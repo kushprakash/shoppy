@@ -53,12 +53,21 @@ Route::get('/master/{any?}', function () {
 // Merchant Store Login Portal (http://domain/store)
 Route::get('/store', function () {
     $code = strtoupper(request()->query('code', 'SHP-A4IFYK'));
-    return view('shop-login', [
-        'shopCode' => $code,
-        'shopName' => $code === 'SHP-A4IFYK' ? 'Ramesh Fashion Store' : 'Merchant Retail Store',
-        'shopPlan' => 'Enterprise Multi-Tenant Retail ERP',
-        'isGenericStoreLogin' => true,
-    ]);
+    $theme = request()->cookie('shoppy_erp_theme', 'light');
+    $isDark = ($theme === 'dark');
+    return response()
+        ->view('app', [
+            'entry' => 'app',
+            'title' => 'Merchant Store Login — Shoppy ERP',
+            'shopCode' => $code,
+            'htmlClass' => $isDark ? 'h-full bg-slate-950 text-slate-100 dark' : 'h-full bg-[#f4f7fa] text-slate-800',
+            'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white' : 'min-h-full flex flex-col bg-[#f4f7fa] text-slate-800 selection:bg-cyan-500 selection:text-white',
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+});
+
+Route::get('/store-login', function () {
+    return redirect('/store');
 });
 
 // Store Code dynamic URL routing (http://domain/{storeCode})
@@ -95,15 +104,36 @@ Route::get('/{storeCode}', function ($storeCode) {
         ],
     ];
 
+    $shop = null;
+    $hasEcommerce = false;
+
+    try {
+        $dbShop = \Illuminate\Support\Facades\DB::connection('mysql')->table('shops')->where('shop_code', $normalizedCode)->first();
+        if ($dbShop) {
+            $settings = json_decode($dbShop->settings, true) ?: [];
+            $hasEcommerce = !empty($settings['has_ecommerce']);
+            $shop = [
+                'name' => $dbShop->name,
+                'plan' => $settings['plan_name'] ?? 'GST Billing Software',
+                'has_ecommerce' => $hasEcommerce,
+            ];
+        }
+    } catch (\Throwable $e) {}
+
+    if (!$shop) {
+        $shop = $shops[$normalizedCode] ?? [
+            'name' => 'Retail Merchant Counter',
+            'plan' => 'GST Billing Software',
+            'has_ecommerce' => false,
+        ];
+        $hasEcommerce = $shop['has_ecommerce'];
+    }
+
     // Check if toggle cookie override exists (e.g. from Super Admin desk)
     $cookieOverride = request()->cookie('shoppy_ecom_' . $normalizedCode);
-    $shop = $shops[$normalizedCode] ?? [
-        'name' => 'Retail Merchant Counter',
-        'plan' => 'GST Billing Software',
-        'has_ecommerce' => false,
-    ];
-
-    $hasEcommerce = $cookieOverride !== null ? ($cookieOverride === '1') : $shop['has_ecommerce'];
+    if ($cookieOverride !== null) {
+        $hasEcommerce = ($cookieOverride === '1');
+    }
 
     // If subscribed to Ecommerce -> Open Online Ecommerce Storefront
     if ($hasEcommerce) {
@@ -115,11 +145,7 @@ Route::get('/{storeCode}', function ($storeCode) {
     }
 
     // If NOT subscribed to Ecommerce -> Open Billing Software Login Page
-    return view('shop-login', [
-        'shopCode' => $normalizedCode,
-        'shopName' => $shop['name'],
-        'shopPlan' => $shop['plan'],
-    ]);
+    return redirect('/store?code=' . $normalizedCode);
 })->where('storeCode', '^(STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$');
 
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)

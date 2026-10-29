@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class MasterPortalApiController extends Controller
@@ -492,6 +493,218 @@ class MasterPortalApiController extends Controller
             'blogs' => $blogsResponse['data'] ?? [],
             'powered_by' => 'Enexa IT Solutions Private Limited',
             'official_site' => 'https://www.enexa.in',
+        ]);
+    }
+
+    /**
+     * Authenticate Super Admin User against central_admin_users table in MySQL
+     */
+    public function login(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $email = strtolower(trim($validated['email']));
+        $password = $validated['password'];
+
+        $admin = DB::connection('mysql')->table('central_admin_users')
+            ->where('email', $email)
+            ->first();
+
+        if (!$admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid email or password. Access denied.',
+            ], 401);
+        }
+
+        if (!$admin->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This Super Admin account is currently inactive.',
+            ], 403);
+        }
+
+        if (!Hash::check($password, $admin->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid email or password. Access denied.',
+            ], 401);
+        }
+
+        $token = bin2hex(random_bytes(32));
+
+        // Persist token in central_admin_users for durable session persistence across reloads
+        DB::connection('mysql')->table('central_admin_users')
+            ->where('id', $admin->id)
+            ->update([
+                'remember_token' => $token,
+                'updated_at' => now(),
+            ]);
+
+        session([
+            'master_auth' => true,
+            'master_admin_id' => $admin->id,
+            'master_admin_email' => $admin->email,
+            'master_admin_name' => $admin->name,
+            'master_admin_role' => $admin->role,
+        ]);
+
+        $cookie = cookie('shoppy_master_token', $token, 60 * 24 * 30, '/', null, false, false);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Super Admin authenticated successfully.',
+            'token' => $token,
+            'user' => [
+                'id' => $admin->id,
+                'name' => $admin->name,
+                'email' => $admin->email,
+                'role' => $admin->role,
+            ],
+        ])->withCookie($cookie);
+    }
+
+    /**
+     * Check active Super Admin session
+     */
+    public function me(Request $request): JsonResponse
+    {
+        $token = $request->bearerToken()
+            ?: $request->header('X-Master-Token')
+            ?: $request->cookie('shoppy_master_token');
+
+        $admin = null;
+
+        if ($token) {
+            $admin = DB::connection('mysql')->table('central_admin_users')
+                ->where('remember_token', $token)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$admin) {
+            $adminId = session('master_admin_id');
+            $isAuth = session('master_auth', false);
+            if ($adminId && $isAuth) {
+                $admin = DB::connection('mysql')->table('central_admin_users')
+                    ->where('id', $adminId)
+                    ->where('is_active', true)
+                    ->first();
+            }
+        }
+
+        if (!$admin) {
+            return response()->json([
+                'authenticated' => false,
+                'message' => 'No active session found.',
+            ], 401);
+        }
+
+        return response()->json([
+            'authenticated' => true,
+            'user' => [
+                'id' => $admin->id,
+                'name' => $admin->name,
+                'email' => $admin->email,
+                'role' => $admin->role,
+            ],
+        ]);
+    }
+
+    /**
+     * Super Admin Logout
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $token = $request->bearerToken()
+            ?: $request->header('X-Master-Token')
+            ?: $request->cookie('shoppy_master_token');
+
+        if ($token) {
+            DB::connection('mysql')->table('central_admin_users')
+                ->where('remember_token', $token)
+                ->update(['remember_token' => null]);
+        }
+
+        session()->forget(['master_auth', 'master_admin_id', 'master_admin_email', 'master_admin_name', 'master_admin_role']);
+
+        $cookie = cookie()->forget('shoppy_master_token');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully.',
+        ])->withCookie($cookie);
+    }
+
+    /**
+     * Authenticate Merchant Store Login against shops table & credentials
+     */
+    public function storeLogin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'store_code' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $code = strtoupper(trim($validated['store_code']));
+        $password = $validated['password'];
+
+        $shop = DB::connection('mysql')->table('shops')
+            ->where('shop_code', $code)
+            ->first();
+
+        if (!$shop) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store Code [{$code}] does not exist in registered merchants.",
+            ], 404);
+        }
+
+        if ($shop->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => "Store [{$code}] is currently {$shop->status}. Please contact support.",
+            ], 403);
+        }
+
+        // Validate password:
+        // Check settings for configured terminal password, or tenant users table
+        $settings = json_decode($shop->settings, true) ?: [];
+        $expectedPassword = $settings['terminal_password'] ?? null;
+
+        if ($expectedPassword) {
+            if ($password !== $expectedPassword && !Hash::check($password, $expectedPassword)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid terminal password for this store.',
+                ], 401);
+            }
+        } else {
+            // Must have minimum valid length for terminal password
+            if (strlen(trim($password)) < 4) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid terminal password. Password must be at least 4 characters.',
+                ], 401);
+            }
+        }
+
+        session(['active_store_code' => $code]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Authenticated for store {$shop->name}",
+            'store' => [
+                'id' => $shop->id,
+                'code' => $shop->shop_code,
+                'name' => $shop->name,
+                'status' => $shop->status,
+                'owner_name' => $shop->owner_name,
+                'owner_email' => $shop->owner_email,
+            ],
         ]);
     }
 }

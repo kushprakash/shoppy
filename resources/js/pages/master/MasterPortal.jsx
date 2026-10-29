@@ -43,6 +43,7 @@ import {
   Grid2X2,
   Bell,
   ShoppingCart,
+  EyeOff,
   Boxes,
   Warehouse,
   Printer,
@@ -60,20 +61,22 @@ import {
 import subscriptionService from '../../services/subscriptionService';
 
 export default function MasterPortal() {
-  // Authentication state for Super Admin (Strictly starts logged out unless session exists)
+  // Authentication state for Super Admin (Restored from token on page reload)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     try {
-      return (
-        sessionStorage.getItem('master_auth') === 'true' ||
-        localStorage.getItem('master_auth') === 'true'
-      );
+      const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
+      const auth = localStorage.getItem('master_auth') === 'true' || sessionStorage.getItem('master_auth') === 'true';
+      return !!(token && auth);
     } catch (e) {
       return false;
     }
   });
 
-  const [adminEmail, setAdminEmail] = useState('admin@shoppy.io');
-  const [adminPassword, setAdminPassword] = useState('admin123');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState(null);
 
   // Navigation tab in Master Portal: 'dashboard' | 'plans' | 'stores' | 'due_payments' | 'categories'
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -278,8 +281,46 @@ export default function MasterPortal() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Sync data on load and subscribe to master updates
+  // Sync data on load, verify session with backend, and subscribe to master updates
   useEffect(() => {
+    const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
+
+    if (!token) {
+      setIsAuthenticated(false);
+    } else {
+      // Verify Super Admin token session with backend database
+      fetch('/api/master/me', {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-Master-Token': token
+        }
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.authenticated) {
+            setIsAuthenticated(true);
+            try {
+              sessionStorage.setItem('master_auth', 'true');
+              localStorage.setItem('master_auth', 'true');
+              if (data.user) localStorage.setItem('master_user', JSON.stringify(data.user));
+            } catch (e) {}
+          } else {
+            setIsAuthenticated(false);
+            try {
+              sessionStorage.removeItem('master_auth');
+              localStorage.removeItem('master_auth');
+              sessionStorage.removeItem('master_token');
+              localStorage.removeItem('master_token');
+              localStorage.removeItem('master_user');
+            } catch (e) {}
+          }
+        })
+        .catch(() => {
+          // If momentary network blip, keep authenticated state from valid localStorage token
+        });
+    }
+
     const syncData = async () => {
       setPlans(subscriptionService.getPlans());
       setShops(subscriptionService.getStores());
@@ -302,32 +343,80 @@ export default function MasterPortal() {
     return () => window.removeEventListener('shoppy:master_updated', syncData);
   }, []);
 
-  // Super Admin Login Handler
-  const handleLogin = (e) => {
+  // Super Admin Login Handler (Strict Real Database Authentication)
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const emailNorm = (adminEmail || '').trim().toLowerCase();
+    setLoginError(null);
+    const emailNorm = (adminEmail || '').trim();
     const passNorm = (adminPassword || '').trim();
 
-    if (
-      (emailNorm.includes('admin') || emailNorm.includes('shoppy')) &&
-      (passNorm === 'admin123' || passNorm.length >= 6)
-    ) {
-      try {
-        sessionStorage.setItem('master_auth', 'true');
-        localStorage.setItem('master_auth', 'true');
-      } catch (err) {}
-      setIsAuthenticated(true);
-      showToast('Welcome back, Super Admin!');
-    } else {
-      showToast('Invalid credentials. Use admin@shoppy.io / admin123');
+    if (!emailNorm || !passNorm) {
+      setLoginError('Please enter both administrator email and password.');
+      showToast('Please enter both administrator email and password.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch('/api/master/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email: emailNorm, password: passNorm })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        try {
+          sessionStorage.setItem('master_auth', 'true');
+          localStorage.setItem('master_auth', 'true');
+          if (data.token) {
+            sessionStorage.setItem('master_token', data.token);
+            localStorage.setItem('master_token', data.token);
+          }
+          if (data.user) {
+            localStorage.setItem('master_user', JSON.stringify(data.user));
+          }
+        } catch (err) {}
+        setIsAuthenticated(true);
+        setLoginError(null);
+        showToast(data.message || 'Super Admin access authenticated successfully.');
+      } else {
+        const msg = data.message || 'Invalid administrator credentials. Access denied.';
+        setLoginError(msg);
+        showToast(msg);
+      }
+    } catch (err) {
+      const msg = 'Authentication server connection error. Please try again.';
+      setLoginError(msg);
+      showToast(msg);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   // Super Admin Logout Handler
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
+    try {
+      await fetch('/api/master/logout', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          'X-Master-Token': token || ''
+        }
+      });
+    } catch (err) {}
+
     try {
       sessionStorage.removeItem('master_auth');
       localStorage.removeItem('master_auth');
+      sessionStorage.removeItem('master_token');
+      localStorage.removeItem('master_token');
+      localStorage.removeItem('master_user');
     } catch (err) {}
     setIsAuthenticated(false);
     showToast('Logged out of Super Admin Portal');
@@ -682,16 +771,17 @@ export default function MasterPortal() {
             <p className="text-xs text-slate-400">Master SaaS Platform & Multi-Tenant Control Portal</p>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 text-[11px] text-slate-300 space-y-1">
-            <div className="font-bold text-cyan-400 flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5" />
-              <span>Restricted Super Admin Area</span>
+          {loginError ? (
+            <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2.5 animate-in fade-in">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span className="font-medium">{loginError}</span>
             </div>
-            <p className="text-slate-400">
-              Demo Credentials: <span className="font-mono text-white font-bold">admin@shoppy.io</span> /{' '}
-              <span className="font-mono text-white font-bold">admin123</span>
-            </p>
-          </div>
+          ) : (
+            <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Restricted Super Admin Area • Authorized Personnel Only</span>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -700,30 +790,46 @@ export default function MasterPortal() {
                 type="email"
                 required
                 value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="admin@shoppy.io"
+                onChange={(e) => {
+                  setAdminEmail(e.target.value);
+                  if (loginError) setLoginError(null);
+                }}
+                placeholder="Enter administrator email"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Master Key / Password</label>
-              <input
-                type="password"
-                required
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-              />
+              <div className="relative">
+                <input
+                  type={showAdminPassword ? 'text' : 'password'}
+                  required
+                  value={adminPassword}
+                  onChange={(e) => {
+                    setAdminPassword(e.target.value);
+                    if (loginError) setLoginError(null);
+                  }}
+                  placeholder="Enter master password"
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                >
+                  {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#008ba3] to-[#10b981] hover:from-[#00a8cc] hover:to-[#059669] text-white font-bold text-xs shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isLoggingIn}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#008ba3] to-[#10b981] hover:from-[#00a8cc] hover:to-[#059669] text-white font-bold text-xs shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Lock className="w-4 h-4" />
-              <span>Login to Super Admin Portal</span>
+              <span>{isLoggingIn ? 'Authenticating...' : 'Login to Super Admin Portal'}</span>
             </button>
           </form>
 
@@ -1349,7 +1455,7 @@ export default function MasterPortal() {
                 rel="noreferrer"
                 className="flex items-center justify-between px-3 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/40"
               >
-                <span>Storefront Demo Preview</span>
+                <span>Live Storefront Preview</span>
                 <ExternalLink className="w-3 h-3 text-slate-500" />
               </a>
             </div>

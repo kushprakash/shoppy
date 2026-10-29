@@ -39,6 +39,8 @@ export default function AppRoutes() {
       <Route path="/privacy-policy" element={<LandingPage defaultPage="privacy-policy" />} />
       <Route path="/return-policy" element={<LandingPage defaultPage="return-policy" />} />
       <Route path="/terms-of-service" element={<LandingPage defaultPage="terms-of-service" />} />
+      <Route path="/store" element={<LandingPage defaultPage="store" />} />
+      <Route path="/store-login" element={<LandingPage defaultPage="store" />} />
 
       {/* Super Admin Master Portal */}
       <Route path="/master" element={<MasterPortal />} />

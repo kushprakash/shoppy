@@ -67,28 +67,19 @@
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5">
             <div class="border-b border-slate-800 pb-3">
                 <h2 class="text-base font-bold text-white font-heading">Merchant & Cashier Login</h2>
-                <p class="text-xs text-slate-400">Enter your credentials to access the retail billing desk</p>
+                <p class="text-xs text-slate-400">Enter your Store Code and Password to access the terminal</p>
             </div>
 
             <form action="/shop-admin" method="GET" class="space-y-4">
-                @if($isGenericStoreLogin ?? false)
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Select Provisioned Store</label>
-                    <select onchange="window.location.href='/store?code=' + this.value" class="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs font-bold focus:outline-none focus:border-cyan-500 transition">
-                        <option value="SHP-A4IFYK" {{ ($shopCode ?? '') === 'SHP-A4IFYK' ? 'selected' : '' }}>SHP-A4IFYK — Ramesh Fashion Store (Enterprise)</option>
-                        <option value="STORE983515" {{ ($shopCode ?? '') === 'STORE983515' ? 'selected' : '' }}>STORE983515 — Verma General & Kirana (Omnichannel)</option>
-                        <option value="STORE441029" {{ ($shopCode ?? '') === 'STORE441029' ? 'selected' : '' }}>STORE441029 — Sharma Textile & Garments (Billing Only)</option>
-                        <option value="STORE552190" {{ ($shopCode ?? '') === 'STORE552190' ? 'selected' : '' }}>STORE552190 — Apex Mobile & Electronics (Ecommerce)</option>
-                        <option value="STORE118833" {{ ($shopCode ?? '') === 'STORE118833' ? 'selected' : '' }}>STORE118833 — Kisan Agro Seed & Fertilizer (WhatsApp)</option>
-                    </select>
-                </div>
-                @endif
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">User ID / Email</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Store Code</label>
                     <input 
                         type="text" 
-                        value="{{ 'admin@' . strtolower($shopCode) . '.local' }}" 
-                        class="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 transition"
+                        name="store"
+                        value="{{ $shopCode ?? '' }}" 
+                        placeholder="e.g. SHP-A4IFYK"
+                        required
+                        class="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs font-bold font-mono tracking-wider focus:outline-none focus:border-cyan-500 transition"
                     />
                 </div>
 
@@ -96,7 +87,9 @@
                     <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
                     <input 
                         type="password" 
-                        value="••••••••••••" 
+                        name="password"
+                        placeholder="Enter password" 
+                        required
                         class="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 transition"
                     />
                 </div>

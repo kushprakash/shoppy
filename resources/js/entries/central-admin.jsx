@@ -39,7 +39,7 @@ export default function CentralAdmin() {
       if (agentsRes.data.success) setAgents(agentsRes.data.agents || []);
       if (commRes.data.success) setCommissions(commRes.data.data.data || []);
     } catch (err) {
-      console.error(err);
+      // Fallback
     } finally {
       setLoading(false);
     }

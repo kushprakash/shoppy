@@ -544,7 +544,6 @@ export default function ShopAdmin() {
         }
       } catch (err) {
         // Fallback to local high-fidelity state
-        console.log('Using local tenant simulated state');
       }
     };
     loadApiData();

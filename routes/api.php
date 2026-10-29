@@ -32,10 +32,18 @@ Route::prefix('master')->group(function () {
     Route::get('/leads', [MasterPortalApiController::class, 'getContactInquiries']);
     Route::patch('/leads/{id}/status', [MasterPortalApiController::class, 'updateLeadStatus']);
 
+    // Super Admin Authentication (Database central_admin_users verification)
+    Route::post('/login', [MasterPortalApiController::class, 'login']);
+    Route::post('/logout', [MasterPortalApiController::class, 'logout']);
+    Route::get('/me', [MasterPortalApiController::class, 'me']);
+
     // CMS Blogs Management
     Route::post('/blogs', [MasterPortalApiController::class, 'createBlog']);
     Route::delete('/blogs/{id}', [MasterPortalApiController::class, 'deleteBlog']);
 });
+
+// Merchant Store Terminal Authentication (Database shops verification)
+Route::post('/store/login', [MasterPortalApiController::class, 'storeLogin']);
 
 // Public Dynamic Website APIs
 Route::get('/public/landing-data', [MasterPortalApiController::class, 'getPublicLandingData']);

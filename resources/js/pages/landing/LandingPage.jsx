@@ -46,16 +46,23 @@ import {
   Receipt,
   Calendar,
   Share2,
-  Search
+  Search,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  User
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import subscriptionService from '../../services/subscriptionService';
 
 export default function LandingPage({ defaultPage = 'home' }) {
+  const navigate = useNavigate();
+
   // Determine initial active page from URL path or prop
   const getInitialPage = () => {
     if (defaultPage && defaultPage !== 'home') return defaultPage;
     const path = window.location.pathname.replace(/^\//, '').toLowerCase();
-    const validPages = ['about', 'services', 'pricing', 'blog', 'contact', 'privacy-policy', 'return-policy', 'terms-of-service'];
+    const validPages = ['about', 'services', 'pricing', 'blog', 'contact', 'privacy-policy', 'return-policy', 'terms-of-service', 'store'];
     return validPages.includes(path) ? path : 'home';
   };
 
@@ -148,6 +155,84 @@ export default function LandingPage({ defaultPage = 'home' }) {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Store Terminal Login State
+  const getInitialStoreCode = () => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const code = sp.get('code');
+      if (code) return code.toUpperCase();
+      return localStorage.getItem('shoppy_saved_store_code') || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const [inputStoreCode, setInputStoreCode] = useState(getInitialStoreCode);
+  const [inputPassword, setInputPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberTerminal, setRememberTerminal] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+
+  const handleStoreLogin = async (e) => {
+    e.preventDefault();
+    setLoginError(null);
+
+    const cleanCode = (inputStoreCode || '').trim().toUpperCase();
+    const cleanPassword = (inputPassword || '').trim();
+
+    if (!cleanCode) {
+      setLoginError('Please enter your Store Code.');
+      return;
+    }
+    if (!cleanPassword) {
+      setLoginError('Please enter your terminal Password.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+
+    try {
+      const res = await fetch('/api/store/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          store_code: cleanCode,
+          password: cleanPassword
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        try {
+          if (rememberTerminal) {
+            localStorage.setItem('shoppy_saved_store_code', cleanCode);
+          } else {
+            localStorage.removeItem('shoppy_saved_store_code');
+          }
+          localStorage.setItem('shoppy_active_store_code', cleanCode);
+          if (data.store) {
+            localStorage.setItem('shoppy_active_store', JSON.stringify(data.store));
+          }
+          document.cookie = `shoppy_active_store=${cleanCode}; path=/; max-age=86400`;
+        } catch (err) {}
+
+        showToast(data.message || `Welcome! Store ${cleanCode} authenticated`);
+        navigate('/shop-admin/dashboard');
+      } else {
+        setLoginError(data.message || 'Invalid store code or password.');
+      }
+    } catch (err) {
+      setLoginError('Connection error to store server. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   // Sync data on load and subscribe to backend / master updates
   useEffect(() => {
     const loadData = () => {
@@ -169,7 +254,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
           if (json.blogs && json.blogs.length > 0) setBlogs(json.blogs);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     const handleMasterUpdate = () => loadData();
     window.addEventListener('shoppy:master_updated', handleMasterUpdate);
@@ -198,40 +283,40 @@ export default function LandingPage({ defaultPage = 'home' }) {
   const slides = (settings.hero_banners && settings.hero_banners.length > 0)
     ? settings.hero_banners
     : [
-        {
-          id: 1,
-          badge: '⚡ Powered by Enexa IT Solutions Private Limited',
-          title: 'Fastest GST Billing Software & Retail POS Terminal',
-          subtitle: 'Counter billing in under 50 milliseconds. Thermal receipt prints (80mm/50mm), automated GST tax invoicing, GSTR-1 ledger exports & multi-branch stock.',
-          tag: 'Core Retail POS',
-          ctaText: 'View Pricing & Plans',
-          action: 'pricing',
-          gradient: 'from-[#1e1b4b] via-[#2e1065] to-[#4c1d95]',
-          accentBadge: 'bg-amber-400/20 text-amber-300 border-amber-400/30'
-        },
-        {
-          id: 2,
-          badge: '💬 Official Meta WhatsApp Cloud API Partner',
-          title: 'Automated WhatsApp Invoices & Dynamic UPI QR Codes',
-          subtitle: 'Send official GST tax invoice PDFs and instant payment links directly to customers WhatsApp with 98% open rates. Recover dues 3x faster.',
-          tag: 'WhatsApp CRM Suite',
-          ctaText: 'Explore WhatsApp Plans',
-          action: 'pricing',
-          gradient: 'from-[#062c26] via-[#094238] to-[#0d594b]',
-          accentBadge: 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30'
-        },
-        {
-          id: 3,
-          badge: '🌐 Real-time Omnichannel Digital Commerce',
-          title: 'Online Storefront Connected Directly to Counter POS',
-          subtitle: 'Every store gets a live web shopping portal at domain/{storeCode}. Real-time inventory sync, 5 Indian payment gateways, and automatic AWB courier dispatch.',
-          tag: 'Omnichannel Storefront',
-          ctaText: 'Onboard Store Now',
-          action: 'pricing',
-          gradient: 'from-[#0b2938] via-[#103e54] to-[#185a7a]',
-          accentBadge: 'bg-cyan-400/20 text-cyan-300 border-cyan-400/30'
-        }
-      ];
+      {
+        id: 1,
+        badge: '⚡ Powered by Enexa IT Solutions Private Limited',
+        title: 'Fastest GST Billing Software & Retail POS Terminal',
+        subtitle: 'Counter billing in under 50 milliseconds. Thermal receipt prints (80mm/50mm), automated GST tax invoicing, GSTR-1 ledger exports & multi-branch stock.',
+        tag: 'Core Retail POS',
+        ctaText: 'View Pricing & Plans',
+        action: 'pricing',
+        gradient: 'from-[#1e1b4b] via-[#2e1065] to-[#4c1d95]',
+        accentBadge: 'bg-amber-400/20 text-amber-300 border-amber-400/30'
+      },
+      {
+        id: 2,
+        badge: '💬 Official Meta WhatsApp Cloud API Partner',
+        title: 'Automated WhatsApp Invoices & Dynamic UPI QR Codes',
+        subtitle: 'Send official GST tax invoice PDFs and instant payment links directly to customers WhatsApp with 98% open rates. Recover dues 3x faster.',
+        tag: 'WhatsApp CRM Suite',
+        ctaText: 'Explore WhatsApp Plans',
+        action: 'pricing',
+        gradient: 'from-[#062c26] via-[#094238] to-[#0d594b]',
+        accentBadge: 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30'
+      },
+      {
+        id: 3,
+        badge: '🌐 Real-time Omnichannel Digital Commerce',
+        title: 'Online Storefront Connected Directly to Counter POS',
+        subtitle: 'Every store gets a live web shopping portal at domain/{storeCode}. Real-time inventory sync, 5 Indian payment gateways, and automatic AWB courier dispatch.',
+        tag: 'Omnichannel Storefront',
+        ctaText: 'Onboard Store Now',
+        action: 'pricing',
+        gradient: 'from-[#0b2938] via-[#103e54] to-[#185a7a]',
+        accentBadge: 'bg-cyan-400/20 text-cyan-300 border-cyan-400/30'
+      }
+    ];
 
   // Auto-play Carousel
   useEffect(() => {
@@ -343,6 +428,160 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }, 1200);
   };
 
+  // Dedicated Production Store Login Screen (Distraction-free, Store Code + Password, Zero clutter)
+  if (currentPage === 'store') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0c1421] via-[#101b2b] to-[#152338] text-slate-100 flex flex-col justify-between p-4 sm:p-6 font-sans antialiased selection:bg-[#00a2c7] selection:text-white">
+        {/* Top Minimal Navigation Bar */}
+        <header className="max-w-5xl mx-auto w-full flex items-center justify-between py-2">
+          <button
+            onClick={() => navigateTo('home')}
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer px-3.5 py-1.5 rounded-full hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Shoppy</span>
+          </button>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-mono text-[11px] text-slate-300">Terminal Server Live</span>
+          </div>
+        </header>
+
+        {/* Center Production Auth Card */}
+        <main className="w-full max-w-[420px] mx-auto my-auto py-6">
+          <div className="bg-slate-900/95 border border-slate-800/90 rounded-3xl p-7 sm:p-8 shadow-2xl backdrop-blur-xl">
+            {/* Brand Header */}
+            <div className="text-center space-y-2 mb-6">
+              <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#008ba3] via-[#00a8cc] to-[#10b981] items-center justify-center text-white shadow-xl shadow-cyan-500/20 mb-1">
+                <Store className="w-7 h-7" />
+              </div>
+              <h1 className="text-xl font-extrabold text-white font-heading tracking-tight">
+                Store Terminal Login
+              </h1>
+              <p className="text-xs text-slate-400">
+                Enter your Store Code and Password to access your POS & ERP billing desk
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {loginError && (
+              <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2.5 animate-in fade-in">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            {/* Form: Store Code + Password */}
+            <form onSubmit={handleStoreLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Store Code
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={inputStoreCode}
+                    onChange={(e) => {
+                      setInputStoreCode(e.target.value.toUpperCase());
+                      setLoginError(null);
+                    }}
+                    placeholder="e.g. SHP-A4IFYK"
+                    autoFocus
+                    required
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white font-mono text-xs font-bold tracking-wider placeholder:font-sans placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={inputPassword}
+                    onChange={(e) => {
+                      setInputPassword(e.target.value);
+                      setLoginError(null);
+                    }}
+                    placeholder="Enter terminal password"
+                    required
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white text-xs font-medium placeholder:text-slate-500 focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] pt-1">
+                <label className="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberTerminal}
+                    onChange={(e) => setRememberTerminal(e.target.checked)}
+                    className="rounded border-slate-700 bg-slate-800 text-[#00a2c7] focus:ring-0 cursor-pointer"
+                  />
+                  <span>Remember Store Code</span>
+                </label>
+
+
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#00a8cc] to-[#008ba3] hover:from-[#0096b7] hover:to-[#007b91] text-white font-bold text-xs shadow-lg shadow-cyan-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <RotateCcw className="w-4 h-4 animate-spin" />
+                      <span>Verifying Terminal...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Login to Retail Software</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            <div className="pt-5 mt-5 border-t border-slate-800/80 text-center text-[11px] text-slate-500">
+              <span>Need help or new merchant activation?</span>
+              <br />
+              <button
+                onClick={() => navigateTo('contact')}
+                className="text-[#00a2c7] hover:underline font-semibold mt-1 cursor-pointer"
+              >
+                Contact Enexa Support Desk
+              </button>
+            </div>
+          </div>
+        </main>
+
+        {/* Minimal Footer */}
+        <footer className="max-w-5xl mx-auto w-full text-center py-2 text-[11px] text-slate-500">
+          <span>© 2026 Enexa IT Solutions Private Limited • Enterprise Retail ERP</span>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       {/* Toast Notification */}
@@ -418,66 +657,60 @@ export default function LandingPage({ defaultPage = 'home' }) {
         <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-700 dark:text-slate-300">
           <button
             onClick={() => navigateTo('home')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${
-              currentPage === 'home'
-                ? 'text-[#00a2c7] border-[#00a2c7]'
-                : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-            }`}
+            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'home'
+              ? 'text-[#00a2c7] border-[#00a2c7]'
+              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
+              }`}
           >
             Home
           </button>
 
           <button
             onClick={() => navigateTo('about')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${
-              currentPage === 'about'
-                ? 'text-[#00a2c7] border-[#00a2c7]'
-                : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-            }`}
+            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'about'
+              ? 'text-[#00a2c7] border-[#00a2c7]'
+              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
+              }`}
           >
             About Us
           </button>
 
           <button
             onClick={() => navigateTo('services')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${
-              currentPage === 'services'
-                ? 'text-[#00a2c7] border-[#00a2c7]'
-                : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-            }`}
+            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'services'
+              ? 'text-[#00a2c7] border-[#00a2c7]'
+              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
+              }`}
           >
             Services & Solutions
           </button>
 
           <button
             onClick={() => navigateTo('pricing')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${
-              currentPage === 'pricing'
-                ? 'text-[#00a2c7] border-[#00a2c7]'
-                : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-            }`}
+            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'pricing'
+              ? 'text-[#00a2c7] border-[#00a2c7]'
+              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
+              }`}
           >
             Pricing & Packages
           </button>
 
           <button
             onClick={() => navigateTo('blog')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${
-              currentPage === 'blog'
-                ? 'text-[#00a2c7] border-[#00a2c7]'
-                : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-            }`}
+            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'blog'
+              ? 'text-[#00a2c7] border-[#00a2c7]'
+              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
+              }`}
           >
             Blog & Insights
           </button>
 
           <button
             onClick={() => navigateTo('contact')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${
-              currentPage === 'contact'
-                ? 'text-[#00a2c7] border-[#00a2c7]'
-                : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-            }`}
+            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'contact'
+              ? 'text-[#00a2c7] border-[#00a2c7]'
+              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
+              }`}
           >
             Contact Us
           </button>
@@ -496,20 +729,17 @@ export default function LandingPage({ defaultPage = 'home' }) {
             <span>Renew Plan</span>
           </button>
 
-          <a
-            href="/store"
-            className="hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          <button
+            onClick={() => navigateTo('store')}
+            className={`hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${currentPage === 'store'
+              ? 'bg-cyan-500/15 text-[#00a2c7] border border-[#00a2c7]/40 shadow-xs'
+              : 'text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
           >
-            Merchant Login
-          </a>
+            Store Login
+          </button>
 
-          <a
-            href="/master"
-            className="px-3 py-1.5 rounded-full border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-[#00a2c7] dark:hover:border-cyan-400 transition flex items-center gap-1.5"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-[#00a2c7]" />
-            <span>Super Admin</span>
-          </a>
+
 
           <button
             onClick={() => navigateTo('contact')}
@@ -566,7 +796,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   { id: 'services', label: 'Services & Solutions', icon: Boxes },
                   { id: 'pricing', label: 'Pricing Plans', icon: CreditCard },
                   { id: 'blog', label: 'Blog & Insights', icon: FileText },
-                  { id: 'contact', label: 'Contact Us & Demo', icon: Phone }
+                  { id: 'contact', label: 'Contact Us & Demo', icon: Phone },
+                  { id: 'store', label: 'Store Login', icon: Lock }
                 ].map((item) => {
                   const Icon = item.icon;
                   const isActive = currentPage === item.id;
@@ -574,11 +805,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <button
                       key={item.id}
                       onClick={() => navigateTo(item.id)}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition text-left cursor-pointer ${
-                        isActive
-                          ? 'bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] font-extrabold'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition text-left cursor-pointer ${isActive
+                        ? 'bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] font-extrabold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
                     >
                       <Icon className={`w-4 h-4 ${isActive ? 'text-[#00a2c7]' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
@@ -598,11 +828,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <button
                       key={leg.id}
                       onClick={() => navigateTo(leg.id)}
-                      className={`w-full px-3 py-1.5 text-xs text-left transition cursor-pointer ${
-                        currentPage === leg.id
-                          ? 'text-[#00a2c7] font-bold'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                      className={`w-full px-3 py-1.5 text-xs text-left transition cursor-pointer ${currentPage === leg.id
+                        ? 'text-[#00a2c7] font-bold'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        }`}
                     >
                       {leg.label}
                     </button>
@@ -763,9 +992,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   <button
                     key={idx}
                     onClick={() => setCurrentSlide(idx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${
-                      currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2 bg-white/40 hover:bg-white/70'
-                    }`}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2 bg-white/40 hover:bg-white/70'
+                      }`}
                   />
                 ))}
               </div>
@@ -864,11 +1092,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <button
                       key={cycle}
                       onClick={() => setBillingCycle(cycle)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition capitalize cursor-pointer ${
-                        billingCycle === cycle
-                          ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition capitalize cursor-pointer ${billingCycle === cycle
+                        ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
                     >
                       {cycle === 'half_yearly' ? 'Half Yearly' : cycle === 'yearly' ? 'Annually (Save up to 33%)' : cycle}
                     </button>
@@ -890,9 +1117,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       {priceInfo.offPercent > 0 && (
                         <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
                           <div
-                            className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${
-                              plan.ribbonBg || 'bg-[#008ba3]'
-                            }`}
+                            className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${plan.ribbonBg || 'bg-[#008ba3]'
+                              }`}
                           >
                             {priceInfo.ribbonText}
                           </div>
@@ -1382,11 +1608,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   <button
                     key={cycle}
                     onClick={() => setBillingCycle(cycle)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition capitalize cursor-pointer ${
-                      billingCycle === cycle
-                        ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition capitalize cursor-pointer ${billingCycle === cycle
+                      ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
                   >
                     {cycle === 'half_yearly' ? 'Half Yearly' : cycle === 'yearly' ? 'Yearly (Save up to 33%)' : cycle}
                   </button>
@@ -1407,9 +1632,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     {priceInfo.offPercent > 0 && (
                       <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
                         <div
-                          className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${
-                            plan.ribbonBg || 'bg-[#008ba3]'
-                          }`}
+                          className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${plan.ribbonBg || 'bg-[#008ba3]'
+                            }`}
                         >
                           {priceInfo.ribbonText}
                         </div>
@@ -1526,11 +1750,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   <button
                     key={cat}
                     onClick={() => setBlogCategoryFilter(cat)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                      blogCategoryFilter === cat
-                        ? 'bg-[#00a2c7] text-white shadow-xs'
-                        : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${blogCategoryFilter === cat
+                      ? 'bg-[#00a2c7] text-white shadow-xs'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
                   >
                     {cat === 'all' ? 'All Articles' : cat}
                   </button>
@@ -2180,11 +2403,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         key={gw}
                         type="button"
                         onClick={() => setOnboardForm({ ...onboardForm, paymentMethod: gw })}
-                        className={`p-3 rounded-xl border text-left cursor-pointer transition ${
-                          onboardForm.paymentMethod === gw
-                            ? 'border-[#00a2c7] bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7]'
-                            : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                        }`}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition ${onboardForm.paymentMethod === gw
+                          ? 'border-[#00a2c7] bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7]'
+                          : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                          }`}
                       >
                         {gw}
                       </button>
@@ -2223,7 +2445,6 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-xs text-left space-y-1.5">
                   <p><strong>Store Name:</strong> {provisionedStore.name}</p>
                   <p><strong>Storefront URL:</strong> <a href={`/${provisionedStore.shop_code}`} target="_blank" rel="noreferrer" className="text-[#00a2c7] underline font-bold">http://localhost:8000/{provisionedStore.shop_code}</a></p>
-                  <p><strong>Billing Terminal:</strong> <a href="/pos-terminal" target="_blank" rel="noreferrer" className="text-indigo-600 underline font-bold">Launch POS Terminal</a></p>
                 </div>
 
                 <div className="pt-2">
@@ -2400,8 +2621,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
               <li><button onClick={() => navigateTo('privacy-policy')} className="hover:text-cyan-400 transition cursor-pointer">Privacy Policy</button></li>
               <li><button onClick={() => navigateTo('return-policy')} className="hover:text-cyan-400 transition cursor-pointer">Return Policy</button></li>
               <li><button onClick={() => navigateTo('terms-of-service')} className="hover:text-cyan-400 transition cursor-pointer">Terms of Service</button></li>
-              <li><a href="/master" className="hover:text-cyan-400 transition">Super Admin Desk</a></li>
-              <li><a href="/store" className="hover:text-cyan-400 transition">Store Merchant Login</a></li>
+              <li><button onClick={() => navigate('/master')} className="hover:text-cyan-400 transition cursor-pointer">Super Admin Desk</button></li>
+              <li><button onClick={() => navigateTo('store')} className="hover:text-cyan-400 transition cursor-pointer">Store Merchant Login</button></li>
             </ul>
           </div>
         </div>

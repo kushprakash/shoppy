@@ -47,7 +47,6 @@ export default function Storefront() {
         setProducts(catalogRes.data.data.data || []);
       }
     } catch (err) {
-      console.warn('Backend API offline, loading default catalog products:', err);
       setStoreInfo({
         name: shopCode === 'STORE983515' ? 'Verma General & Kirana Store' : 'Ramesh Fashion Store',
         code: shopCode,
@@ -102,7 +101,7 @@ export default function Storefront() {
         }
       }
     } catch (err) {
-      console.error(err);
+      // Offline fallback
     }
   };
 

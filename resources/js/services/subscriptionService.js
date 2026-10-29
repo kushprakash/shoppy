@@ -284,7 +284,7 @@ class SubscriptionService {
         });
       }
     } catch (e) {
-      console.warn('LocalStorage fallback mode', e);
+      // LocalStorage fallback
     }
   }
 
@@ -335,7 +335,7 @@ class SubscriptionService {
         }
       }
     } catch (err) {
-      console.log('Background API sync notice:', err.message);
+      // Sync fallback
     }
   }
 
@@ -411,7 +411,7 @@ class SubscriptionService {
         })
       }).then(() => this.syncFromBackend());
     } catch (e) {
-      console.warn('API POST failed, saved to local cache', e);
+      // Local cache fallback
     }
 
     return formattedPlan;
@@ -520,7 +520,6 @@ class SubscriptionService {
       await this.syncFromBackend();
       return data;
     } catch (e) {
-      console.warn('createBlog error', e);
       return { success: false };
     }
   }
@@ -535,7 +534,6 @@ class SubscriptionService {
       await this.syncFromBackend();
       return data;
     } catch (e) {
-      console.warn('deleteBlog error', e);
       return { success: false };
     }
   }
@@ -561,7 +559,7 @@ class SubscriptionService {
         return json.data || [];
       }
     } catch (e) {
-      console.warn('getLeads error', e);
+      // Lead fetch fallback
     }
     return [];
   }

@@ -30,7 +30,7 @@ export default function PosBilling() {
         setShift(res.data.shift);
       }
     } catch (err) {
-      console.error(err);
+      // Offline fallback
     }
   };
 
@@ -46,7 +46,7 @@ export default function PosBilling() {
         setProducts(res.data.products);
       }
     } catch (err) {
-      console.error(err);
+      // Offline fallback
     }
   };
 
