@@ -1,0 +1,481 @@
+# Master PRD v2.2 — Multi-Tenant E-Commerce, Retail ERP, POS & GST Billing SaaS
+
+## 1. Project Overview
+
+एक premium, secure, scalable multi-tenant SaaS platform विकसित करना है, जिसमें एक ही integrated Laravel + React project के अंतर्गत:
+
+- Multi-category e-commerce storefront (SEO-friendly & fast caching)
+- Retail ERP और inventory management (Multi-branch, multi-warehouse)
+- POS billing और GST invoices (Barcode, weighing scale, thermal printer support)
+- 5 Pre-integrated Payment Gateways (PhonePe, PayU, Cashfree, Easebuzz, Razorpay) + COD
+- 5 Pre-integrated Courier / Shipping Aggregators (Shiprocket, iThink Logistics, NimbusPost, Shipmozo, Shipway)
+- Purchase, suppliers और customers management
+- Comprehensive Agent / Referral Partner System (Central approval, commission & payout lifecycle)
+- WhatsApp, SMS और Email notification & billing engine
+- Central SaaS admin और subscription management (Lifecycle, grace period & data retention)
+- Shop-specific branding, subdomain और custom domain with automated SSL
+- Encrypted API request और response communication (Private ERP/POS/Admin/Checkout data)
+- Android/iOS WebView compatibility with native print & scan bridge
+
+शामिल होंगे।
+
+### Technology Stack
+
+- **Backend:** Laravel 12, PHP 8.3+
+- **Frontend:** React 19, JSX/TypeScript, React Router, Vite
+- **Frontend Architecture:** Multi-Entry / Code-Splitting (Storefront, POS Counter, Shop Admin, Central Admin separate bundles)
+- **Styling:** Tailwind CSS + approved premium UI component system
+- **Database:** MySQL 8+ (1 Central DB + 1 Separate DB per Tenant Shop)
+- **Caching & Queues:** Redis (Tenant-aware prefixing & isolated cache tags)
+- **API:** Laravel API routes (Public Storefront API vs Encrypted Tenant API)
+- **Authentication:** Secure session/token-based authentication (Sanctum / Custom Guard)
+- **Encryption:** TLS 1.3 + Application-level authenticated payload encryption (AES-256-GCM + Ephemeral ECDH)
+- **Mobile compatibility:** Android/iOS WebView with native integration bridge (Thermal printer, Bluetooth, Camera Barcode)
+
+---
+
+## 2. Non-Negotiable Architecture & Project Structure
+
+### 2.1 One Integrated Repository
+
+Backend और frontend एक ही repository/project में रहेंगे:
+
+```text
+project/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Central/          # SaaS Admin, Agent, Subscription
+│   │   │   ├── Storefront/       # Public E-commerce APIs (SEO & CDN friendly)
+│   │   │   ├── Tenant/           # Encrypted Shop Admin, ERP
+│   │   │   └── Pos/              # High-speed POS Billing APIs
+│   │   ├── Middleware/
+│   │   │   ├── IdentifyTenant.php
+│   │   │   ├── EncryptPayload.php
+│   │   │   ├── DecryptPayload.php
+│   │   │   └── SubscriptionGuard.php
+│   │   └── Requests/
+│   ├── Services/
+│   │   ├── Payments/             # PhonePe, PayU, Cashfree, Easebuzz, Razorpay
+│   │   ├── Shipping/             # Shiprocket, iThink, NimbusPost, Shipmozo, Shipway
+│   │   ├── Notifications/        # WhatsApp, SMS, Email
+│   │   ├── Gst/                  # Calculation, E-Invoice, E-Way Bill
+│   │   ├── Hardware/             # ESC/POS, Weighing scale parser
+│   │   └── Tenancy/              # Dynamic DB manager & migration runner
+│   ├── Security/                 # ECDH Key Exchange, AES-256-GCM, Merchant Key
+│   └── Models/
+│       ├── Central/              # Central DB models
+│       └── Tenant/               # Tenant DB models
+├── routes/
+│   ├── web.php                   # SPA Shell & Storefront SSR/Meta injection
+│   ├── api.php                   # Global API entry point
+│   └── api/
+│       ├── central.php           # Central Admin & Agent routes
+│       ├── storefront.php        # Public catalog & cart routes
+│       ├── tenant.php            # Encrypted ERP & Settings routes
+│       └── pos.php               # High-speed POS billing routes
+├── resources/
+│   ├── js/
+│   │   ├── entries/              # Code-Splitting Entry Points
+│   │   │   ├── storefront.jsx    # Light bundle for online customers
+│   │   │   ├── pos.jsx           # Dedicated offline-ready POS screen
+│   │   │   ├── shop-admin.jsx    # ERP & Settings dashboard
+│   │   │   └── central-admin.jsx # SaaS Admin & Agent portal
+│   │   ├── components/
+│   │   ├── layouts/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── security/
+│   │   └── hooks/
+│   └── views/
+│       ├── app.blade.php         # Main application shell
+│       └── storefront.blade.php  # SEO meta-injected storefront shell
+├── database/
+│   ├── migrations/
+│   │   ├── central/              # Central DB migrations
+│   │   └── tenant/               # Tenant DB migrations
+├── tests/
+└── vite.config.js
+```
+
+### 2.2 Frontend Bundle Optimization & Code-Splitting
+
+- Storefront, POS, Shop Admin, और Central Admin के अलग-अलग Vite entry points होंगे।
+- आम ग्राहक को POS या एडमिन का भारी JavaScript कोड डाउनलोड नहीं करना पड़ेगा। इससे पेज लोड 1 सेकंड से कम रहेगा।
+
+---
+
+## 3. Multi-Tenant Database Architecture
+
+### 3.1 Central SaaS Database
+
+इसमें platform-level data होगा:
+
+- Shops और shop registration registry
+- Shop Code registry और hostname mapping
+- Domain/subdomain mapping और SSL status
+- Merchant credential metadata और key versions
+- Subscription plans, category licenses और add-on modules
+- Billing और SaaS subscription invoices (with GST)
+- Agent registry, referral codes, commission rules और payout ledgers
+- Central admin users और permissions
+- Tenant provisioning queue jobs और database migration status
+- System-wide security audit events और telemetry
+
+### 3.2 One Separate Database Per Shop
+
+हर shop/business tenant का अपना अलग समर्पित (isolated) MySQL database होगा।
+
+```text
+Central SaaS Database
+    ├── Shop A → Database A (Fashion + Grocery)
+    ├── Shop B → Database B (Pharmacy + Electronics)
+    └── Shop C → Database C (General Retail)
+```
+
+**महत्वपूर्ण नियम:**
+- एक shop कई business categories चुन सकती है; सभी उसी एक tenant database में रहेंगी।
+- Category add/remove करने पर नया database नहीं बनेगा और existing database delete या split नहीं होगा।
+- Shop A का data Shop B को किसी भी परिस्थिति में accessible नहीं होगा।
+- Tenant database connection switch runtime पर verified hostname/token context से होगा।
+
+### 3.3 Large-Scale Migration & Central Reporting Strategy
+
+1. **Queue-Based Tenant Migrations:** जब भी कोई नया कोड/माइग्रेशन डिप्लॉय होगा, माइग्रेशन Laravel Queues (Horizon) के ज़रिए 20-20 टेनेंट्स के बैच में बैकग्राउंड में चलेगा ताकि सर्वर ब्लॉक न हो।
+2. **Central Aggregated Analytics:** सेंट्रल एडमिन पर पूरे प्लेटफॉर्म की कुल सेल्स/जीएमवी देखने के लिए सभी टेनेंट डेटाबेस को एक साथ क्वेरी नहीं किया जाएगा। इसके बजाय, प्रत्येक टेनेंट का महत्वपूर्ण सारांश (Daily GMV, Total Orders, Active SKUs) रात में एक शेड्यूल जॉब के ज़रिए Central DB के `shop_metrics_daily` टेबल में सिंक होगा।
+
+---
+
+## 4. Central SaaS Admin & Shop Provisioning
+
+Central admin निम्न कार्य कर सकेगा:
+
+- Shop create, activate, suspend, lock और deactivate करना
+- Unique Shop Code और initial database automate generate करना
+- Merchant credential lifecycle manage करना
+- Tenant database create, migrate और roll-back करना
+- Domain/subdomain map करना और SSL स्थिति जाँचना
+- Business categories और feature modules assign करना
+- Subscription, trial, discounts और custom pricing configure करना
+- Agent commission approve करना और Payout release करना
+- Automated database backup schedule और download logs देखना
+- Provisioning idempotent होगी: retry करने पर duplicate shop या unintended database create नहीं होगा।
+
+---
+
+## 5. Agent & Referral Partner Management System
+
+प्लेटफॉर्म में एक संपूर्ण एजेंट/पार्टनर इकोसिस्टम होगा जो नई दुकानें जोड़ने पर एजेंट को कमीशन देगा।
+
+### 5.1 Agent Lifecycle & Approval Flow
+
+1. **Registration:** एजेंट सेंट्रल पोर्टल पर अपना नाम, मोबाइल, ईमेल, पैन (PAN) और बैंक खाता/UPI विवरण भरकर रजिस्टर करेगा।
+2. **Company Verification:** Central Admin एजेंट के दस्तावेजों की पुष्टि करके उसका खाता **Approved** मार्क करेगा।
+3. **Unique Referral Code:** अप्रूवल के बाद एजेंट को एक अद्वितीय रेफरल कोड (उदा. `AGT-DELHI-102`) और रेफरल लिंक मिलेगा।
+4. **Vendor Onboarding:**
+   - जब कोई नया दुकानदार (Vendor) साइन अप करेगा, तो वह यह रेफरल कोड दर्ज कर सकता है।
+   - या एजेंट अपने पोर्टल से सीधे नई दुकान रजिस्टर कर सकता है।
+
+### 5.2 Commission Calculation Model
+
+- **Configurable Commission Types:**
+  - **One-Time Signup Commission:** नई दुकान के पहले भुगतान पर फिक्स राशि (उदा. ₹1,000)।
+  - **Recurring Subscription Commission:** जब तक दुकान एक्टिव रहेगी और मंथली/वार्षिक सब्सक्रिप्शन भरेगी, प्रत्येक रिन्यूअल पर फिक्स % (उदा. 10% या 15%)।
+  - **Custom Tier Commission:** शीर्ष एजेंटों के लिए कस्टमाइज्ड स्लैब।
+- **Commission Calculation:** सर्वर-साइड सब्सक्रिप्शन पेमेंट सफल होते ही `agent_commissions` टेबल में कमीशन क्रेडिट होगा (Status: `Pending`).
+- **TDS Deduction:** सरकारी नियमों के अनुसार लागू TDS (उदा. 5%) काटकर नेट पेयबल जनरेट होगा।
+
+### 5.3 Agent Dashboard & Payout Workflow
+
+- **Agent Portal:** एजेंट अपने डैशबोर्ड पर देख सकेगा:
+  - उसके कोड से रजिस्टर्ड कुल दुकानें और उनकी स्थिति (Active/Trial/Expired)
+  - कुल कमाई, पेंडिंग कमीशन और विथड्रॉवल हिस्ट्री
+- **Payout Settlement:**
+  - जब एजेंट का बैलेंस मिनिमम थ्रेशोल्ड (उदा. ₹2,000) पार करेगा, तो वह 'Request Payout' कर सकेगा।
+  - Central Admin भुगतान (NEFT/IMPS/UPI) करने के बाद UTR/Transaction Reference दर्ज करके पेआउट को `Paid` मार्क करेगा।
+
+---
+
+## 6. Public vs. Private Encrypted API Architecture
+
+### 6.1 दोहरी API नीति (Dual-Zone API Architecture)
+
+सुरक्षा और एसईओ (SEO) तथा कैशिंग के बीच संतुलन के लिए APIs को दो स्पष्ट ज़ोन में बाँटा गया है:
+
+| API Zone | Scope & Endpoints | Security & Encryption Protocol | Caching & Performance |
+| :--- | :--- | :--- | :--- |
+| **Public Storefront Zone** | Product Listing, Categories, Brands, Banners, Search, Store Info, Public SEO Meta, Sitemap | HTTPS + TLS 1.3 + Signed Headers (No Payload Encryption) | Edge CDN Cachable (Cloudflare, Varnish), Ultra-fast response (<150ms), Googlebot Friendly |
+| **Private Tenant Zone** | POS Billing, ERP, Inventory, Purchases, Suppliers, Customers, Cart, Checkout, Invoices, Payment Keys | HTTPS + TLS 1.3 + **Mandatory AES-256-GCM Payload Encryption (Ephemeral ECDH)** | Strict No-Cache, Short-lived Sessions, Replay Protected, Complete DevTools Privacy |
+
+### 6.2 Mandatory Application-Level Encryption Protocol (Private Zone)
+
+- **Algorithm:** Authenticated AES-256-GCM (Ciphertext, IV/Nonce, Auth Tag).
+- **Key Exchange:** Browser और Server के बीच ephemeral ECDH (Elliptic Curve Diffie-Hellman) से short-lived session keys बनेंगी।
+- **Merchant Key:** केवल सर्वर-साइड स्टोर रहेगी। यह कभी ब्राउज़र को नहीं भेजी जाएगी।
+- **DevTools Privacy:** Private endpoints पर Network Tab या Proxy में सिर्फ एन्क्रिप्टेड साइफरटेक्स्ट दिखेगा, संवेदनशील बिज़नेस डेटा या ग्राहक का विवरण नहीं।
+- **Exceptions:** पब्लिक कैटलॉग और इमेज/स्टैटिक एसेट्स एन्क्रिप्शन से बाहर रहेंगे ताकि परफॉरमेंस और सर्च इंजन क्रॉलिंग प्रभावित न हो।
+
+---
+
+## 7. Authentication, Authorization & Security
+
+- **Multi-Role RBAC:** Central Admin, Shop Owner, Store Manager, Cashier, Inventory Clerk, Agent, Customer.
+- **Session Security:** `HttpOnly`, `Secure`, `SameSite=Lax/Strict` कुकीज़ और Bearer Sanctum Tokens।
+- **Replay Protection:** प्रत्येक संवेदनशील म्यूटेशन में Unique Nonce, Timestamp Window (अधिकतम 300 सेकंड) और Idempotency Key होगी।
+- **Brute-Force & Rate Limiting:** IP और Tenant-level rate limiting (उदा. POS endpoints के लिए 120 req/min, Login के लिए 5 attempts/min)।
+- **Cross-Domain Session Isolation:** Domain बदलने पर कुकी और सेशन स्कोप स्वतः आइसोलेट होगा ताकि दो दुकानों के सेशन आपस में मिक्स न हों।
+
+---
+
+## 8. Domain, Subdomain & Automated SSL Architecture
+
+- **Default Subdomain:** प्रत्येक दुकान को `shopname.yourplatform.com` तुरंत सक्रिय मिलेगा।
+- **Custom Domain:** दुकानदार अपना कस्टम डोमेन (उदा. `store.rameshfashion.com` या `www.rameshfashion.com`) मैप कर सकता है।
+- **Automated SSL Pipeline:**
+  - Let's Encrypt / ACME HTTP-01 challenge ऑटोमेशन (via Caddy, Nginx / Traefik reverse proxy या Cloudflare for SaaS API).
+  - DNS CNAME वेरिफिकेशन के बाद 60 सेकंड के भीतर ऑटोमैटिक SSL सर्टिफिकेट जनरेट होगा।
+  - Unverified या एक्सपायर्ड डोमेन पर सुरक्षित फॉलबैक स्क्रीन दिखेगी।
+
+---
+
+## 9. Subscription Lifecycle, Grace Period & Data Retention
+
+- **Plan Types:** Per-category plans, All-category plan, Custom enterprise, Monthly और Annual.
+- **Server-Side Pricing:** छूट, कूपन और टैक्स केवल सर्वर-साइड कैलकुलेट होंगे।
+- **Lifecycle States:**
+  1. **Active:** सभी फीचर्स, POS और ऑनलाइन स्टोर चालू।
+  2. **Past Due / Grace Period (7 दिन):** रिन्यूअल फेल होने पर 7 दिन तक POS और स्टोर चलता रहेगा, एडमिन को बैनर अलर्ट दिखेगा।
+  3. **Suspended / Read-Only (अगले 23 दिन):** स्टोर बंद हो जाएगा, POS बिलिंग रुक जाएगी, लेकिन दुकानदार पिछले बिल्स, इन्वेंट्री और जीएसटी रिपोर्ट्स देख और एक्सेल/पीडीएफ एक्सपोर्ट कर सकेगा।
+  4. **Archived / Dormant (30 दिन बाद):** टेनेंट का पूरा डेटाबेस बैकअप (encrypted `.sql.gz`) S3/Storage में सुरक्षित रखा जाएगा और मुख्य डेटाबेस को इनएक्टिव मार्क किया जाएगा। 90 दिन बाद अंतिम नोटिस के साथ डेटा डिलीट किया जा सकता है।
+
+---
+
+## 10. Multi-Location / Multi-Branch & Cash Management
+
+- **Multiple Branches/Outlets:** एक दुकान की कई शाखाएं (उदा. Main Branch, Outlet 2) हो सकती हैं।
+- **Branch-Wise Inventory:** हर शाखा का अपना अलग स्टॉक और वेयरहाउस।
+- **POS Cash Registers (Tills):**
+  - **Open Shift:** कैशियर दिन की शुरुआत में ओपनिंग कैश (Floating Cash) दर्ज करेगा।
+  - **Mid-Shift Cash In/Out:** पेटी कैश या बैंक डिपॉजिट की एंट्री।
+  - **Close Shift:** दिन के अंत में सिस्टम कुल कैश, कार्ड, यूपीआई का हिसाब दिखाएगा और कैशियर वास्तविक कैश दर्ज करके डिफरेंस (Shortage/Overage) रिपोर्ट निकालेगा।
+  - **Z-Report:** दैनिक बिक्री समापन रिपोर्ट का स्वतः प्रिंट।
+
+---
+
+## 11. Multi-Gateway Payment System (5 Pre-Integrated Gateways + COD)
+
+दुकानदार अपनी पसंद के अनुसार पेमेंट गेटवे चुन सकता है। 
+
+### 11.1 Integrated Gateways
+
+1. **PhonePe Payment Gateway:** (Merchant ID, Salt Key, Salt Index)
+2. **PayU:** (Merchant Key, Merchant Salt)
+3. **Cashfree Payments:** (App ID, Secret Key, Test/Live Environment)
+4. **Easebuzz:** (Merchant Key, Salt Key, Sub-merchant support)
+5. **Razorpay:** (Key ID, Key Secret, Webhook Secret)
+6. **Cash on Delivery (COD):** (Pre-enabled by default)
+
+### 11.2 Shop Settings UI & Configuration Flow
+
+- **Navigation:** Shop Admin Dashboard ➔ **Settings** ➔ **Payment Gateways** Tab.
+- **Cards UI:** सभी 5 गेटवे के अलग-अलग टॉगल कार्ड्स दिखेंगे।
+- **Configuration Modal:**
+  - गेटवे पर क्लिक करने पर API Credentials डालने का फॉर्म खुलेगा (Test Mode / Live Mode टॉगल के साथ)।
+  - **Credential Security:** दुकानदार द्वारा दर्ज की गई API Keys और Secrets टेनेंट डेटाबेस में **AES-256-CBC एन्क्रिप्टेड** स्टोर होंगी, कभी भी प्लेनटेक्स्ट में नहीं।
+- **Activation Rule:** 
+  - जब दुकानदार किसी गेटवे की सही Keys डालकर **"Activate"** टॉगल ऑन करेगा, तो केवल वही गेटवे ऑनलाइन चेकआउट पर ग्राहकों को दिखेगा।
+  - दुकानदार एक साथ 1 या अधिक गेटवे एक्टिव कर सकता है (उदा. PhonePe + Cashfree)।
+  - **डिफ़ॉल्ट फॉलबैक नियम:** जब तक दुकानदार कम से कम एक ऑनलाइन पेमेंट गेटवे एक्टिव नहीं करता, तब तक स्टोर के चेकआउट पर **"केवल COD (Cash on Delivery)"** का विकल्प दिखाई देगा।
+- **Automated Webhooks:** प्रत्येक गेटवे के लिए सुरक्षित, सिग्नेचर-वेरिफाइड वेबहुक एंडपॉइंट होगा ताकि पेमेंट कटने के बाद अगर ब्राउज़र बंद भी हो जाए, तो भी ऑर्डर अपने आप 'Paid' मार्क हो जाए।
+
+---
+
+## 12. Multi-Courier Shipping & Logistics System (5 Aggregators)
+
+ऑनलाइन स्टोर से मिलने वाले ऑर्डर्स को शिप करने के लिए 5 शीर्ष कूरियर एग्रीगेटर्स पहले से इंटीग्रेटेड होंगे।
+
+### 12.1 Integrated Couriers
+
+1. **Shiprocket:** (Email/Password or API User & Token)
+2. **iThink Logistics:** (Access Token, Secret Key)
+3. **NimbusPost:** (Email, API Key)
+4. **Shipmozo:** (Public Key, Secret Key)
+5. **Shipway:** (Merchant ID, API License Key)
+
+### 12.2 Shop Settings UI & Automation Flow
+
+- **Navigation:** Shop Admin Dashboard ➔ **Settings** ➔ **Shipping & Logistics** Tab.
+- **Configuration & Activation:**
+  - दुकानदार अपने चुने हुए कूरियर एग्रीगेटर के क्रेडेंशियल्स दर्ज करके **"Activate"** करेगा।
+  - पिकअप एड्रेस (Pickup Warehouse Address), कॉन्टैक्ट पर्सन और RTO एड्रेस सेट करेगा।
+- **Automated Shipping Workflow:**
+  1. **Pincode Serviceability & Rate Calculator:** कार्ट और चेकआउट पर ग्राहक का पिनकोड डालते ही एक्टिव कूरियर पार्टनर से लाइव डिलीवरी चार्ज और अनुमानित दिन (Estimated Delivery) फेच होंगे।
+  2. **One-Click Order Push:** शॉप एडमिन में नया ऑर्डर आने पर दुकानदार "Ship Order" बटन दबाएगा।
+  3. **AWB & Label Generation:** कूरियर API से ट्रैकिंग नंबर (AWB Number) और 4x6 थर्मल शिपिंग लेबल (Shipping Label with Barcode) तुरंत जनरेट होगा।
+  4. **Pickup Request & Manifest:** कूरियर बॉय के लिए पिकअप रिक्वेस्ट और मैनिफेस्ट शीट एक क्लिक में डाउनलोड होगी।
+  5. **Live Tracking:** ग्राहक अपने 'My Orders' सेक्शन में सीधे लाइव पार्सल स्टेटस (In-transit, Out for delivery, Delivered) देख सकेगा।
+
+---
+
+## 13. WhatsApp, SMS & Email Communication Engine
+
+- **Supported Channels:**
+  - **WhatsApp Business API:** (Gupshup / Interakt / Meta Cloud API integration)
+  - **SMS Gateways:** (Fast2SMS / MSG91 / Textlocal DLT-approved templates)
+  - **Transactional Email:** (SMTP / SendGrid / Postmark / Amazon SES)
+- **Automated Triggers:**
+  - **POS Digital Bill:** काउंटर पर बिल बनते ही ग्राहक के मोबाइल पर WhatsApp/SMS के जरिए डिजिटल पीडीएफ बिल लिंक जाएगा (Zero paper billing option)।
+  - **Online Order Alerts:** Order Placed, Shipped (with Tracking Link), Delivered notifications.
+  - **Customer OTP:** पासवर्ड-लेस मोबाइल लॉगिन और हाई-वैल्यू सीओडी ऑर्डर्स के लिए OTP वेरिफिकेशन।
+  - **Low-Stock Alert:** जब किसी प्रोडक्ट का स्टॉक थ्रेशोल्ड से नीचे जाए, तो दुकानदार को दैनिक WhatsApp सारांश।
+
+---
+
+## 14. POS Billing, Hardware & Offline Mode Safeguards
+
+### 14.1 Hardware Integration
+
+- **Thermal Printers:** 58mm (2-inch) और 80mm (3-inch) ESC/POS प्रिंटिंग (USB, LAN, Bluetooth)।
+- **Weighing Scales (Electronic Tola/Kanta):** ग्रॉसरी, फल-सब्जी और मिठाई की दुकानों के लिए RS-232 / USB सीरियल पोर्ट के जरिए लाइव वजन सीधे बिलिंग स्क्रीन पर फेच होना।
+- **Barcode Scanners:** 1D/2D QR कोड स्कैनर (HID Keyboard emulation और continuous scan mode)।
+- **Cash Drawers:** थर्मल प्रिंटर के RJ11 पोर्ट से बिल प्रिंट होते ही कैश ड्रॉवर ऑटोमैटिक खुलेगा।
+
+### 14.2 Offline Mode Safeguards (इंटरनेट बंद होने पर)
+
+1. **Local Storage Buffer:** इंटरनेट चले जाने पर POS स्क्रीन क्रैश नहीं होगी; वह ब्राउज़र के **IndexedDB** में बिल बनाएगी और स्थानीय रसीद प्रिंट करेगी।
+2. **Serial Counter Offline Numbers:** ऑफलाइन बिलों के लिए विशेष नंबरिंग सीरीज (उदा. `OFF-BR1-1001`) होगी ताकि ऑनलाइन नंबरों से ओवरलैप न हो।
+3. **Re-connection Auto Sync:** इंटरनेट वापस आते ही बैकग्राउंड वर्कर ऑफलाइन बने सभी बिलों को सर्वर पर पुश करेगा।
+4. **Stock Conflict Resolution:** यदि कोई आइटम ऑफलाइन बिक गया और उसी समय ऑनलाइन भी ऑर्डर हो गया, तो सर्वर स्टॉक को नेगेटिव अलर्ट में डालकर मैनेजर को ऑडिट नोटिफिकेशन भेजेगा।
+
+---
+
+## 15. Comprehensive GST, E-Invoicing & E-Way Bill
+
+- **GST Calculations:** CGST + SGST (Intra-state) और IGST (Inter-state) का स्वतः निर्धारण।
+- **B2B vs B2C Billing:** 
+  - B2B बिलों के लिए ग्राहक का GSTIN दर्ज करते ही GSTN API से कंपनी का नाम और पता स्वतः वेरीफाई होगा।
+- **E-Invoicing (IRN & QR Code):**
+  - ₹5 करोड़ से अधिक टर्नओवर वाले व्यापारियों के लिए NIC पोर्टल या GST Suvidha Provider (GSP) के जरिए 1-क्लिक में IRN (Invoice Reference Number) और हस्ताक्षरित QR कोड बिल पर प्रिंट होगा।
+- **E-Way Bill Integration:**
+  - ₹50,000 से अधिक के इनवॉइस पर वाहन संख्या (Vehicle Number) और ट्रांसपोर्टर आईडी डालकर सीधे E-Way Bill नंबर जनरेट करने की सुविधा।
+- **GSTR 1 & GSTR 3B Ready Reports:** सेल्स रजिस्टर, HSN-wise समरी और टैक्स रिपोर्ट सीधे JSON/Excel फॉर्मेट में सीए (CA) को भेजने के लिए तैयार।
+
+---
+
+## 16. Category-Specific Features (Single Database Architecture)
+
+एक ही शॉप डेटाबेस में विभिन्न कैटेगरीज के लिए डायनेमिक फील्ड्स:
+
+- **Fashion & Apparel:** Size, Color, Fit, Gender, Matrix Variant creator, Barcode generation per variant.
+- **Grocery & Supermarket:** Lose/Unit pricing (kg, gram, litre), Batch no., Expiry date alerts, FSSAI number print on bill.
+- **Electronics & Mobile:** Single SKU के अंदर कई IMEI / Serial Numbers की ट्रैकिंग, वारंटी कार्ड जनरेशन।
+- **Pharmacy:** Batch number, Expiry date, Schedule H1 drug alert, Doctor prescription upload mandatory flag.
+- **General Retail:** Standard barcode, MRP, Selling price, Wholesale/B2B price tiers.
+
+---
+
+## 17. Updated Database Design & Entities
+
+### 17.1 Central SaaS Database (Platform Level)
+
+- `shops`: मुख्य टेनेंट रिकॉर्ड (Name, Slug, Status: Active/Grace/Suspended, DB Name, Created At).
+- `shop_domains`: Subdomains, Custom Domains, DNS verification status, SSL auto-renew status.
+- `shop_credentials`: Encrypted tenant credentials, API tokens, key rotation history.
+- `subscription_plans`: प्लान्स की सूची, Category-wise license fees, Add-on features.
+- `shop_subscriptions`: वर्तमान एक्टिव प्लान, एक्सपायरी डेट, ऑटो-रिन्यूअल स्थिति।
+- `subscription_payments`: गेटवे ट्रांजैक्शन आईडी, इनवॉइस राशि, पेमेंट स्थिति।
+- `saas_invoices`: कंपनी द्वारा दुकानदार को जारी GST इनवॉइस।
+- `agents`: एजेंट मास्टर (Name, Mobile, PAN, Bank Details, Status: Pending/Approved/Blocked).
+- `agent_referrals`: रेफरल कोड्स, मैप की गई दुकानें।
+- `agent_commissions`: प्रत्येक रिन्यूअल/साइनअप पर अर्जित कमीशन, टीडीएस कटौती।
+- `agent_payouts`: एजेंट को किए गए बैंक भुगतान, UTR/रिफरेंस नंबर।
+- `shop_metrics_daily`: सेंट्रलाइज्ड रिपोर्टिंग के लिए दैनिक संकलित डेटा (Daily GMV, Order Count).
+- `tenant_provisioning_jobs`: डेटाबेस क्रिएशन और माइग्रेशन की कतार और ऑडिट।
+- `central_admin_users`: सुपर एडमिन, सपोर्ट टीम और उनके रोल्स।
+
+### 17.2 Tenant Database (Shop Level)
+
+- **Organization & Access:** `branches`, `warehouses`, `users`, `roles`, `permissions`, `audit_logs`.
+- **Payment & Courier Configurations:**
+  - `tenant_payment_gateways`: 5 गेटवे के एन्क्रिप्टेड क्रेडेंशियल्स, एक्टिव टॉगल, टेस्ट/लाइव मोड।
+  - `tenant_shipping_providers`: 5 कूरियर पार्टनर्स के क्रेडेंशियल्स, डिफॉल्ट पिकअप एड्रेस, एक्टिव टॉगल।
+  - `tenant_notification_settings`: WhatsApp, SMS, Email API कीज़ और टेम्प्लेट सेटिंग्स।
+- **Catalog & Attributes:** `business_categories`, `brands`, `categories`, `attributes`, `attribute_values`, `products`, `product_variants`, `product_serials_imei`, `batches`.
+- **Inventory & Logistics:** `inventory`, `stock_movements`, `stock_transfers`, `shipping_rates`, `pincodes`.
+- **Sales, POS & Billing:**
+  - `cash_registers`, `pos_shifts` (Cash in/out, shortage/overage).
+  - `customers`, `customer_addresses`, `carts`, `cart_items`.
+  - `orders`, `order_items`, `order_shipments` (AWB, Label URL, Courier name).
+  - `invoices`, `invoice_items`, `e_invoices` (IRN, QR Code), `e_way_bills`.
+  - `payments` (Transactions, gateway response, split modes).
+  - `returns`, `return_items`, `coupons`.
+- **Suppliers & Purchase:** `suppliers`, `purchase_orders`, `purchase_bills`, `purchase_returns`, `supplier_ledgers`.
+
+---
+
+## 18. Security Testing & Acceptance Criteria
+
+रिलीज़ से पहले निम्न स्वचालित और मैन्युअल परीक्षण अनिवार्य होंगे:
+
+1. **Dual-Zone API Verification:**
+   - Storefront APIs (Products, Categories) बिना एन्क्रिप्शन के तेज गति और वैध HTTP Cache Headers के साथ काम करें।
+   - Private Tenant/POS APIs बिना वैध Ephemeral ECDH Key और AES-256-GCM एन्क्रिप्शन के डेटा स्वीकार न करें और DevTools में साइफरटेक्स्ट दिखाएं।
+2. **Payment Gateway Fallback Test:**
+   - जब तक कोई ऑनलाइन गेटवे एक्टिव न हो, चेकआउट पर सिर्फ COD दिखे।
+   - PhonePe/Cashfree एक्टिव करने पर तुरंत गेटवे ऑप्शन लोड हो और टेस्ट ट्रांजैक्शन सफल हो।
+3. **Courier Automation Test:**
+   - डमी ऑर्डर पर Shiprocket/NimbusPost से AWB जनरेट हो और 4x6 शिपिंग लेबल सही बारकोड के साथ डाउनलोड हो।
+4. **Offline POS Sync Test:**
+   - नेटवर्क केबल हटाने पर POS पर बिल प्रिंट हो; नेटवर्क दोबारा जोड़ने पर बिना डुप्लीकेट बने बैकएंड पर सिंक हो।
+5. **Agent Commission Test:**
+   - रेफरल कोड वाली दुकान का सब्सक्रिप्शन पेमेंट सफल होते ही एजेंट के लेजर में सही कमीशन और टीडीएस क्रेडिट हो।
+6. **Multi-Tenant Isolation Test:**
+   - Shop A का क्रेडेंशियल या टोकन किसी भी परिस्थिति में Shop B का डेटाबेस एक्सेस न कर सके।
+
+---
+
+## 19. Section-by-Section Development Workflow
+
+AI coding agent को पूरा प्रोजेक्ट एक ही बार में नहीं बनाना है। निम्नलिखित क्रम में चरणबद्ध कार्य होगा:
+
+1. **Phase 1: Architecture & Multi-Tenancy Core**
+   - Laravel 12 + Vite Multi-Entry React सेटअप।
+   - Central DB और Dynamic Tenant DB Connection Manager।
+   - Subdomain और Tenant Resolution Middleware।
+2. **Phase 2: Security & Dual-Zone API Gateway**
+   - Public Storefront API Routing।
+   - Private API AES-256-GCM + ECDH Encryption Layer।
+3. **Phase 3: Central Admin, Subscriptions & Agent System**
+   - Shop Provisioning Pipeline (Automated DB Creation & Migration).
+   - Agent Portal, Referral Tracking, Commission & Payout Engine.
+   - Subscription Lifecycle & Grace Period Guard.
+4. **Phase 4: ERP, Inventory & Multi-Branch Catalog**
+   - Products, Matrix Variants, Batches, Serials, Warehouses.
+   - Purchase Management & Supplier Ledgers.
+5. **Phase 5: High-Speed POS Billing & Hardware Integration**
+   - POS Counter Screen (Barcode, Weighing Scale, Thermal Printer bridge).
+   - Cashier Shifts, Hold Bill, Offline Buffer & Sync.
+   - GST Invoicing, E-Invoice (IRN/QR) & E-Way Bill.
+6. **Phase 6: 5 Payment Gateways & 5 Courier Aggregators**
+   - Settings UI for Merchant Keys (PhonePe, PayU, Cashfree, Easebuzz, Razorpay).
+   - Settings UI for Couriers (Shiprocket, iThink, NimbusPost, Shipmozo, Shipway).
+   - COD Fallback & Webhook Verification.
+   - 1-Click Label, AWB Generation & Live Tracking.
+7. **Phase 7: SEO Storefront & Notification Engine**
+   - Fast Caching Storefront, Cart, Checkout.
+   - WhatsApp / SMS Digital Bills & Notifications.
+   - Android/iOS WebView Shell & Real-Device Testing.
+
+---
+
+## 20. Final Non-Negotiable Rules
+
+1. **One integrated Laravel + React project** (Separate Vite bundles for Storefront, POS, Admin).
+2. **Strict Multi-Tenancy:** 1 Central DB + ठीक 1 Tenant DB प्रति दुकान (कैटेगरी बढ़ने पर DB नहीं बदलेगा)।
+3. **Dual-Zone API Policy:** Storefront खुला और SEO-फ्रेंडली रहेगा; POS, ERP और एडमिन पूरी तरह AES-256-GCM एन्क्रिप्टेड रहेगा।
+4. **5 Payment Gateways + COD:** सेटिंग्स में कीज़ एक्टिव होने पर ही लाइव होगा, अन्यथा केवल COD दिखाई देगा।
+5. **5 Courier Aggregators:** सेटिंग्स से एक्टिव करके 1-क्लिक AWB और लेबल प्रिंटिंग अनिवार्य होगी।
+6. **Full Agent Lifecycle:** रेफरल ट्रैकिंग, ऑटो कमीशन, टीडीएस और पेआउट सिस्टम अनिवार्य रहेगा।
+7. **Hardware & Offline Resilient POS:** थर्मल प्रिंटर, वेइंग स्केल और इंटरनेट कटने पर ऑफलाइन बिलिंग सपोर्ट होना चाहिए।
+8. **Automated WhatsApp/SMS Bills:** हर बिक्री पर बिना कागज़ के डिजिटल बिल भेजने की सुविधा होगी।
+9. **Development section-by-section होगा;** प्रत्येक फेज के टेस्ट और अप्रूवल के बाद ही अगला फेज शुरू होगा।
