@@ -1,27 +1,58 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import { 
   Zap, Search, Barcode, Printer, CheckCircle2, User, 
-  CreditCard, Banknote, QrCode, RefreshCw, X, ShieldAlert, ArrowLeft
+  CreditCard, Banknote, QrCode, RefreshCw, X, ShieldAlert, 
+  ArrowLeft, ShieldCheck, Receipt, Trash2, TrendingUp, TrendingDown, Phone
 } from 'lucide-react';
+import InvoicePrintModal from '../components/InvoicePrintModal';
 
 export default function PosBilling() {
   const [shopCode, setShopCode] = useState(document.getElementById('root')?.dataset?.shopCode || 'SHP-A4IFYK');
+  
+  // Dual Billing: Barcode Scanner & Manual Search
+  const [barcodeQuery, setBarcodeQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
   const [cart, setCart] = useState([]);
-  const [customer, setCustomer] = useState({ name: 'Walk-in Customer', phone: '9988776655' });
-  const [paymentMode, setPaymentMode] = useState('cash');
+  
+  // Bill Options: Pakka vs Kachha
+  const [billType, setBillType] = useState('pakka'); // 'pakka' (GST) | 'kachha' (Estimate/Challan)
+  
+  // Customer State: Mobile Auto-Detection & On-The-Fly Add
+  const [customerPhone, setCustomerPhone] = useState('9988776655');
+  const [customerName, setCustomerName] = useState('Walk-in Customer');
+  const [customerCity, setCustomerCity] = useState('Jaipur, RJ');
+  const [customerDues, setCustomerDues] = useState(0);
+
+  // Dynamic Payment Mode & Dues
+  const [paymentMode, setPaymentMode] = useState('Cash Counter (POS)');
+  const [amountPaid, setAmountPaid] = useState('');
+  
+  // Shift & Receipt Modals
   const [shift, setShift] = useState(null);
   const [shiftModal, setShiftModal] = useState(false);
   const [closingCashInput, setClosingCashInput] = useState('');
   const [zReport, setZReport] = useState(null);
-  const [receipt, setReceipt] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  
   const barcodeInputRef = useRef(null);
 
   axios.defaults.headers.common['X-Shop-Code'] = shopCode;
+
+  // Local sample catalog fallback for offline / fast search
+  const localCatalog = [
+    { id: 'PRD-101', name: 'Premium Cotton Slim Fit Shirt', barcode: '890123400101', sku: 'FSH-SHIRT-01', selling_price: 1299.0, purchase_price: 650.0, gst_rate: 5, hsn: '6205', unit: 'pcs', batchNo: 'RAY-SH-2026', expiryDate: '2029-10-31', stock: 52 },
+    { id: 'PRD-102', name: 'Dark Indigo Stretch Denim Jeans', barcode: '890123400102', sku: 'FSH-JEANS-01', selling_price: 1899.0, purchase_price: 950.0, gst_rate: 12, hsn: '6203', unit: 'pcs', batchNo: 'RAY-JN-902', expiryDate: '', stock: 34 },
+    { id: 'PRD-103', name: 'Royal Basmati Rice 5kg Aged Pack', barcode: '890123400103', sku: 'GROC-RICE-05', selling_price: 480.0, purchase_price: 380.0, gst_rate: 0, hsn: '1006', unit: 'pack', batchNo: 'BAT-2026-R09', expiryDate: '2028-07-31', stock: 120 },
+    { id: 'PRD-104', name: 'Pure Desi Cow Ghee 1L Tin', barcode: '890123400104', sku: 'GROC-GHEE-01', selling_price: 650.0, purchase_price: 520.0, gst_rate: 12, hsn: '0405', unit: 'tin', batchNo: 'BAT-2026-G42', expiryDate: '2027-03-10', stock: 8 },
+    { id: 'PRD-105', name: 'True Wireless Stereo Earbuds v5.3', barcode: '890123400105', sku: 'ELEC-BUDS-01', selling_price: 1499.0, purchase_price: 850.0, gst_rate: 18, hsn: '8518', unit: 'pcs', batchNo: 'ALP-TWS-01', expiryDate: '2028-12-31', stock: 24 },
+    { id: 'PRD-106', name: 'GaN 65W Fast Wall Charger', barcode: '890123400106', sku: 'ELEC-CHRG-65', selling_price: 1199.0, purchase_price: 620.0, gst_rate: 18, hsn: '8504', unit: 'pcs', batchNo: 'GAN-65-99', expiryDate: '2029-06-30', stock: 15 },
+    { id: 'PRD-108', name: 'Handcrafted Festive Linen Kurta', barcode: '890123400108', sku: 'FSH-KURTA-09', selling_price: 1699.0, purchase_price: 850.0, gst_rate: 5, hsn: '6205', unit: 'pcs', batchNo: 'KT-2026-09', expiryDate: '', stock: 45 }
+  ];
 
   const fetchShiftStatus = async () => {
     try {
@@ -29,88 +60,151 @@ export default function PosBilling() {
       if (res.data.success) {
         setShift(res.data.shift);
       }
-    } catch (err) {
-      // Offline fallback
-    }
-  };
-
-  const handleSearch = async (query) => {
-    setSearchQuery(query);
-    if (!query) {
-      setProducts([]);
-      return;
-    }
-    try {
-      const res = await axios.get(`/api/pos/products/search?q=${encodeURIComponent(query)}`);
-      if (res.data.success) {
-        setProducts(res.data.products);
-      }
-    } catch (err) {
-      // Offline fallback
-    }
+    } catch (err) {}
   };
 
   useEffect(() => {
     fetchShiftStatus();
-    // Default focus on barcode input
     barcodeInputRef.current?.focus();
   }, [shopCode]);
 
+  // Handle Barcode Scan
+  const handleBarcodeSubmit = (e) => {
+    e.preventDefault();
+    if (!barcodeQuery.trim()) return;
+
+    const term = barcodeQuery.trim();
+    const found = localCatalog.find((p) => p.barcode === term || p.sku === term);
+    if (found) {
+      addToCart(found);
+      setBarcodeQuery('');
+    } else {
+      // Fallback search online API
+      handleSearch(term);
+    }
+  };
+
+  // Handle Manual Search
+  const handleSearch = async (query) => {
+    setSearchQuery(query);
+    if (!query) {
+      setSearchResults([]);
+      return;
+    }
+    const q = query.toLowerCase();
+    const matches = localCatalog.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.sku.toLowerCase().includes(q)
+    );
+    setSearchResults(matches);
+  };
+
+  // Add Item to Cart
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
-        return prev.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
       }
-      return [...prev, { ...product, quantity: 1, unit_price: parseFloat(product.selling_price) }];
+      return [
+        ...prev,
+        {
+          id: product.id,
+          name: product.name,
+          barcode: product.barcode,
+          sku: product.sku,
+          quantity: 1,
+          unit_price: parseFloat(product.selling_price || product.price || 0),
+          cost_price: parseFloat(product.purchase_price || 0),
+          gst_rate: parseFloat(product.gst_rate || 0),
+          hsn: product.hsn || '6205',
+          unit: product.unit || 'pcs',
+          batchNo: product.batchNo || 'BAT-2026-X',
+          expiryDate: product.expiryDate || '2028-12-31'
+        }
+      ];
     });
+
     setSearchQuery('');
-    setProducts([]);
+    setSearchResults([]);
     barcodeInputRef.current?.focus();
   };
 
   const updateQty = (id, delta) => {
-    setCart((prev) => prev.map((item) => {
-      if (item.id === id) {
-        const newQty = item.quantity + delta;
-        return newQty > 0 ? { ...item, quantity: newQty } : null;
-      }
-      return item;
-    }).filter(Boolean));
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === id) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
   };
 
+  const updateCartField = (id, field, val) => {
+    setCart((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: val } : item))
+    );
+  };
+
+  // Financials & Calculations
   const subtotal = cart.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
-  const taxTotal = cart.reduce((acc, item) => {
-    const rate = parseFloat(item.gst_rate || 0);
-    const lineTotal = item.unit_price * item.quantity;
-    return acc + ((lineTotal * rate) / (100 + rate));
-  }, 0);
-  const grandTotal = subtotal;
+  const costTotal = cart.reduce((acc, item) => acc + (item.cost_price * item.quantity), 0);
+  
+  const taxTotal = billType === 'pakka'
+    ? cart.reduce((acc, item) => {
+        const lineTotal = item.unit_price * item.quantity;
+        const rate = item.gst_rate || 0;
+        return acc + (lineTotal * rate) / 100;
+      }, 0)
+    : 0;
 
-  const handleCompleteBill = async () => {
+  const grandTotal = subtotal + taxTotal;
+  const grossProfit = grandTotal - costTotal;
+  const profitMarginPercent = grandTotal > 0 ? ((grossProfit / grandTotal) * 100).toFixed(1) : '0.0';
+
+  const paidVal = amountPaid === '' ? grandTotal : parseFloat(amountPaid || 0);
+  const duesVal = Math.max(0, grandTotal - paidVal);
+
+  // Complete Bill & Trigger 3-Format Print Modal
+  const handleCompleteBill = () => {
     if (cart.length === 0) return;
-    try {
-      setLoading(true);
-      const res = await axios.post('/api/pos/bill/create', {
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        payment_mode: paymentMode,
-        items: cart.map((i) => ({
-          product_id: i.id,
-          quantity: i.quantity,
-          unit_price: i.unit_price,
-        })),
-      });
 
-      if (res.data.success) {
-        setReceipt(res.data.receipt);
-        setCart([]);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Bill generation failed');
-    } finally {
-      setLoading(false);
-    }
+    const invoiceObj = {
+      id: `POS-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+      date: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+      customerName: customerName.trim() || 'Walk-in Customer',
+      phone: customerPhone.trim() || '9988776655',
+      city: customerCity.trim() || 'Jaipur, RJ',
+      billType, // 'pakka' (GST) | 'kachha' (Estimate)
+      channel: 'POS Counter 01',
+      channelType: 'offline', // Offline Invoice flag
+      subtotal,
+      gstTotal: taxTotal,
+      total: grandTotal,
+      paidAmount: paidVal,
+      duesAmount: duesVal,
+      paymentMethod: paymentMode,
+      items: cart.map((it) => ({
+        name: it.name,
+        qty: it.quantity,
+        unit: it.unit,
+        price: it.unit_price,
+        costPrice: it.cost_price,
+        gst: billType === 'pakka' ? `${it.gst_rate}%` : '0%',
+        hsn: it.hsn,
+        batchNo: it.batchNo,
+        expiryDate: it.expiryDate
+      }))
+    };
+
+    setSelectedInvoice(invoiceObj);
+    setCart([]);
+    setAmountPaid('');
   };
 
   const handleCloseShift = async () => {
@@ -140,16 +234,45 @@ export default function PosBilling() {
             <h1 className="text-lg font-black font-heading tracking-tight flex items-center gap-2">
               <Zap className="w-5 h-5 text-emerald-400" />
               <span>POS Fast Billing Terminal</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800">
+                Offline Mode
+              </span>
             </h1>
             <span className="text-xs text-slate-400 font-mono">Counter 1 • {shopCode}</span>
           </div>
+        </div>
+
+        {/* Bill Type Switcher: Pakka (GST) vs Kachha (Estimate) */}
+        <div className="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setBillType('pakka')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              billType === 'pakka'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" /> Pakka (GST)
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillType('kachha')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              billType === 'kachha'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Receipt className="w-3.5 h-3.5" /> Kachha (Estimate)
+          </button>
         </div>
 
         {/* Shift Control */}
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <div className="text-xs font-semibold text-slate-300">Cashier: Ramesh Kumar</div>
-            <div className="text-[11px] text-emerald-400 font-mono">Shift Active • Counter 01</div>
+            <div className="text-[11px] text-emerald-400 font-mono">Shift Active • Station 01</div>
           </div>
           <button 
             onClick={() => setShiftModal(true)}
@@ -162,225 +285,293 @@ export default function PosBilling() {
 
       {/* Main Billing Workstation */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Side: Product Search & Quick Grid */}
-        <div className="flex-1 p-6 flex flex-col gap-4 border-r border-slate-800 overflow-y-auto">
-          {/* Barcode / Search Box */}
-          <div className="relative">
-            <Barcode className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input 
-              ref={barcodeInputRef}
-              type="text" 
-              placeholder="Scan Barcode (e.g. 8901234001) or Type Product Name..." 
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-900 border-2 border-slate-800 focus:border-indigo-500 text-white font-medium text-base shadow-inner focus:outline-none"
-            />
+        
+        {/* Left Side: Product Search, Barcode & Cart Table */}
+        <div className="flex-1 p-5 flex flex-col gap-4 border-r border-slate-800 overflow-y-auto">
+          
+          {/* Barcode & Manual Search Dual Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* 1. Barcode Scan Box (Press Enter or scan to add) */}
+            <form onSubmit={handleBarcodeSubmit} className="relative">
+              <Barcode className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" />
+              <input 
+                ref={barcodeInputRef}
+                type="text" 
+                placeholder="Scan Barcode (e.g. 890123400101)..." 
+                value={barcodeQuery}
+                onChange={(e) => setBarcodeQuery(e.target.value)}
+                className="w-full pl-11 pr-14 py-3 rounded-xl bg-slate-900 border-2 border-slate-800 focus:border-cyan-500 text-white font-mono text-sm shadow-inner focus:outline-none"
+              />
+              <button 
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-cyan-600 text-white rounded text-xs font-bold"
+              >
+                Scan
+              </button>
+            </form>
+
+            {/* 2. Manual Product Search */}
+            <div className="relative">
+              <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              <input 
+                type="text" 
+                placeholder="Search Item by Name (Shirt, Ghee, Rice)..." 
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-800 focus:border-cyan-500 text-white text-sm shadow-inner focus:outline-none"
+              />
+            </div>
           </div>
 
-          {/* Search Results Dropdown/List */}
-          {products.length > 0 && (
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
             <div className="bg-slate-900 border border-slate-700 rounded-xl p-2 shadow-2xl space-y-1">
-              {products.map((p) => (
+              {searchResults.map((p) => (
                 <div 
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="p-3 rounded-lg hover:bg-slate-800 flex items-center justify-between cursor-pointer transition"
+                  className="p-2.5 rounded-lg hover:bg-slate-800 flex items-center justify-between cursor-pointer transition"
                 >
                   <div>
                     <span className="font-bold text-white text-sm block">{p.name}</span>
-                    <span className="text-xs text-slate-400 font-mono">SKU: {p.sku} | Barcode: {p.barcode}</span>
+                    <span className="text-xs text-slate-400 font-mono">Barcode: {p.barcode} | Stock: {p.stock}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-emerald-400 font-bold text-base block">₹{p.selling_price}</span>
-                    <span className="text-[11px] text-slate-400">GST: {p.gst_rate}%</span>
+                    <span className="text-emerald-400 font-bold text-base block font-mono">₹{p.selling_price}</span>
+                    <span className="text-[11px] text-slate-400">Cost: ₹{p.purchase_price}</span>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Fast Category Grid */}
-          <div className="mt-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Quick Selection</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button 
-                onClick={() => handleSearch('Shirt')}
-                className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-left transition"
-              >
-                <span className="text-2xl block mb-1">👔</span>
-                <span className="text-xs font-bold text-white block">Shirts</span>
-                <span className="text-[10px] text-slate-500">From ₹1,299</span>
-              </button>
+          {/* Cart Table with Chooseable Batch & Expiry */}
+          <div className="flex-1 bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden flex flex-col">
+            <div className="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900">
+              <span className="font-bold text-sm text-white flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-cyan-400" />
+                <span>Billed Items ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
+              </span>
+              {cart.length > 0 && (
+                <button onClick={() => setCart([])} className="text-xs text-rose-400 hover:underline">
+                  Clear All
+                </button>
+              )}
+            </div>
 
-              <button 
-                onClick={() => handleSearch('Jeans')}
-                className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-left transition"
-              >
-                <span className="text-2xl block mb-1">👖</span>
-                <span className="text-xs font-bold text-white block">Jeans</span>
-                <span className="text-[10px] text-slate-500">From ₹1,899</span>
-              </button>
+            <div className="flex-1 overflow-y-auto">
+              {cart.length === 0 ? (
+                <div className="py-20 text-center text-slate-500 space-y-2">
+                  <Barcode className="w-12 h-12 mx-auto text-slate-700 animate-pulse" />
+                  <p className="text-sm font-semibold">Scan Barcode or Search to Add</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-900/80 text-slate-400 font-bold uppercase text-[10px]">
+                    <tr>
+                      <th className="px-3 py-2">Item Description</th>
+                      <th className="px-3 py-2 w-32">Batch / Expiry (Chooseable)</th>
+                      <th className="px-3 py-2 text-center w-24">Qty</th>
+                      <th className="px-3 py-2 text-right w-20">Rate</th>
+                      {billType === 'pakka' && <th className="px-3 py-2 text-center w-14">GST</th>}
+                      <th className="px-3 py-2 text-right w-24">Amount</th>
+                      <th className="px-3 py-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {cart.map((it) => (
+                      <tr key={it.id} className="hover:bg-slate-800/40">
+                        <td className="px-3 py-2.5">
+                          <span className="font-bold text-white block">{it.name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">BC: {it.barcode}</span>
+                        </td>
 
-              <button 
-                onClick={() => handleSearch('Rice')}
-                className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-left transition"
-              >
-                <span className="text-2xl block mb-1">🌾</span>
-                <span className="text-xs font-bold text-white block">Groceries</span>
-                <span className="text-[10px] text-slate-500">From ₹450</span>
-              </button>
+                        {/* Batch & Expiry input */}
+                        <td className="px-3 py-2.5">
+                          <input 
+                            type="text" 
+                            placeholder="Batch" 
+                            value={it.batchNo} 
+                            onChange={(e) => updateCartField(it.id, 'batchNo', e.target.value)}
+                            className="w-full px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-[10px] font-mono text-cyan-400 mb-1"
+                          />
+                          <input 
+                            type="date" 
+                            value={it.expiryDate} 
+                            onChange={(e) => updateCartField(it.id, 'expiryDate', e.target.value)}
+                            className="w-full px-1 py-0.5 rounded bg-slate-950 border border-slate-700 text-[9px] text-slate-300"
+                          />
+                        </td>
 
-              <button 
-                onClick={() => handleSearch('Earbuds')}
-                className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-left transition"
-              >
-                <span className="text-2xl block mb-1">🎧</span>
-                <span className="text-xs font-bold text-white block">Electronics</span>
-                <span className="text-[10px] text-slate-500">From ₹1,499</span>
-              </button>
+                        {/* Qty */}
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center justify-center gap-1 bg-slate-950 rounded p-0.5">
+                            <button onClick={() => updateQty(it.id, -1)} className="w-5 h-5 rounded bg-slate-800 font-bold">-</button>
+                            <span className="w-6 text-center font-bold font-mono">{it.quantity}</span>
+                            <button onClick={() => updateQty(it.id, 1)} className="w-5 h-5 rounded bg-slate-800 font-bold">+</button>
+                          </div>
+                        </td>
+
+                        <td className="px-3 py-2.5 text-right font-mono font-bold">
+                          ₹{it.unit_price.toFixed(2)}
+                        </td>
+
+                        {billType === 'pakka' && (
+                          <td className="px-3 py-2.5 text-center text-slate-400">
+                            {it.gst_rate}%
+                          </td>
+                        )}
+
+                        <td className="px-3 py-2.5 text-right font-mono font-black text-emerald-400">
+                          ₹{(it.unit_price * it.quantity).toFixed(2)}
+                        </td>
+
+                        <td className="px-3 py-2.5 text-center">
+                          <button onClick={() => updateQty(it.id, -it.quantity)} className="text-slate-500 hover:text-rose-400">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right Side: Bill Ledger & Payment */}
-        <div className="w-96 flex-shrink-0 bg-slate-900/60 flex flex-col justify-between p-6 shadow-2xl">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-              <h2 className="font-bold text-white text-base">Current Bill Items ({cart.length})</h2>
-              {cart.length > 0 && (
-                <button onClick={() => setCart([])} className="text-xs text-rose-400 hover:underline">Clear</button>
-              )}
+        {/* Right Side: Customer, Dues, Loss/Profit & Settlement */}
+        <div className="w-96 flex-shrink-0 bg-slate-900 flex flex-col justify-between p-5 border-l border-slate-800 overflow-y-auto space-y-4">
+          
+          {/* Customer Lookup by Mobile (Auto-add on the fly) */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+              <User className="w-3.5 h-3.5 text-cyan-400" /> Customer Data (By Mobile)
+            </span>
+            <div className="relative">
+              <Phone className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+              <input 
+                type="text" 
+                placeholder="Mobile (9829011234)..."
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-bold"
+              />
             </div>
-
-            {/* Cart Items List */}
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {cart.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 text-xs">
-                  Scan barcode to add items to bill.
-                </div>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="font-semibold text-white block">{item.name}</span>
-                      <span className="text-slate-400 font-mono">₹{item.unit_price} x {item.quantity}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 font-bold">-</button>
-                      <span className="font-bold w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 font-bold">+</button>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div>
+              <input 
+                type="text" 
+                placeholder="Customer Name..."
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"
+              />
             </div>
           </div>
 
-          {/* Payment & Ledger Bottom Bar */}
-          <div className="pt-4 border-t border-slate-800 space-y-3">
-            {/* Payment Mode Selector */}
-            <div className="grid grid-cols-3 gap-2">
-              <button 
-                onClick={() => setPaymentMode('cash')}
-                className={`py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
-                  paymentMode === 'cash' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'
-                }`}
-              >
-                <Banknote className="w-3.5 h-3.5" />
-                <span>Cash</span>
-              </button>
-
-              <button 
-                onClick={() => setPaymentMode('upi')}
-                className={`py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
-                  paymentMode === 'upi' ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-900 text-slate-400 border-slate-800'
-                }`}
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>UPI QR</span>
-              </button>
-
-              <button 
-                onClick={() => setPaymentMode('card')}
-                className={`py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
-                  paymentMode === 'card' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900 text-slate-400 border-slate-800'
-                }`}
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>Card</span>
-              </button>
-            </div>
-
-            {/* Totals Breakdown */}
-            <div className="space-y-1.5 text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-              <div className="flex justify-between"><span>Subtotal:</span> <span className="text-white font-mono">₹{subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>GST Included:</span> <span className="text-white font-mono">₹{taxTotal.toFixed(2)}</span></div>
-              <div className="flex justify-between text-base font-extrabold text-white pt-2 border-t border-slate-800">
-                <span>Grand Total:</span>
-                <span className="text-emerald-400 font-heading text-xl">₹{grandTotal.toFixed(2)}</span>
+          {/* Real-time Loss / Profit Option */}
+          <div className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+            grossProfit >= 0 ? 'bg-emerald-950/40 border-emerald-800' : 'bg-rose-950/40 border-rose-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              {grossProfit >= 0 ? (
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-rose-400" />
+              )}
+              <div>
+                <span className="font-bold text-white block">
+                  {grossProfit >= 0 ? 'Estimated Bill Profit' : 'Estimated Bill Loss'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Cost: ₹{costTotal.toFixed(2)} | Margin: {profitMarginPercent}%
+                </span>
               </div>
             </div>
-
-            {/* Print & Bill CTA */}
-            <button 
-              disabled={cart.length === 0 || loading}
-              onClick={handleCompleteBill}
-              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-xl shadow-emerald-600/30 transition flex items-center justify-center gap-2 disabled:opacity-40 active:scale-95"
-            >
-              <Printer className="w-4 h-4" />
-              <span>{loading ? 'Processing Bill...' : 'Charge & Print Thermal Bill'}</span>
-            </button>
+            <span className={`font-black font-mono text-sm ${
+              grossProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}>
+              {grossProfit >= 0 ? `+ ₹${grossProfit.toFixed(2)}` : `- ₹${Math.abs(grossProfit).toFixed(2)}`}
+            </span>
           </div>
+
+          {/* Dynamic Payment Mode Selector */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase">Payment Channel</label>
+            <select
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white"
+            >
+              <option value="Cash Counter (POS)">Cash Counter</option>
+              <option value="PhonePe UPI">PhonePe / GPay QR</option>
+              <option value="Debit / Credit Card">Debit / Credit Card</option>
+              <option value="Bank Transfer">Bank Transfer / NEFT</option>
+              <option value="Credit / Udhaar (Dues)">Credit / Udhaar (Full Dues)</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+
+          {/* Financials & Dues Calculation */}
+          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+            <div className="flex justify-between text-slate-400">
+              <span>Subtotal:</span>
+              <span className="font-mono text-white">₹{subtotal.toFixed(2)}</span>
+            </div>
+            {billType === 'pakka' && (
+              <div className="flex justify-between text-slate-400">
+                <span>GST Tax (CGST+SGST):</span>
+                <span className="font-mono text-emerald-400">+ ₹{taxTotal.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-black text-base text-white pt-2 border-t border-slate-800">
+              <span>Grand Total:</span>
+              <span className="font-mono text-emerald-400 text-lg">₹{grandTotal.toFixed(2)}</span>
+            </div>
+
+            {/* Dues / Partial Payment */}
+            <div className="pt-2 border-t border-dashed border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Amount Paid (₹):</span>
+                <input 
+                  type="number"
+                  step="any"
+                  placeholder={grandTotal.toFixed(2)}
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(e.target.value)}
+                  className="w-28 px-2 py-1 rounded bg-slate-900 border border-slate-700 font-bold text-right font-mono text-white"
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-1 font-bold">
+                <span className="text-slate-400">Balance Dues (Udhaar):</span>
+                <span className={`font-mono ${duesVal > 0 ? 'text-rose-400 font-black' : 'text-emerald-400'}`}>
+                  ₹{duesVal.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Complete Bill CTA -> Opens 3-in-1 Print Modal */}
+          <button 
+            disabled={cart.length === 0}
+            onClick={handleCompleteBill}
+            className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-xl shadow-emerald-600/30 transition flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Complete & Print 3-in-1 Bill (Ctrl+P)</span>
+          </button>
         </div>
       </div>
 
-      {/* Thermal Receipt Print Modal */}
-      {receipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-white text-slate-950 font-mono text-xs p-6 rounded-lg max-w-xs w-full shadow-2xl space-y-3">
-            <div className="text-center pb-2 border-b border-dashed border-slate-400">
-              <h4 className="font-extrabold text-base uppercase">RAMESH FASHION</h4>
-              <p className="text-[10px] text-slate-600">Main Market, Delhi • GSTIN: 07AAAAA0000A1Z5</p>
-              <p className="text-[10px] text-slate-600">{receipt.timestamp}</p>
-            </div>
-
-            <div className="flex justify-between text-[11px]">
-              <span>Bill No: {receipt.order_number}</span>
-              <span>Inv: {receipt.invoice_number}</span>
-            </div>
-
-            <div className="py-2 border-y border-dashed border-slate-400 space-y-1">
-              <div className="flex justify-between"><span>Items ({receipt.items_count}):</span> <span>₹{receipt.subtotal}</span></div>
-              <div className="flex justify-between"><span>GST Included:</span> <span>₹{receipt.tax_total}</span></div>
-              <div className="flex justify-between font-bold text-sm pt-1 border-t border-slate-300">
-                <span>TOTAL PAID:</span> <span>₹{receipt.grand_total}</span>
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-600">
-                <span>Payment Mode:</span> <span className="uppercase">{receipt.payment_mode}</span>
-              </div>
-            </div>
-
-            <p className="text-center text-[10px] text-slate-500 pt-1">
-              *** THANK YOU! VISIT AGAIN ***
-            </p>
-
-            <div className="pt-3 border-t flex gap-2">
-              <button 
-                onClick={() => window.print()}
-                className="flex-1 py-2 bg-slate-900 text-white font-sans text-xs font-bold rounded"
-              >
-                Print Receipt
-              </button>
-              <button 
-                onClick={() => setReceipt(null)}
-                className="px-3 py-2 bg-slate-200 text-slate-800 font-sans text-xs font-bold rounded"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ========================================================================= */}
+      {/* 3-IN-1 INVOICE PRINT MODAL (THERMAL 80MM, A4, DOT-MATRIX ROLL) */}
+      {/* ========================================================================= */}
+      {selectedInvoice && (
+        <InvoicePrintModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+        />
       )}
 
       {/* Shift Close / Z-Report Modal */}

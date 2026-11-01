@@ -87,6 +87,12 @@ Route::prefix('tenant')->middleware('tenant')->group(function () {
     // 5 Shipping Providers Settings
     Route::get('/settings/shipping-providers', [SettingsController::class, 'getShippingProviders']);
     Route::post('/settings/shipping-providers/{code}', [SettingsController::class, 'updateShippingProvider']);
+
+    // Store Branding, Identity, Footer, SEO, SMS & SMTP Settings
+    Route::get('/settings/branding', [SettingsController::class, 'getStoreBrandingSettings']);
+    Route::post('/settings/branding', [SettingsController::class, 'updateStoreBrandingSettings']);
+    Route::post('/settings/test-smtp', [SettingsController::class, 'testSmtpConnection']);
+    Route::post('/settings/test-sms', [SettingsController::class, 'testSmsConnection']);
 });
 
 /*

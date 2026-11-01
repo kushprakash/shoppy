@@ -52,10 +52,16 @@ class IdentifyTenant
      */
     protected function resolveTenant(Request $request): ?Shop
     {
-        // 1. Explicit Header / Request Hint (Highest priority for API/POS/Mobile clients)
-        $shopCode = $request->header('X-Shop-Code') ?? $request->query('shop_code');
+        // 1. Explicit Header / Request Hint / Cookie / Session (Highest priority for API/POS/Mobile clients)
+        $shopCode = $request->header('X-Shop-Code')
+            ?? $request->header('X-Store-Code')
+            ?? $request->cookie('shoppy_active_store')
+            ?? session('active_store_code')
+            ?? $request->query('shop_code')
+            ?? $request->query('store_code');
+
         if ($shopCode) {
-            $shop = Shop::where('shop_code', $shopCode)->first();
+            $shop = Shop::where('shop_code', strtoupper(trim($shopCode)))->first();
             if ($shop) {
                 return $shop;
             }
@@ -78,7 +84,7 @@ class IdentifyTenant
         if (count($parts) >= 2) {
             $subdomain = $parts[0];
             // Exclude central domains
-            if (!in_array($subdomain, ['www', 'admin', 'api', 'central', 'localhost'])) {
+            if (!in_array($subdomain, ['www', 'admin', 'api', 'central', 'localhost', '127'])) {
                 $shop = Shop::where('slug', $subdomain)->first();
                 if ($shop) {
                     return $shop;
@@ -86,6 +92,7 @@ class IdentifyTenant
             }
         }
 
-        return null;
+        // 4. Safe fallback for single tenant local dev or test environments
+        return Shop::where('status', 'active')->first();
     }
 }

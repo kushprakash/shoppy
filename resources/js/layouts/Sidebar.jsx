@@ -15,33 +15,62 @@ import {
   ChevronDown,
   Store,
   ExternalLink,
-  LogOut
+  LogOut,
+  UserCheck,
+  ShieldCheck,
+  User,
+  KeyRound,
+  TrendingUp,
+  CalendarCheck,
+  FileText,
+  DollarSign
 } from 'lucide-react';
 
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
-  const { isDarkMode, mobileSidebarOpen, setMobileSidebarOpen, shopCode } = useErp();
+  const {
+    isDarkMode,
+    mobileSidebarOpen,
+    setMobileSidebarOpen,
+    shopCode,
+    hasPermission,
+    storeName,
+    currentUser,
+    setIsICardOpen,
+    setIsProfileModalOpen,
+    setIsChangePasswordOpen
+  } = useErp();
 
-  // Navigation schema
+  // Navigation schema with Granular Role & Permission bindings
   const NAV_ITEMS = [
     {
       id: 'dashboard',
       label: 'ERP Dashboard',
       path: '/shop-admin/dashboard',
+      permission: 'overview.dashboard',
       section: 'Overview',
       icon: <LayoutDashboard className="w-4 h-4" />
     },
     {
+      id: 'profit-loss',
+      label: 'Profit & Loss (P&L)',
+      path: '/shop-admin/profit-loss',
+      permission: 'overview.profit_loss',
+      section: 'Overview',
+      icon: <TrendingUp className="w-4 h-4 text-emerald-500" />
+    },
+    {
       id: 'catalog',
-      label: 'Catalog & Products',
+      label: 'Products Master',
       section: 'Retail ERP Modules',
       icon: <Package className="w-4 h-4" />,
       subItems: [
-        { id: 'products', label: 'All Products List', path: '/shop-admin/products' },
-        { id: 'create-product', label: '+ Add New Product', path: '/shop-admin/products/create' },
-        { id: 'barcodes', label: 'Barcode Print Desk', path: '/shop-admin/barcodes' }
+        { id: 'create-product', label: '+ Add New Product', path: '/shop-admin/products/create', permission: 'catalog.create_product' },
+        { id: 'products', label: 'All Products List', path: '/shop-admin/products', permission: 'catalog.view_products' },
+        { id: 'catalog-setup', label: 'Categories & Shipping', path: '/shop-admin/catalog-setup', permission: 'catalog.categories_setup' },
+        { id: 'barcodes', label: 'Barcode Print Desk', path: '/shop-admin/barcodes', permission: 'catalog.barcode_desk' }
       ]
     },
     {
@@ -50,9 +79,9 @@ export default function Sidebar() {
       section: 'Retail ERP Modules',
       icon: <Warehouse className="w-4 h-4" />,
       subItems: [
-        { id: 'stock-levels', label: 'Multi-Branch Stock', path: '/shop-admin/inventory' },
-        { id: 'stock-adjustment', label: 'Stock Adjustment (In/Out)', path: '/shop-admin/inventory/adjustments' },
-        { id: 'low-stock', label: 'Low Stock Alerts', path: '/shop-admin/inventory/low-stock' }
+        { id: 'stock-levels', label: 'Multi-Branch Stock', path: '/shop-admin/inventory', permission: 'inventory.view_stock' },
+        { id: 'stock-adjustment', label: 'Stock Adjustment (In/Out)', path: '/shop-admin/inventory/adjustments', permission: 'inventory.adjust_stock' },
+        { id: 'low-stock', label: 'Low Stock Alerts', path: '/shop-admin/inventory/low-stock', permission: 'inventory.low_stock_alerts' }
       ]
     },
     {
@@ -61,15 +90,40 @@ export default function Sidebar() {
       section: 'Retail ERP Modules',
       icon: <Receipt className="w-4 h-4" />,
       subItems: [
-        { id: 'orders', label: 'Orders & Receipts', path: '/shop-admin/orders' },
-        { id: 'gst-invoices', label: 'GST Tax Invoices', path: '/shop-admin/gst-invoices' },
-        { id: 'e-way-bills', label: 'E-Way Bill (NIC IRN)', path: '/shop-admin/e-way-bills' }
+        { id: 'new-sale-billing', label: '+ POS Fast Billing', path: '/shop-admin/billing', permission: 'sales.pos_billing' },
+        { id: 'orders', label: 'Orders & Receipts', path: '/shop-admin/orders', permission: 'sales.view_orders' },
+        { id: 'gst-invoices', label: 'GST Tax Invoices', path: '/shop-admin/gst-invoices', permission: 'sales.view_gst_invoices' },
+        { id: 'coupons', label: 'Discount Coupons', path: '/shop-admin/coupons', permission: 'sales.manage_coupons' },
+        { id: 'e-way-bills', label: 'E-Way Bill (NIC IRN)', path: '/shop-admin/e-way-bills', permission: 'sales.eway_bill' }
       ]
     },
     {
-      id: 'pos-shifts',
-      label: 'POS Register Shifts',
-      path: '/shop-admin/pos-shifts',
+      id: 'crm',
+      label: 'CRM & Quotations',
+      section: 'Retail ERP Modules',
+      icon: <Users className="w-4 h-4" />,
+      subItems: [
+        { id: 'crm-leads', label: 'Leads & Follow-up', path: '/shop-admin/crm/leads', permission: 'crm.manage_leads' },
+        { id: 'crm-quotations', label: 'Quotations & Estimates', path: '/shop-admin/crm/quotations', permission: 'crm.view_quotations' },
+        { id: 'customers', label: 'Customer Directory', path: '/shop-admin/customers', permission: 'crm.view_customers' }
+      ]
+    },
+    {
+      id: 'hrm',
+      label: 'Human Resource (HRM)',
+      section: 'Retail ERP Modules',
+      icon: <UserCheck className="w-4 h-4" />,
+      subItems: [
+        { id: 'hrm-employees', label: 'Staff & Employees', path: '/shop-admin/hrm/employees', permission: 'hrm.view_employees' },
+        { id: 'hrm-attendance', label: 'Attendance & Leaves', path: '/shop-admin/hrm/attendance', permission: 'hrm.attendance_punch' },
+        { id: 'hrm-payroll', label: 'Payroll & Salary Pay', path: '/shop-admin/hrm/payroll', permission: 'hrm.view_payroll' }
+      ]
+    },
+    {
+      id: 'expenses',
+      label: 'Business Expenses',
+      path: '/shop-admin/expenses',
+      permission: 'expenses.view',
       section: 'Retail ERP Modules',
       icon: <CreditCard className="w-4 h-4" />
     },
@@ -79,21 +133,23 @@ export default function Sidebar() {
       section: 'Retail ERP Modules',
       icon: <Boxes className="w-4 h-4" />,
       subItems: [
-        { id: 'suppliers', label: 'Supplier Directory', path: '/shop-admin/suppliers' },
-        { id: 'purchase-bills', label: 'Inward Stock Bills', path: '/shop-admin/purchase-bills' }
+        { id: 'purchase-bills', label: 'Purchase Invoices', path: '/shop-admin/purchase-bills', permission: 'purchase.view_bills' },
+        { id: 'suppliers', label: 'Supplier Directory', path: '/shop-admin/suppliers', permission: 'purchase.view_suppliers' }
       ]
     },
     {
-      id: 'customers',
-      label: 'Customer Directory & CRM',
-      path: '/shop-admin/customers',
-      section: 'Retail ERP Modules',
-      icon: <Users className="w-4 h-4" />
+      id: 'roles-permissions',
+      label: 'Roles & Permissions',
+      path: '/shop-admin/roles-permissions',
+      permission: 'roles.manage',
+      section: 'Integrations & Config',
+      icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />
     },
     {
       id: 'payment-gateways',
       label: 'Payment Gateways (5)',
       path: '/shop-admin/payment-gateways',
+      permission: 'settings.payment_gateways',
       section: 'Integrations & Config',
       icon: <Zap className="w-4 h-4" />
     },
@@ -101,24 +157,53 @@ export default function Sidebar() {
       id: 'courier-shipping',
       label: 'Courier & Logistics (5)',
       path: '/shop-admin/courier-shipping',
+      permission: 'settings.courier_logistics',
       section: 'Integrations & Config',
       icon: <Truck className="w-4 h-4" />
     },
     {
       id: 'store-settings',
-      label: 'Store & Hardware Config',
+      label: 'Store Setting',
       path: '/shop-admin/store-settings',
+      permission: 'settings.store_config',
       section: 'Integrations & Config',
       icon: <Settings className="w-4 h-4" />
+    },
+    {
+      id: 'account-security',
+      label: 'Staff ID & Security',
+      section: 'Integrations & Config',
+      icon: <UserCheck className="w-4 h-4 text-cyan-400" />,
+      subItems: [
+        { id: 'nav-icard', label: '🪪 Employee I-Card', action: 'icard' },
+        { id: 'nav-profile', label: '👤 Update Profile', action: 'profile' },
+        { id: 'nav-password', label: '🔑 Change Password', action: 'password' }
+      ]
     }
   ];
+
+  // Dynamically filter items according to permissions
+  const authorizedNavItems = NAV_ITEMS.map((item) => {
+    if (item.subItems) {
+      const filteredSubs = item.subItems.filter(
+        (sub) => !sub.permission || (typeof hasPermission === 'function' ? hasPermission(sub.permission) : true)
+      );
+      return { ...item, subItems: filteredSubs };
+    }
+    return item;
+  }).filter((item) => {
+    if (item.subItems) {
+      return item.subItems.length > 0;
+    }
+    return !item.permission || (typeof hasPermission === 'function' ? hasPermission(item.permission) : true);
+  });
 
   // State for which dropdowns are open (default all closed on first load)
   const [openDropdowns, setOpenDropdowns] = useState({});
 
   // Automatically keep parent open if current route matches one of its children
   useEffect(() => {
-    NAV_ITEMS.forEach((item) => {
+    authorizedNavItems.forEach((item) => {
       if (item.subItems && item.subItems.some((sub) => sub.path === path)) {
         setOpenDropdowns((prev) => ({ ...prev, [item.id]: true }));
       }
@@ -152,8 +237,25 @@ export default function Sidebar() {
 
   // Handle Sub-Item Click inside dropdown
   const handleSubItemClick = (subItem) => {
-    navigate(subItem.path);
-    setMobileSidebarOpen(false);
+    if (subItem.action === 'icard') {
+      setIsICardOpen(true);
+      setMobileSidebarOpen(false);
+      return;
+    }
+    if (subItem.action === 'profile') {
+      setIsProfileModalOpen(true);
+      setMobileSidebarOpen(false);
+      return;
+    }
+    if (subItem.action === 'password') {
+      setIsChangePasswordOpen(true);
+      setMobileSidebarOpen(false);
+      return;
+    }
+    if (subItem.path) {
+      navigate(subItem.path);
+      setMobileSidebarOpen(false);
+    }
   };
 
   // Render Item (Scooped curved active tab when active)
@@ -176,9 +278,8 @@ export default function Sidebar() {
             {/* Active Tab Body flush to right-0 */}
             <div
               onClick={() => handleParentClick(item)}
-              className={`cursor-pointer relative z-10 ml-1.5 mr-0 pl-1.5 pr-4 py-2 rounded-l-full flex items-center justify-between transition select-none ${
-                isDarkMode ? 'bg-slate-950 text-cyan-400' : 'bg-[#f4f7fa] text-[#00a2c7]'
-              }`}
+              className={`cursor-pointer relative z-10 ml-1.5 mr-0 pl-1.5 pr-4 py-2 rounded-l-full flex items-center justify-between transition select-none ${isDarkMode ? 'bg-slate-950 text-cyan-400' : 'bg-[#f4f7fa] text-[#00a2c7]'
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 {/* Cyan Circular Icon Button */}
@@ -236,19 +337,17 @@ export default function Sidebar() {
                 <button
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className={`flex items-center gap-2.5 text-left w-full py-2.5 px-2 rounded-lg group transition select-none hover:bg-[#283b50]/60 ${
-                    isSubActive ? 'bg-[#283b50]/40' : 'pl-[14px]'
-                  }`}
+                  className={`flex items-center gap-2.5 text-left w-full py-2.5 px-2 rounded-lg group transition select-none hover:bg-[#283b50]/60 ${isSubActive ? 'bg-[#283b50]/40' : 'pl-[14px]'
+                    }`}
                 >
                   {isSubActive && (
                     <span className="w-[3.5px] h-8 bg-white rounded-full shadow-xs shrink-0" />
                   )}
                   <span
-                    className={`text-[13.5px] tracking-tight transition-colors ${
-                      isSubActive
-                        ? 'font-bold text-[#00a2c7] dark:text-cyan-400'
-                        : 'font-medium text-[#8fa3bf] group-hover:text-white'
-                    }`}
+                    className={`text-[13.5px] tracking-tight transition-colors ${isSubActive
+                      ? 'font-bold text-[#00a2c7] dark:text-cyan-400'
+                      : 'font-medium text-[#8fa3bf] group-hover:text-white'
+                      }`}
                   >
                     {sub.label}
                   </span>
@@ -284,13 +383,17 @@ export default function Sidebar() {
             <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-[#008ba3] via-[#00a8cc] to-[#10b981] flex items-center justify-center text-white shadow-sm shrink-0">
               <Store className="w-5 h-5" />
             </div>
-            <div className="leading-none">
+            <div className="leading-none min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-extrabold text-white tracking-tight">Ramesh</span>
-                <span className="text-[11px] font-black uppercase text-[#00a2c7] tracking-wider">ERP</span>
+                <span className="text-base font-extrabold text-white tracking-tight truncate max-w-[130px]" title={storeName || 'Store'}>
+                  {(storeName || 'Store').split(' ')[0] || 'Store'}
+                </span>
+                <span className="text-[11px] font-black uppercase text-[#00a2c7] tracking-wider shrink-0">
+                  ERP
+                </span>
               </div>
-              <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
-                Retail & Multi-Tenant SaaS
+              <p className="text-[8.5px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5 truncate" title={storeName || 'Store'}>
+                {storeName || 'Store'}
               </p>
             </div>
           </div>
@@ -299,79 +402,68 @@ export default function Sidebar() {
         {/* Navigation Items (Scrollable) */}
         <div className="flex-1 overflow-y-auto pl-3 pr-0 py-3 space-y-3.5 text-sm font-medium select-none custom-scrollbar">
           {/* OVERVIEW SECTION */}
-          <div>
-            <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
-              Overview
+          {authorizedNavItems.filter((i) => i.section === 'Overview').length > 0 && (
+            <div>
+              <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
+                Overview
+              </div>
+              {authorizedNavItems.filter((i) => i.section === 'Overview').map(renderSidebarItem)}
             </div>
-            {NAV_ITEMS.filter((i) => i.section === 'Overview').map(renderSidebarItem)}
-          </div>
+          )}
 
           {/* RETAIL ERP MODULES */}
-          <div className="space-y-1">
-            <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
-              Retail ERP Modules
+          {authorizedNavItems.filter((i) => i.section === 'Retail ERP Modules').length > 0 && (
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
+                Retail ERP Modules
+              </div>
+              {authorizedNavItems.filter((i) => i.section === 'Retail ERP Modules').map(renderSidebarItem)}
             </div>
-            {NAV_ITEMS.filter((i) => i.section === 'Retail ERP Modules').map(renderSidebarItem)}
-          </div>
+          )}
 
           {/* INTEGRATIONS & CONFIG */}
-          <div className="space-y-1">
-            <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
-              Integrations & Config
+          {authorizedNavItems.filter((i) => i.section === 'Integrations & Config').length > 0 && (
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
+                Integrations & Config
+              </div>
+              {authorizedNavItems.filter((i) => i.section === 'Integrations & Config').map(renderSidebarItem)}
             </div>
-            {NAV_ITEMS.filter((i) => i.section === 'Integrations & Config').map(renderSidebarItem)}
-          </div>
+          )}
 
-          {/* Quick Cross-Portal Switcher */}
-          <div className="pt-3 border-t border-slate-800/80 mr-3">
-            <div className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              System Portals
+          {/* ACCOUNT & SECURITY */}
+          {authorizedNavItems.filter((i) => i.section === 'Account & Security').length > 0 && (
+            <div className="space-y-1">
+              <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-3">
+                Account & Security
+              </div>
+              {authorizedNavItems.filter((i) => i.section === 'Account & Security').map(renderSidebarItem)}
             </div>
-            <div className="space-y-1 text-xs">
-              <a
-                href="/pos-terminal"
-                className="flex items-center justify-between px-3 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/40"
-              >
-                <span>POS Billing Terminal</span>
-                <ExternalLink className="w-3 h-3 text-slate-500" />
-              </a>
-              <a
-                href="/storefront"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between px-3 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/40"
-              >
-                <span>Online Storefront Preview</span>
-                <ExternalLink className="w-3 h-3 text-slate-500" />
-              </a>
-              <a
-                href="/banking-portal"
-                className="flex items-center justify-between px-3 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/40"
-              >
-                <span>Enexa Banking Portal</span>
-                <ExternalLink className="w-3 h-3 text-slate-500" />
-              </a>
-              <a
-                href="/central-admin-portal"
-                className="flex items-center justify-between px-3 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/40"
-              >
-                <span>Central SaaS Admin</span>
-                <ExternalLink className="w-3 h-3 text-slate-500" />
-              </a>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Footer Profile Box with Store Name & Logout */}
+        {/* Footer Profile Box with Store Name & Interactive Account Options */}
         <div className="p-3 border-t border-slate-800/80 bg-[#0d1624]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center text-xs shadow-sm shrink-0">
-                RF
+          <div className="flex items-center justify-between gap-2">
+            <div
+              onClick={() => setIsProfileModalOpen(true)}
+              title="Click to update profile"
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer group flex-1"
+            >
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-cyan-500/80 shrink-0 bg-cyan-900 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                {currentUser?.avatar ? (
+                  <img src={currentUser.avatar} alt="User" className="w-full h-full object-cover" />
+                ) : (
+                  (storeName || 'ST').slice(0, 2).toUpperCase()
+                )}
               </div>
               <div className="truncate">
-                <p className="text-xs font-semibold text-white truncate">Ramesh Fashion Store</p>
-                <p className="text-[10px] text-slate-400 truncate">Store ID: {shopCode}</p>
+                <p className="text-xs font-semibold text-white group-hover:text-cyan-400 transition truncate" title={currentUser?.name || storeName || 'Store'}>
+                  {currentUser?.name || storeName || 'Store'}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate" title={storeName || 'Store'}>
+                  {storeName || 'Store'} • {shopCode}
+                </p>
               </div>
             </div>
 
@@ -383,6 +475,36 @@ export default function Sidebar() {
             >
               <LogOut className="w-4 h-4" />
             </a>
+          </div>
+
+          {/* Quick Actions Tray for I-Card, Profile Updates, and Change Password */}
+          <div className="grid grid-cols-3 gap-1.5 mt-2.5 pt-2 border-t border-slate-800/60">
+            <button
+              onClick={() => setIsICardOpen(true)}
+              title="View & Print Employee I-Card"
+              className="flex flex-col items-center justify-center py-1.5 px-1 rounded-lg bg-slate-800/60 hover:bg-cyan-950/80 border border-slate-700/50 hover:border-cyan-700/80 text-cyan-400 transition group cursor-pointer"
+            >
+              <UserCheck className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span className="text-[9px] font-bold text-slate-300 group-hover:text-cyan-300 mt-0.5">I-Card</span>
+            </button>
+
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              title="Update Personal Profile Details"
+              className="flex flex-col items-center justify-center py-1.5 px-1 rounded-lg bg-slate-800/60 hover:bg-emerald-950/80 border border-slate-700/50 hover:border-emerald-700/80 text-emerald-400 transition group cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span className="text-[9px] font-bold text-slate-300 group-hover:text-emerald-300 mt-0.5">Profile</span>
+            </button>
+
+            <button
+              onClick={() => setIsChangePasswordOpen(true)}
+              title="Change Password & Security"
+              className="flex flex-col items-center justify-center py-1.5 px-1 rounded-lg bg-slate-800/60 hover:bg-amber-950/80 border border-slate-700/50 hover:border-amber-700/80 text-amber-400 transition group cursor-pointer"
+            >
+              <KeyRound className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span className="text-[9px] font-bold text-slate-300 group-hover:text-amber-300 mt-0.5">Password</span>
+            </button>
           </div>
         </div>
       </aside>
