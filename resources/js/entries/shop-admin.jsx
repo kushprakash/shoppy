@@ -68,6 +68,7 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import StoreSettings from '../pages/settings/StoreSettings';
+import InvoicePrintModal from '../components/InvoicePrintModal';
 
 // ============================================================================
 // 1. INITIAL ENTERPRISE ERP DATASETS (Matching PRD v2.2 Multi-Category)
@@ -2459,128 +2460,13 @@ export default function ShopAdmin() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 2: PROFESSIONAL GST TAX INVOICE WITH IRN & QR */}
+      {/* 3-IN-1 INVOICE PRINT MODAL (Thermal, A4 Auto-Paginated, Dot Matrix Sprocket) */}
       {/* ========================================================= */}
       {selectedInvoice && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-[#00a2c7]" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Tax Invoice — {selectedInvoice.id}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedInvoice(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Bill Preview Paper */}
-            <div className="my-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-xs text-slate-800 dark:text-slate-200 space-y-4">
-              {/* Header */}
-              <div className="text-center pb-3 border-b border-dashed border-slate-300 dark:border-slate-700">
-                <h4 className="text-base font-bold uppercase font-heading">Ramesh Fashion Store</h4>
-                <p className="text-[10px] text-slate-500">Unit 14, Bapu Bazar, Jaipur, Rajasthan - 302003</p>
-                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300">GSTIN: 08AABCR1290M1Z5</p>
-                <p className="text-[10px] text-slate-500">FSSAI Lic: 10019022001429 • Phone: +91 98290 00192</p>
-              </div>
-
-              {/* Invoice Meta */}
-              <div className="flex justify-between text-[11px]">
-                <div>
-                  <div><strong className="text-slate-900 dark:text-white">Invoice No:</strong> {selectedInvoice.id}</div>
-                  <div><strong>Date & Time:</strong> {selectedInvoice.date}</div>
-                  <div><strong>POS Station:</strong> {selectedInvoice.channel}</div>
-                </div>
-                <div className="text-right">
-                  <div><strong className="text-slate-900 dark:text-white">Customer:</strong> {selectedInvoice.customerName}</div>
-                  <div><strong>Mobile:</strong> {selectedInvoice.phone}</div>
-                  <div><strong>Payment:</strong> {selectedInvoice.paymentMethod}</div>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <table className="w-full text-left text-xs">
-                <thead className="border-y border-dashed border-slate-300 dark:border-slate-700">
-                  <tr>
-                    <th className="py-1.5">Item Description</th>
-                    <th className="py-1.5 text-center">Qty</th>
-                    <th className="py-1.5 text-right">Rate</th>
-                    <th className="py-1.5 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {selectedInvoice.items?.map((it, idx) => (
-                    <tr key={idx}>
-                      <td className="py-1.5">
-                        <div>{it.name}</div>
-                        <div className="text-[10px] text-slate-400">GST: {it.gst}</div>
-                      </td>
-                      <td className="py-1.5 text-center">{it.qty}</td>
-                      <td className="py-1.5 text-right">₹ {it.price.toFixed(2)}</td>
-                      <td className="py-1.5 text-right">₹ {(it.qty * it.price).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Totals & Tax Calculation */}
-              <div className="pt-2 border-t border-dashed border-slate-300 dark:border-slate-700 text-right space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>Taxable Subtotal:</span>
-                  <span>₹ {selectedInvoice.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>CGST (Intra-state):</span>
-                  <span>₹ {(selectedInvoice.gstTotal / 2).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>SGST (Intra-state):</span>
-                  <span>₹ {(selectedInvoice.gstTotal / 2).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-sm text-slate-900 dark:text-white pt-2 border-t border-slate-300 dark:border-slate-700">
-                  <span>Net Amount Paid:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">₹ {selectedInvoice.total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* E-Invoice IRN & QR Box (PRD Section 15) */}
-              <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-slate-400">NIC E-Invoice QR & IRN</div>
-                  <div className="font-mono text-[9px] text-slate-500 truncate max-w-sm">
-                    IRN: 9f8a32b0c1e8d7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2
-                  </div>
-                  <div className="text-[9px] text-emerald-600 font-bold mt-0.5">Digitally Signed by GST Suvidha Provider</div>
-                </div>
-                <QrCode className="w-12 h-12 text-slate-800 dark:text-slate-200" />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between pt-2">
-              <button
-                onClick={() => showToast(`WhatsApp Bill Link sent to ${selectedInvoice.phone}`)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition"
-              >
-                <Send className="w-3.5 h-3.5" /> Send Digital WhatsApp Bill
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition"
-                >
-                  <Printer className="w-3.5 h-3.5" /> Print 80mm Thermal Receipt
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <InvoicePrintModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+        />
       )}
 
       {/* ========================================================= */}

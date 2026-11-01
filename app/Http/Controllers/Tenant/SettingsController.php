@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class SettingsController extends Controller
 {
@@ -215,7 +216,14 @@ class SettingsController extends Controller
             'store_name' => $shop->name,
             'owner_name' => $shop->owner_name ?? ($settings['owner_name'] ?? 'Ramesh Sundaram'),
             'base_name' => $settings['base_name'] ?? $shop->name . ' Private Limited',
+            'gst_legal_name' => $settings['gst_legal_name'] ?? ($settings['base_name'] ?? $shop->name . ' Private Limited'),
+            'gst_trade_name' => $settings['gst_trade_name'] ?? $shop->name,
             'gst_number' => $settings['gst_number'] ?? '08AABCR1290M1Z5',
+            'gst_state' => $settings['gst_state'] ?? '08 - Rajasthan',
+            'gst_scheme' => $settings['gst_scheme'] ?? 'regular',
+            'pan_number' => $settings['pan_number'] ?? 'AABCR1290M',
+            'e_invoicing_enabled' => !empty($settings['e_invoicing_enabled']),
+            'rcm_applicable' => !empty($settings['rcm_applicable']),
             'logo' => $settings['logo'] ?? '/images/brand-logo-default.png',
             'footer_logo' => $settings['footer_logo'] ?? '/images/brand-footer-logo-default.png',
             'favicon' => $settings['favicon'] ?? '/favicon.ico',
@@ -281,7 +289,14 @@ class SettingsController extends Controller
             'store_name' => 'required|string|max:255',
             'owner_name' => 'nullable|string|max:255',
             'base_name' => 'required|string|max:255',
+            'gst_legal_name' => 'nullable|string|max:255',
+            'gst_trade_name' => 'nullable|string|max:255',
             'gst_number' => 'required|string|max:32',
+            'gst_state' => 'nullable|string|max:128',
+            'gst_scheme' => 'nullable|string|max:64',
+            'pan_number' => 'nullable|string|max:32',
+            'e_invoicing_enabled' => 'nullable|boolean',
+            'rcm_applicable' => 'nullable|boolean',
             'logo' => 'nullable|string',
             'footer_logo' => 'nullable|string',
             'favicon' => 'nullable|string',
@@ -290,7 +305,7 @@ class SettingsController extends Controller
             'contact_address' => 'required|string',
             'contact_email' => 'required|email|max:255',
             'website_url' => 'required|string|max:255',
-            'app_playstore_url' => 'required|string|max:255',
+            'app_playstore_url' => 'nullable|string|max:255',
             'contact_phone' => 'required|string|max:32',
             'contact_map_iframe' => 'required|string',
             'meta_title' => 'required|string|max:255',
@@ -319,7 +334,14 @@ class SettingsController extends Controller
         $mergedSettings = array_merge($currentSettings, [
             'owner_name' => $validated['owner_name'] ?? ($shop->owner_name ?? ($currentSettings['owner_name'] ?? 'Ramesh Sundaram')),
             'base_name' => $validated['base_name'],
+            'gst_legal_name' => $validated['gst_legal_name'] ?? $validated['base_name'],
+            'gst_trade_name' => $validated['gst_trade_name'] ?? $validated['store_name'],
             'gst_number' => strtoupper(trim($validated['gst_number'])),
+            'gst_state' => $validated['gst_state'] ?? ($currentSettings['gst_state'] ?? '08 - Rajasthan'),
+            'gst_scheme' => $validated['gst_scheme'] ?? ($currentSettings['gst_scheme'] ?? 'regular'),
+            'pan_number' => strtoupper(trim($validated['pan_number'] ?? ($currentSettings['pan_number'] ?? ''))),
+            'e_invoicing_enabled' => !empty($validated['e_invoicing_enabled']),
+            'rcm_applicable' => !empty($validated['rcm_applicable']),
             'logo' => $validated['logo'] ?? ($currentSettings['logo'] ?? null),
             'footer_logo' => $validated['footer_logo'] ?? ($currentSettings['footer_logo'] ?? null),
             'favicon' => $validated['favicon'] ?? ($currentSettings['favicon'] ?? null),
@@ -328,7 +350,7 @@ class SettingsController extends Controller
             'contact_address' => $validated['contact_address'],
             'contact_email' => $validated['contact_email'],
             'website_url' => $validated['website_url'],
-            'app_playstore_url' => $validated['app_playstore_url'],
+            'app_playstore_url' => $validated['app_playstore_url'] ?? '',
             'contact_phone' => $validated['contact_phone'],
             'contact_map_iframe' => $validated['contact_map_iframe'],
             'meta_title' => $validated['meta_title'],
@@ -451,4 +473,37 @@ class SettingsController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Upload Store Branding Asset (Logo, Footer Logo, Favicon).
+     */
+    public function uploadBrandingImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,webp,ico|max:5120',
+            'type' => 'nullable|string',
+        ]);
+
+        $file = $request->file('image');
+        $type = preg_replace('/[^a-zA-Z0-9_-]/', '', $request->input('type', 'logo'));
+        $extension = $file->getClientOriginalExtension() ?: 'png';
+        $filename = $type . '_' . time() . '_' . Str::random(8) . '.' . $extension;
+
+        $targetPath = public_path('uploads/branding');
+        if (!file_exists($targetPath)) {
+            mkdir($targetPath, 0755, true);
+        }
+
+        $file->move($targetPath, $filename);
+
+        $url = '/uploads/branding/' . $filename;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image uploaded successfully!',
+            'url' => $url,
+            'filename' => $filename,
+        ]);
+    }
 }
+

@@ -91,6 +91,7 @@ Route::prefix('tenant')->middleware('tenant')->group(function () {
     // Store Branding, Identity, Footer, SEO, SMS & SMTP Settings
     Route::get('/settings/branding', [SettingsController::class, 'getStoreBrandingSettings']);
     Route::post('/settings/branding', [SettingsController::class, 'updateStoreBrandingSettings']);
+    Route::post('/settings/upload-image', [SettingsController::class, 'uploadBrandingImage']);
     Route::post('/settings/test-smtp', [SettingsController::class, 'testSmtpConnection']);
     Route::post('/settings/test-sms', [SettingsController::class, 'testSmsConnection']);
 });
