@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   X, Printer, Send, FileText, CheckCircle2, QrCode,
   Receipt, Building2, Phone, Calendar, User, CreditCard,
-  AlertCircle, Scissors, Layers, Check, Sparkles, RefreshCw
+  AlertCircle, Scissors, Layers, Check, Sparkles, RefreshCw,
+  Sliders, Plus, Minus, Settings2, Info
 } from 'lucide-react';
 import { useErp } from '../context/ErpContext';
 
@@ -96,7 +97,21 @@ const DEMO_EXTRA_ITEMS = [
   { name: 'Volini Pain Relief Gel 30g', pack: '1 Tube', batchNo: 'VL-410', expiryDate: '06/28', hsn: '3004', qty: 1, price: 145.00, gst: '12%', gstRate: 12 },
   { name: 'Telma 40 Blood Pressure Tablets', pack: '30 Tabs', batchNo: 'TL-205', expiryDate: '02/29', hsn: '3004', qty: 1, price: 240.00, gst: '12%', gstRate: 12 },
   { name: 'Glycomet GP 1/500 Tablet', pack: '15 Tabs', batchNo: 'GM-881', expiryDate: '08/27', hsn: '3004', qty: 2, price: 155.00, gst: '12%', gstRate: 12 },
-  { name: 'Voveran SR 100mg Tablets', pack: '10 Tabs', batchNo: 'VV-303', expiryDate: '05/28', hsn: '3004', qty: 1, price: 168.00, gst: '12%', gstRate: 12 }
+  { name: 'Voveran SR 100mg Tablets', pack: '10 Tabs', batchNo: 'VV-303', expiryDate: '05/28', hsn: '3004', qty: 1, price: 168.00, gst: '12%', gstRate: 12 },
+  { name: 'Cetirizine 10mg Anti-Allergy Tabs', pack: '10 Tabs', batchNo: 'CT-110', expiryDate: '07/28', hsn: '3004', qty: 3, price: 18.50, gst: '12%', gstRate: 12 },
+  { name: 'Azee 250 Tablet (Cipla Ltd)', pack: '6 Tabs', batchNo: 'AZ-219', expiryDate: '10/27', hsn: '3004', qty: 2, price: 72.00, gst: '12%', gstRate: 12 },
+  { name: 'Pantocid 40mg Acid Reflux Tablets', pack: '15 Tabs', batchNo: 'PT-901', expiryDate: '01/29', hsn: '3004', qty: 2, price: 164.00, gst: '12%', gstRate: 12 },
+  { name: 'Limcee 500mg Vitamin C Chewable', pack: '15 Tabs', batchNo: 'LC-304', expiryDate: '11/28', hsn: '3004', qty: 4, price: 23.50, gst: '12%', gstRate: 12 },
+  { name: 'Neurobion Forte B-Complex Tabs', pack: '30 Tabs', batchNo: 'NF-662', expiryDate: '04/29', hsn: '3004', qty: 2, price: 38.00, gst: '12%', gstRate: 12 },
+  { name: 'Zincovit Multivitamin & Minerals', pack: '15 Tabs', batchNo: 'ZN-881', expiryDate: '09/28', hsn: '3004', qty: 3, price: 110.00, gst: '12%', gstRate: 12 },
+  { name: 'Allegra 120mg Fexofenadine Tabs', pack: '10 Tabs', batchNo: 'AL-512', expiryDate: '12/28', hsn: '3004', qty: 1, price: 218.00, gst: '12%', gstRate: 12 },
+  { name: 'Supradyn Daily Multivitamin Tablet', pack: '15 Tabs', batchNo: 'SD-109', expiryDate: '03/29', hsn: '3004', qty: 2, price: 59.00, gst: '12%', gstRate: 12 },
+  { name: 'Digene Antacid Mint Gel 200ml', pack: '1 Bottle', batchNo: 'DG-771', expiryDate: '06/28', hsn: '3004', qty: 1, price: 152.00, gst: '12%', gstRate: 12 },
+  { name: 'Combiflam Pain Relief Tablet', pack: '20 Tabs', batchNo: 'CB-404', expiryDate: '08/28', hsn: '3004', qty: 3, price: 46.00, gst: '12%', gstRate: 12 },
+  { name: 'Calpol 500 Paracetamol Tablets', pack: '15 Tabs', batchNo: 'CP-920', expiryDate: '05/29', hsn: '3004', qty: 4, price: 20.00, gst: '12%', gstRate: 12 },
+  { name: 'Moxikind-CV 625mg Antibiotic', pack: '10 Tabs', batchNo: 'MK-118', expiryDate: '02/28', hsn: '3004', qty: 2, price: 205.00, gst: '12%', gstRate: 12 },
+  { name: 'Benadryl Cough Formula Syrup 100ml', pack: '1 Bottle', batchNo: 'BD-339', expiryDate: '10/28', hsn: '3004', qty: 1, price: 129.00, gst: '12%', gstRate: 12 },
+  { name: 'Himalaya Liv-52 Liver Care Syrup', pack: '200ml', batchNo: 'LV-802', expiryDate: '12/28', hsn: '3004', qty: 1, price: 175.00, gst: '12%', gstRate: 12 }
 ];
 
 export default function InvoicePrintModal({ invoice, onClose }) {
@@ -111,17 +126,93 @@ export default function InvoicePrintModal({ invoice, onClose }) {
     }
   });
 
-  // State to simulate a multi-page invoice (18+ items) for live verification of C/F, B/F and Amount in Words
-  const [isSimulatedMultiPage, setIsSimulatedMultiPage] = useState(false);
+  // Simulation count: 0 = actual items, 15 = 15 items (1 page test), 27 = 27 items (2 pages test)
+  const [simulationCount, setSimulationCount] = useState(0);
 
   // Dot matrix paper height mode: 'half' (5.5" / 140mm medical tear-off standard) or 'full' (11" / 280mm)
   const [dotMatrixPaperSize, setDotMatrixPaperSize] = useState('half');
+
+  // =========================================================================
+  // USER REQUIREMENT:
+  // "agar A4 bill invoice me 27 product jaise hi hoga second page me chala jayega agar 15 aur 15 se kam product hai to 1 hi page me complete set rahega"
+  // Default capacity is 26 products per page:
+  // - <= 26 products (e.g. 15 or less): completely fits in 1 Page with fixed bottom footer
+  // - As soon as 27 products: 26 on page 1, 27th product goes to Page 2
+  // =========================================================================
+  // Always default to 26 items per page. Enforce minimum 26 so stale
+  // localStorage values (e.g. 15 from old Test buttons) don't break layout.
+  // =========================================================================
+  const [a4ItemsPerPage, setA4ItemsPerPage] = useState(() => {
+    try {
+      const stored = localStorage.getItem('shoppy_a4_items_per_page');
+      const parsed = stored !== null ? parseInt(stored, 10) : NaN;
+      // Enforce minimum 26 — ignore anything less (stale test values)
+      if (!isNaN(parsed) && parsed >= 26) return parsed;
+      return storeSettings?.a4_items_per_page || 26;
+    } catch {
+      return 26;
+    }
+  });
+
+  // Paging mode: 'fixed' (default, uniform products/page) | 'auto' (smart dynamic) | 'custom' (separate page 1 header allowance)
+  const [a4PagingMode, setA4PagingMode] = useState(() => {
+    try {
+      return localStorage.getItem('shoppy_a4_paging_mode') || 'fixed';
+    } catch {
+      return 'fixed';
+    }
+  });
+
+  // Advanced: Page 1 items limit when separate mode is toggled
+  const [a4Page1Max, setA4Page1Max] = useState(() => {
+    try {
+      const stored = localStorage.getItem('shoppy_a4_page1_max');
+      return stored ? parseInt(stored, 10) : 26;
+    } catch {
+      return 26;
+    }
+  });
+
+  const [a4NextPagesMax, setA4NextPagesMax] = useState(() => {
+    try {
+      const stored = localStorage.getItem('shoppy_a4_next_pages_max');
+      return stored ? parseInt(stored, 10) : 26;
+    } catch {
+      return 26;
+    }
+  });
+
+  // Quick helper to change items per page and persist
+  const handleA4ItemsPerPageChange = (val) => {
+    const num = Math.max(1, Math.min(35, parseInt(val, 10) || 26));
+    setA4ItemsPerPage(num);
+    setA4PagingMode('fixed');
+    try {
+      localStorage.setItem('shoppy_a4_items_per_page', num.toString());
+      localStorage.setItem('shoppy_a4_paging_mode', 'fixed');
+    } catch { }
+    showToast(`A4 page capacity set to ${num} products per page`);
+  };
+
+  const handlePagingModeChange = (mode) => {
+    setA4PagingMode(mode);
+    try {
+      localStorage.setItem('shoppy_a4_paging_mode', mode);
+    } catch { }
+    if (mode === 'auto') {
+      showToast('A4 Auto-fit enabled (Standard 26 items per page)');
+    } else if (mode === 'custom') {
+      showToast('Custom Page 1 header allowance enabled');
+    } else {
+      showToast(`Fixed ${a4ItemsPerPage} products per A4 page`);
+    }
+  };
 
   const handleFormatChange = (fmt) => {
     setPrintFormat(fmt);
     try {
       localStorage.setItem('shoppy_last_print_format', fmt);
-    } catch {}
+    } catch { }
   };
 
   if (!invoice) return null;
@@ -138,12 +229,18 @@ export default function InvoicePrintModal({ invoice, onClose }) {
       { name: 'Classic Pure Leather Belt', variant: 'Black / M', barcode: '8901234003', hsn: '4203', qty: 1, price: 699.00, gst: '18%', gstRate: 18 }
     ];
 
-    if (!isSimulatedMultiPage) {
-      return baseItems;
+    if (simulationCount === 15) {
+      return DEMO_EXTRA_ITEMS.slice(0, 15);
     }
-    // Prepend base items and add demo medicines/items to reach 17+ items
-    return [...baseItems, ...DEMO_EXTRA_ITEMS.slice(0, 15)];
-  }, [invoice.items, isSimulatedMultiPage]);
+    if (simulationCount === 27) {
+      return DEMO_EXTRA_ITEMS.slice(0, 27);
+    }
+    if (simulationCount > 0) {
+      return DEMO_EXTRA_ITEMS.slice(0, simulationCount);
+    }
+
+    return baseItems;
+  }, [invoice.items, simulationCount]);
 
   // Recalculate totals based on active items
   const itemsSubtotal = useMemo(() => {
@@ -180,65 +277,62 @@ export default function InvoicePrintModal({ invoice, onClose }) {
   const displayPhone = storeSettings?.contact_phone || storeSettings?.phone || '+91 98290 00192';
 
   // =========================================================================
-  // A4 AUTO-PAGINATION ALGORITHM
+  // A4 AUTO / MANAGED PAGINATION ALGORITHM
   // User Requirement:
-  // "A4 bala page me 1 page se jada product hone pe dusre page me auto chala jayega
-  //  and first page la total second ke top row me show hoga
-  //  and amount ka text me last page me niche show hoga"
+  // "invoice print me 1 a4 page me kitne product set honge o manage kare"
+  // "first page la total second ke top row me show hoga (B/F)"
+  // "amount ka text me last page me niche show hoga"
   // =========================================================================
   const paginatedPages = useMemo(() => {
     if (!activeItems || activeItems.length === 0) return [[]];
 
-    // Single-page capacity:
-    // A single A4 page includes Full Header + Billed To Box + Table + Amount in Words + Bank Details + Tax Summary + Signatory.
-    // Fits up to 10 items comfortably without any overflow.
-    const SINGLE_PAGE_MAX = 10;
-    if (activeItems.length <= SINGLE_PAGE_MAX) {
-      return [activeItems];
-    }
-
-    // Multi-page capacities:
-    // - Page 1 (Full Header + Billed To Box + Table + C/F row + Footer): Fits up to 14 items
-    // - Middle Pages (Compact Header + Table + B/F row + C/F row + Footer): Fits up to 18 items
-    // - Last Page (Compact Header + Table + B/F row + Amount in Words + Bank Info + Tax Summary + Signatory): Fits up to 10 items
-    const PAGE1_MAX = 14;
-    const LAST_PAGE_MAX = 10;
-    const MIDDLE_MAX = 18;
-
-    // 2-page invoice (11 to 24 items):
-    if (activeItems.length <= PAGE1_MAX + LAST_PAGE_MAX) {
-      let p1Count = Math.min(PAGE1_MAX, activeItems.length - 2);
-      if (activeItems.length - p1Count > LAST_PAGE_MAX) {
-        p1Count = activeItems.length - LAST_PAGE_MAX;
+    // MODE A: SMART AUTO-PAGINATION
+    if (a4PagingMode === 'auto') {
+      const SINGLE_PAGE_MAX = 26;
+      if (activeItems.length <= SINGLE_PAGE_MAX) {
+        return [activeItems];
       }
-      return [
-        activeItems.slice(0, p1Count),
-        activeItems.slice(p1Count)
-      ];
+
+      const PAGE1_MAX = 26;
+      const pages = [];
+      pages.push(activeItems.slice(0, PAGE1_MAX));
+      let remaining = activeItems.slice(PAGE1_MAX);
+
+      while (remaining.length > 0) {
+        pages.push(remaining.slice(0, PAGE1_MAX));
+        remaining = remaining.slice(PAGE1_MAX);
+      }
+      return pages;
     }
 
-    // 3 or more pages:
+    // MODE B: SEPARATE PAGE 1 CAPACITY (Header space allowance)
+    if (a4PagingMode === 'custom') {
+      const p1Limit = Math.max(1, parseInt(a4Page1Max, 10) || 26);
+      const nextLimit = Math.max(1, parseInt(a4NextPagesMax, 10) || 26);
+
+      if (activeItems.length <= p1Limit) {
+        return [activeItems];
+      }
+
+      const pages = [];
+      pages.push(activeItems.slice(0, p1Limit));
+      let remaining = activeItems.slice(p1Limit);
+
+      while (remaining.length > 0) {
+        pages.push(remaining.slice(0, nextLimit));
+        remaining = remaining.slice(nextLimit);
+      }
+      return pages;
+    }
+
+    // MODE C: FIXED PRODUCTS PER PAGE (Managed by User: e.g. 15, 20, 26, default 26)
+    const pageSize = Math.max(1, parseInt(a4ItemsPerPage, 10) || 26);
     const pages = [];
-    pages.push(activeItems.slice(0, PAGE1_MAX));
-    let remaining = activeItems.slice(PAGE1_MAX);
-
-    while (remaining.length > 0) {
-      if (remaining.length <= LAST_PAGE_MAX) {
-        pages.push(remaining);
-        break;
-      }
-      if (remaining.length <= MIDDLE_MAX + LAST_PAGE_MAX) {
-        const midCount = Math.min(MIDDLE_MAX, remaining.length - Math.min(LAST_PAGE_MAX, Math.ceil(remaining.length / 2)));
-        pages.push(remaining.slice(0, midCount));
-        pages.push(remaining.slice(midCount));
-        break;
-      } else {
-        pages.push(remaining.slice(0, MIDDLE_MAX));
-        remaining = remaining.slice(MIDDLE_MAX);
-      }
+    for (let i = 0; i < activeItems.length; i += pageSize) {
+      pages.push(activeItems.slice(i, i + pageSize));
     }
-    return pages;
-  }, [activeItems]);
+    return pages.length > 0 ? pages : [[]];
+  }, [activeItems, a4PagingMode, a4ItemsPerPage, a4Page1Max, a4NextPagesMax]);
 
   // Clean Print Engine targeting the specific format container
   const handlePrint = useCallback(() => {
@@ -292,7 +386,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
       <style>
         @page {
           size: ${isThermal ? '80mm auto' : isDotMatrix ? `215mm ${dotMatrixHeight}` : 'A4 portrait'};
-          margin: ${isThermal ? '2mm' : isDotMatrix ? '2mm 4mm' : '8mm 10mm'};
+          margin: ${isThermal ? '2mm' : isDotMatrix ? '2mm 4mm' : '10mm 8mm'};
         }
         *, *::before, *::after {
           box-sizing: border-box;
@@ -314,7 +408,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
           border: none !important;
           border-radius: 0 !important;
           margin: 0 !important;
-          padding: 0 0 6mm 0 !important;
+          padding: 10mm 8mm !important;
           page-break-after: always !important;
           break-after: page !important;
           page-break-inside: avoid !important;
@@ -323,12 +417,25 @@ export default function InvoicePrintModal({ invoice, onClose }) {
           display: flex !important;
           flex-direction: column !important;
           justify-content: space-between !important;
-          min-height: 255mm !important;
+          height: 277mm !important;
+          min-height: 277mm !important;
+          max-height: 277mm !important;
+          box-sizing: border-box !important;
+          overflow: hidden !important;
         }
         .a4-page-sheet:last-child {
           page-break-after: avoid !important;
           break-after: avoid !important;
-          padding-bottom: 0 !important;
+        }
+        .a4-product-row {
+          height: 22px !important;
+          max-height: 22px !important;
+        }
+        .a4-product-row td {
+          height: 22px !important;
+          max-height: 22px !important;
+          overflow: hidden !important;
+          white-space: nowrap !important;
         }
         .thermal-receipt {
           width: 80mm !important;
@@ -428,14 +535,14 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                   {isPakka ? 'Tax Invoice' : 'Estimate Bill'} — <span className="font-mono text-[#00a2c7]">{invoice.id}</span>
                 </h3>
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${isPakka
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
                   }`}>
                   {isPakka ? 'Pakka (GST)' : 'Kachha (Estimate)'}
                 </span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isOffline
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
-                    : 'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300'
+                  : 'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300'
                   }`}>
                   {isOffline ? 'Counter Sale (POS)' : 'E-Commerce Order'}
                 </span>
@@ -465,8 +572,8 @@ export default function InvoicePrintModal({ invoice, onClose }) {
             <button
               onClick={() => handleFormatChange('thermal')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${printFormat === 'thermal'
-                  ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <span>🧾 1. Thermal Print (80mm/58mm Roll)</span>
@@ -476,8 +583,8 @@ export default function InvoicePrintModal({ invoice, onClose }) {
             <button
               onClick={() => handleFormatChange('a4')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${printFormat === 'a4'
-                  ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <span>📄 2. A4 Size (Multi-Page C/F & B/F)</span>
@@ -492,8 +599,8 @@ export default function InvoicePrintModal({ invoice, onClose }) {
             <button
               onClick={() => handleFormatChange('dotmatrix')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${printFormat === 'dotmatrix'
-                  ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
             >
               <span>📑 3. Dot Matrix / Tractor Roll (Medical 1-Page)</span>
@@ -502,24 +609,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
 
           {/* Action Buttons & Helpers */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Helper: Simulate Multi-page toggle to test A4 overflow and B/F, C/F rows */}
-            {printFormat === 'a4' && (
-              <button
-                onClick={() => {
-                  const nextState = !isSimulatedMultiPage;
-                  setIsSimulatedMultiPage(nextState);
-                  showToast(nextState ? 'Simulating 18 items multi-page invoice' : 'Restored original items');
-                }}
-                className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition border ${isSimulatedMultiPage
-                    ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
-                  }`}
-                title="Toggle between real items and simulated 18 items to test multi-page B/F and C/F calculation"
-              >
-                <Layers className="w-3.5 h-3.5 text-amber-600" />
-                {isSimulatedMultiPage ? 'Reset to Actual Items' : 'Test Multi-Page (18 Items)'}
-              </button>
-            )}
+
 
             {/* Dot Matrix Height Selector (5.5" Half Page tear-off vs 11" Full Sheet) */}
             {printFormat === 'dotmatrix' && (
@@ -555,6 +645,8 @@ export default function InvoicePrintModal({ invoice, onClose }) {
             </button>
           </div>
         </div>
+
+
 
         {/* 3. Printable Area - Previews chosen format */}
         <div className="print-modal-scroll flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-200/60 dark:bg-slate-950 flex justify-center">
@@ -720,15 +812,70 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                 // Cumulative total carrying forward from this page to next
                 const runningUpTo = runningBefore + pageSubtotal;
 
+                // Right-side financial summary rows for last page table footer
+                const lastPageSummaryRows = [];
+                if (couponDiscount > 0) {
+                  lastPageSummaryRows.push({
+                    label: `Coupon Discount (${couponCode || 'Promo'}):`,
+                    val: `-₹ ${couponDiscount.toFixed(2)}`,
+                    cls: 'text-emerald-700 font-bold',
+                  });
+                }
+                if (shippingCharge > 0) {
+                  lastPageSummaryRows.push({
+                    label: 'Shipping Charges:',
+                    val: `+₹ ${shippingCharge.toFixed(2)}`,
+                    cls: 'text-slate-700 font-bold',
+                  });
+                }
+                if (isPakka) {
+                  lastPageSummaryRows.push({
+                    label: 'CGST (Output):',
+                    val: `₹ ${(gstCalculated / 2).toFixed(2)}`,
+                    cls: 'text-slate-800 font-bold',
+                  });
+                  lastPageSummaryRows.push({
+                    label: 'SGST (Output):',
+                    val: `₹ ${(gstCalculated / 2).toFixed(2)}`,
+                    cls: 'text-slate-800 font-bold',
+                  });
+                }
+                lastPageSummaryRows.push({
+                  label: isPakka ? 'TOTAL VALUE:' : 'TOTAL VALUE:',
+                  val: `₹ ${grandTotal.toFixed(2)}`,
+                  isTotal: true,
+                });
+                lastPageSummaryRows.push({
+                  label: isCod ? 'COD (Collect on Delivery):' : 'Amount Received:',
+                  val: `₹ ${isCod ? grandTotal.toFixed(2) : paidAmount.toFixed(2)}`,
+                  cls: isCod ? 'text-amber-800 font-bold' : 'text-emerald-700 font-bold',
+                });
+                if (!isCod && duesAmount > 0) {
+                  lastPageSummaryRows.push({
+                    label: 'BALANCE DUES:',
+                    val: `₹ ${duesAmount.toFixed(2)}`,
+                    isDues: true,
+                  });
+                }
+
                 return (
                   <div
                     key={pageIdx}
-                    className="a4-page-sheet bg-white text-slate-900 p-8 rounded-xl shadow-lg border border-slate-300 w-full text-xs font-sans relative flex flex-col justify-between"
+                    className="a4-page-sheet bg-white text-slate-900 p-6 sm:p-7 rounded-xl shadow-lg border border-slate-300 w-full text-xs font-sans relative flex flex-col justify-between"
+                    style={{
+                      width: '100%',
+                      minHeight: '267mm',
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                    }}
                   >
-                    <div>
+                    {/* TOP SECTION: Page Header + Buyer Info (Shrink-0) */}
+                    <div className="shrink-0">
                       {/* PAGE HEADER: Full Header on Page 1, Compact Continuity Header on Page 2+ */}
                       {isFirstPage ? (
-                        <div className="flex items-start justify-between border-b-2 border-slate-900 pb-3">
+                        <div className="flex items-start justify-between border-b-2 border-slate-900 pb-2.5">
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-2xl font-black tracking-tight text-slate-900 uppercase">
@@ -754,13 +901,13 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                             <div className="text-slate-500 text-[11px]">Payment: <b>{invoice.paymentMethod || 'Cash'}</b></div>
                             {totalPages > 1 && (
                               <div className="text-[#00a2c7] font-bold text-[11px]">
-                                Page 1 of {totalPages}
+                                Page {pageIdx + 1} of {totalPages}
                               </div>
                             )}
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between border-b-2 border-slate-900 pb-2 mb-3">
+                        <div className="flex items-center justify-between border-b-2 border-slate-900 pb-1.5 mb-2">
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-base font-black tracking-tight text-slate-900 uppercase">
@@ -788,7 +935,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
 
                       {/* Buyer & Bill Details Box (Page 1 Only) */}
                       {isFirstPage && (
-                        <div className="grid grid-cols-2 gap-4 py-2.5 border-b border-slate-200 bg-slate-50/70 p-3 rounded-lg my-3">
+                        <div className="grid grid-cols-2 gap-3 py-2 border border-slate-300 bg-slate-50/70 p-2.5 rounded-lg my-2">
                           <div>
                             <p className="font-bold text-slate-500 uppercase text-[10px]">Billed To (Customer Details):</p>
                             <h4 className="font-extrabold text-slate-900 text-sm mt-0.5">{invoice.customerName || 'Cash Customer'}</h4>
@@ -836,239 +983,250 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                           </div>
                         </div>
                       )}
+                    </div>
 
-                      {/* Paginated Items Table */}
-                      <table className="w-full text-left border-collapse border border-slate-400 my-2">
-                        <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[10px]">
-                          <tr className="border-b border-slate-400">
-                            <th className="border border-slate-300 px-2 py-2 text-center w-8 min-w-[32px] align-middle">#</th>
-                            <th className="border border-slate-300 px-3 py-2 text-left min-w-[220px] align-middle">Description of Goods</th>
-                            <th className="border border-slate-300 px-2.5 py-2 text-center w-36 min-w-[130px] whitespace-nowrap align-middle">Batch / Expiry</th>
-                            <th className="border border-slate-300 px-2 py-2 text-center w-16 min-w-[60px] font-mono align-middle">HSN</th>
-                            <th className="border border-slate-300 px-2 py-2 text-center w-20 min-w-[70px] whitespace-nowrap align-middle">Qty</th>
-                            <th className="border border-slate-300 px-3 py-2 text-right w-24 min-w-[85px] font-mono align-middle">Rate (₹)</th>
-                            {isPakka && <th className="border border-slate-300 px-2 py-2 text-center w-16 min-w-[60px] align-middle">GST %</th>}
-                            <th className="border border-slate-300 px-3 py-2 text-right w-28 min-w-[95px] font-mono align-middle">Amount (₹)</th>
+                    {/* MIDDLE SECTION: Paginated Items Table (Full-Height Flex, Columns continuous top-to-bottom, NO horizontal row lines in product list) */}
+                    <div className="flex-1 flex flex-col min-h-0 my-1">
+                      <table className="w-full h-full border-collapse border-2 border-slate-900 table-fixed text-left">
+                        <colgroup>
+                          <col style={{ width: '4%' }} />
+                          <col style={{ width: isPakka ? '38%' : '44%' }} />
+                          <col style={{ width: '14%' }} />
+                          <col style={{ width: '8%' }} />
+                          <col style={{ width: '8%' }} />
+                          <col style={{ width: '10%' }} />
+                          {isPakka && <col style={{ width: '6%' }} />}
+                          <col style={{ width: '12%' }} />
+                        </colgroup>
+                        <thead className="bg-slate-100 text-slate-900 font-bold uppercase text-[10px] border-b-2 border-slate-900 shrink-0">
+                          <tr>
+                            <th className="border-r border-slate-400 px-1 py-1.5 text-center">#</th>
+                            <th className="border-r border-slate-400 px-2 py-1.5 text-left">Description of Goods</th>
+                            <th className="border-r border-slate-400 px-1.5 py-1.5 text-center whitespace-nowrap">Batch / Expiry</th>
+                            <th className="border-r border-slate-400 px-1 py-1.5 text-center font-mono">HSN</th>
+                            <th className="border-r border-slate-400 px-1 py-1.5 text-center whitespace-nowrap">Qty</th>
+                            <th className="border-r border-slate-400 px-2 py-1.5 text-right font-mono">Rate (₹)</th>
+                            {isPakka && <th className="border-r border-slate-400 px-1 py-1.5 text-center">GST%</th>}
+                            <th className="px-2 py-1.5 text-right font-mono">Amount (₹)</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200">
+                        <tbody className="h-full">
 
-                          {/* USER REQUIREMENT: "first page la total second ke top row me show hoga" */}
+                          {/* USER REQUIREMENT: "first page la total second ke top row me show hoga (B/F)" */}
                           {/* TOP ROW FOR PAGE 2+: Total Brought Forward (B/F) from previous page */}
                           {!isFirstPage && (
-                            <tr className="bg-amber-50/95 font-bold border-b-2 border-slate-400">
-                              <td colSpan={isPakka ? 7 : 6} className="border border-slate-300 px-3 py-1.5 text-right uppercase text-[10px] text-amber-950 tracking-wider">
-                                <span className="bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded mr-2 font-black text-[9px]">B/F</span>
-                                Total Brought Forward (B/F) from Page {pageIdx} (कुल योग आगे लाया गया):
+                            <tr className="bg-amber-50 font-bold border-b-2 border-slate-900" style={{ height: '22px', maxHeight: '22px', overflow: 'hidden' }}>
+                              <td colSpan={isPakka ? 7 : 6} className="border-r border-slate-400 px-2 py-0 text-right uppercase text-[9px] text-amber-950 tracking-wider" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                <span className="bg-amber-200 text-amber-900 px-1 rounded mr-1 font-black text-[8px]">B/F</span>
+                                Total Brought Forward from Page {pageIdx}:
                               </td>
-                              <td className="border border-slate-300 px-3 py-1.5 text-right font-mono text-xs text-amber-950 font-black">
+                              <td className="px-2 py-0 text-right font-mono text-[10px] text-amber-950 font-black" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                 ₹ {runningBefore.toFixed(2)}
                               </td>
                             </tr>
                           )}
 
-                          {/* Page Items */}
+                          {/* USER REQUIREMENT:
+                              "colume upar se niche sata hua rahega"
+                              "row line product list me nhi rahega sirf row line niche rahega and upar rahega product list me nhi rahega"
+                          */}
                           {pageItems.map((it, itemIdx) => {
                             const itemNumber = globalStartIdx + itemIdx + 1;
                             const rowAmount = parseFloat(it.qty || 1) * parseFloat(it.price || 0);
+
                             return (
-                              <tr key={itemIdx} className="hover:bg-slate-50/60 transition">
-                                <td className="border border-slate-300 px-2 py-1 text-center text-slate-500 font-bold align-middle">
+                              <tr key={itemIdx} className="a4-product-row">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center text-slate-500 font-bold align-middle text-[10px]">
                                   {itemNumber}
                                 </td>
-                                <td className="border border-slate-300 px-2.5 py-1 align-middle">
-                                  <div className="font-bold text-slate-900 text-xs leading-tight">{it.name}</div>
-                                  <div className="flex items-center gap-2 text-[9px] text-slate-500">
-                                    {it.pack && <span className="bg-slate-100 px-1 rounded text-slate-700">{it.pack}</span>}
-                                    {it.variant && <span>{it.variant}</span>}
-                                    {it.barcode && <span className="font-mono text-slate-400">BC: {it.barcode}</span>}
-                                  </div>
+                                <td className="border-r border-slate-400 px-2 py-0 align-middle">
+                                  <div className="font-bold text-slate-900 text-[10px] leading-tight truncate">{it.name}</div>
+                                  {(it.pack || it.variant || it.barcode) && (
+                                    <div className="flex items-center gap-1 text-[8px] text-slate-500 leading-none">
+                                      {it.pack && <span className="bg-slate-100 px-1 rounded text-slate-700">{it.pack}</span>}
+                                      {it.variant && <span>{it.variant}</span>}
+                                      {it.barcode && <span className="font-mono text-slate-400">BC:{it.barcode}</span>}
+                                    </div>
+                                  )}
                                 </td>
-                                <td className="border border-slate-300 px-2 py-1 text-center align-middle whitespace-nowrap">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center align-middle whitespace-nowrap">
                                   {it.batchNo ? (
                                     <div className="font-mono text-[9px] text-slate-800 font-bold leading-tight">
-                                      <span>B: {it.batchNo}</span>
+                                      <span>{it.batchNo}</span>
                                       {it.expiryDate && (
-                                        <span className="block text-[8px] text-slate-500 font-normal">Exp: {it.expiryDate}</span>
+                                        <span className="block text-[8px] text-slate-500 font-normal">{it.expiryDate}</span>
                                       )}
                                     </div>
                                   ) : (
                                     <span className="text-slate-400 text-[10px]">—</span>
                                   )}
                                 </td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-center font-mono text-[10px] text-slate-700 align-middle">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center font-mono text-[10px] text-slate-700 align-middle">
                                   {it.hsn || '6205'}
                                 </td>
-                                <td className="border border-slate-300 px-2 py-1 text-center font-bold text-xs text-slate-900 align-middle whitespace-nowrap">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center font-bold text-[10px] text-slate-900 align-middle whitespace-nowrap">
                                   {it.qty} {it.unit || 'pcs'}
                                 </td>
-                                <td className="border border-slate-300 px-2.5 py-1 text-right font-mono text-xs text-slate-800 align-middle">
+                                <td className="border-r border-slate-400 px-2 py-0 text-right font-mono text-[10px] text-slate-800 align-middle">
                                   {parseFloat(it.price || 0).toFixed(2)}
                                 </td>
                                 {isPakka && (
-                                  <td className="border border-slate-300 px-1.5 py-1 text-center font-bold text-slate-700 text-[11px] align-middle">
+                                  <td className="border-r border-slate-400 px-1 py-0 text-center font-bold text-slate-700 text-[10px] align-middle">
                                     {it.gst || (it.gstRate ? `${it.gstRate}%` : '5%')}
                                   </td>
                                 )}
-                                <td className="border border-slate-300 px-2.5 py-1 text-right font-bold font-mono text-xs text-slate-900 align-middle">
+                                <td className="px-2 py-0 text-right font-bold font-mono text-[10px] text-slate-900 align-middle">
                                   {rowAmount.toFixed(2)}
                                 </td>
                               </tr>
                             );
                           })}
 
+                          {/* Filler Row: Expands to absorb all remaining empty space and extend column vertical lines to the footer */}
+                          <tr className="h-full" style={{ height: 'auto' }}>
+                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
+                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
+                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
+                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
+                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
+                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
+                            {isPakka && <td className="border-r border-slate-400 p-0">&nbsp;</td>}
+                            <td className="p-0">&nbsp;</td>
+                          </tr>
+
                           {/* USER REQUIREMENT: C/F on all intermediate / non-last pages */}
                           {/* BOTTOM ROW FOR PAGE 1..(N-1): Carried Forward (C/F) to next page */}
                           {!isLastPage && (
-                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-400">
-                              <td colSpan={isPakka ? 7 : 6} className="border border-slate-300 px-3 py-2 text-right uppercase text-[10px] text-slate-800 tracking-wider">
-                                <span className="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded mr-2 font-black text-[9px]">C/F</span>
-                                Total Carried Forward (C/F) to Page {pageIdx + 2} (कुल योग आगे ले जाया गया):
+                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-900" style={{ height: '22px', maxHeight: '22px', overflow: 'hidden' }}>
+                              <td colSpan={isPakka ? 7 : 6} className="border-r border-slate-400 px-2 py-0 text-right uppercase text-[9px] text-slate-800 tracking-wider" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                <span className="bg-slate-200 text-slate-800 px-1 rounded mr-1 font-black text-[8px]">C/F</span>
+                                Total Carried Forward to Page {pageIdx + 2}:
                               </td>
-                              <td className="border border-slate-300 px-3 py-2 text-right font-mono text-xs text-slate-900 font-black">
+                              <td className="px-2 py-0 text-right font-mono text-[10px] text-slate-900 font-black" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                 ₹ {runningUpTo.toFixed(2)}
                               </td>
                             </tr>
+                          )}
+
+                          {/* USER REQUIREMENT: "footer ko bhi row colume me set kare" */}
+                          {/* LAST PAGE FOOTER INSIDE TABLE */}
+                          {isLastPage && (
+                            <>
+                              {/* 1. Taxable Subtotal Row (Aligns Qty & Amount directly with table columns above) */}
+                              <tr className="bg-slate-50 font-bold border-t-2 border-slate-900" style={{ height: '22px', maxHeight: '22px' }}>
+                                <td colSpan={4} className="border-r border-slate-400 px-2 py-0 text-left uppercase text-[9px] text-slate-700 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                  <span className="font-bold text-slate-500">Total Items:</span> <span className="font-black text-slate-900">{activeItems.length}</span>
+                                </td>
+                                <td className="border-r border-slate-400 px-1 py-0 text-center font-bold font-mono text-[9px] text-slate-900 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                  {activeItems.reduce((acc, it) => acc + parseFloat(it.qty || 1), 0)} pcs
+                                </td>
+                                <td colSpan={isPakka ? 2 : 1} className="border-r border-slate-400 px-2 py-0 text-right font-bold uppercase text-[9px] text-slate-700 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                  Taxable Subtotal:
+                                </td>
+                                <td className="px-2 py-0 text-right font-mono font-bold text-[10px] text-slate-900 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                  ₹ {itemsSubtotal.toFixed(2)}
+                                </td>
+                              </tr>
+
+                              {/* 2. Total items ke niche = AMOUNT IN WORDS Row */}
+                              {lastPageSummaryRows.length > 0 && (
+                                <tr className="border-t border-slate-300" style={{ height: '22px', maxHeight: '22px' }}>
+                                  <td colSpan={5} className="border-r border-slate-400 px-2 py-0 align-middle" style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                    <span className="font-bold text-slate-500 uppercase text-[9px] mr-1.5">Amount in Words:</span>
+                                    <span className="font-black text-slate-900 text-[9px]">{numberToWordsINR(grandTotal)}</span>
+                                  </td>
+                                  <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9px] ${lastPageSummaryRows[0].isTotal ? 'font-black uppercase text-[10px] text-slate-900 tracking-wider' : lastPageSummaryRows[0].cls || 'font-bold text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
+                                    {lastPageSummaryRows[0].label}
+                                  </td>
+                                  <td className={`px-2 py-0 text-right font-mono align-middle ${lastPageSummaryRows[0].isTotal ? 'font-black text-[11px] text-[#00a2c7]' : lastPageSummaryRows[0].cls || 'font-bold text-[10px] text-slate-900'}`} style={{ whiteSpace: 'nowrap' }}>
+                                    {lastPageSummaryRows[0].val}
+                                  </td>
+                                </tr>
+                              )}
+
+                              {/* 3. Below Amount in Words: Bank Details (Left with rowSpan) + Remaining Summary rows (Right) */}
+                              {lastPageSummaryRows.length > 1 && (
+                                <>
+                                  <tr className={lastPageSummaryRows[1].isTotal ? 'bg-slate-100 border-t-2 border-b-2 border-slate-900' : 'border-t border-slate-200'} style={{ height: lastPageSummaryRows[1].isTotal ? '26px' : '20px' }}>
+                                    {/* Left Cell: Spans across all remaining right-side rows */}
+                                    <td
+                                      rowSpan={lastPageSummaryRows.length - 1}
+                                      colSpan={5}
+                                      className="border-r border-slate-400 px-2.5 py-1.5 align-top text-[9px] text-slate-700 bg-white"
+                                    >
+                                      <div className="font-bold text-slate-800 uppercase text-[8px] mb-0.5 tracking-wider">BANK &amp; PAYMENT DETAILS:</div>
+                                      <div>Bank: <b>HDFC Bank Ltd, Jaipur Main</b> &nbsp;|&nbsp; A/C: <b>50200088912044</b></div>
+                                      <div>IFSC: <b>HDFC0000054</b> &nbsp;|&nbsp; UPI: <b>shoppy@hdfcbank</b></div>
+                                      <div className="mt-0.5">
+                                        <span>Payment: <b>{invoice.paymentMethod || 'Cash'}</b></span>
+                                        {invoice.paymentRef && <span className="ml-2 font-mono font-bold text-[#00a2c7]">Ref: {invoice.paymentRef}</span>}
+                                        {isCod ? (
+                                          <span className="ml-2 bg-amber-100 text-amber-900 text-[8px] font-black px-1.5 py-0.2 rounded border border-amber-300">COD DUE</span>
+                                        ) : (
+                                          <span className="ml-2 bg-emerald-100 text-emerald-900 text-[8px] font-black px-1.5 py-0.2 rounded border border-emerald-300">PAID</span>
+                                        )}
+                                      </div>
+                                      {isPakka && <div className="text-slate-400 text-[8px] font-mono mt-0.5">IRN: 9f8a32b0c1e8d7f6...Signed by GSP (E-Invoice)</div>}
+                                    </td>
+
+                                    <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9px] ${lastPageSummaryRows[1].isTotal ? 'font-black uppercase text-[10px] text-slate-900 tracking-wider' : lastPageSummaryRows[1].cls || 'font-bold text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
+                                      {lastPageSummaryRows[1].label}
+                                    </td>
+                                    <td className={`px-2 py-0 text-right font-mono align-middle ${lastPageSummaryRows[1].isTotal ? 'font-black text-[11px] text-[#00a2c7]' : lastPageSummaryRows[1].cls || 'font-bold text-[10px] text-slate-900'}`} style={{ whiteSpace: 'nowrap' }}>
+                                      {lastPageSummaryRows[1].val}
+                                    </td>
+                                  </tr>
+
+                                  {/* Subsequent right-side rows (cols 1-5 already spanned by Bank Details above) */}
+                                  {lastPageSummaryRows.slice(2).map((r, idx) => (
+                                    <tr
+                                      key={idx}
+                                      className={r.isTotal ? 'bg-slate-100 border-t-2 border-b-2 border-slate-900' : r.isDues ? 'bg-rose-50 border-t border-slate-200' : 'border-t border-slate-200'}
+                                      style={{ height: r.isTotal ? '26px' : '20px' }}
+                                    >
+                                      <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9px] ${r.isTotal ? 'font-black uppercase text-[10px] text-slate-900 tracking-wider' : r.isDues ? 'font-black text-rose-700' : r.cls || 'font-bold text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
+                                        {r.label}
+                                      </td>
+                                      <td className={`px-2 py-0 text-right font-mono align-middle ${r.isTotal ? 'font-black text-[11px] text-[#00a2c7]' : r.isDues ? 'font-black text-[10px] text-rose-700' : r.cls || 'font-bold text-[10px] text-slate-900'}`} style={{ whiteSpace: 'nowrap' }}>
+                                        {r.val}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </>
+                              )}
+                            </>
                           )}
                         </tbody>
                       </table>
                     </div>
 
-                    {/* Intermediate Page Footer (When Not Last Page) */}
+                    {/* Intermediate Page Footer (When Not Last Page - Pinned to bottom) */}
                     {!isLastPage && (
-                      <div className="mt-auto pt-3 border-t border-slate-300 flex justify-between items-center text-[10px] text-slate-500">
-                        <p>Terms: Goods once sold will only be exchanged within 7 days • Subject to Jaipur jurisdiction only</p>
-                        <p className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                      <div className=" shrink-0 mt-auto pt-2 border-t border-slate-300 flex justify-between items-center text-[10px] text-slate-500">
+                        <p style={{ display: 'none' }}>Terms: Goods once sold will only be exchanged within 7 days • Subject to Jaipur jurisdiction only</p>
+                        <p className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded" style={{ display: 'none' }}>
                           Continued on Page {pageIdx + 2} of {totalPages} ➔
                         </p>
                       </div>
                     )}
 
-                    {/* USER REQUIREMENT: "amount ka text me last page me niche show hoga" */}
-                    {/* Final Page: Grand Totals, Amount in Words (ONLY on Last Page), Bank Details, and Signatory */}
+                    {/* USER REQUIREMENT: "FOR RAMESH FASHION STORE / Authorized Signatory ye bala sabse bahar right bottom me rahega sab row colume se bahar" */}
+                    {/* LAST PAGE OUTSIDE FOOTER: Terms & Conditions on Left, Authorized Signatory on Right */}
                     {isLastPage && (
-                      <div className="mt-2">
-                        {/* Bill Amount in Words (Strictly placed at the bottom on the last page) */}
-                        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-300 my-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div>
-                            <span className="font-bold text-slate-600 uppercase text-[10px] block tracking-wide">
-                              Invoice Amount in Words (कुल राशि शब्दों में):
-                            </span>
-                            <span className="font-black text-slate-900 text-xs tracking-wide">
-                              {numberToWordsINR(grandTotal)}
-                            </span>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase block">Grand Total:</span>
-                            <span className="font-mono font-black text-sm text-[#00a2c7]">
-                              ₹ {grandTotal.toFixed(2)}
-                            </span>
-                          </div>
+                      <div className="shrink-0 mt-3 pt-2 border-t border-slate-300 flex justify-between items-end">
+                        <div className="text-[9px] text-slate-500 max-w-[62%] space-y-0.5">
+                          <p className="font-bold text-slate-700">Terms &amp; Conditions:</p>
+                          <p>1. Goods once sold will only be exchanged within 7 days with original tag and bill.</p>
+                          <p>2. Subject to Jaipur jurisdiction only. This is a computer generated invoice.</p>
+                          <p className="text-[8px] text-slate-400 font-mono mt-0.5">Page {pageIdx + 1} of {totalPages}</p>
                         </div>
-
-                        {/* Bottom Summary & Tax Calculation */}
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                          <div className="space-y-1.5 border border-slate-200 p-2.5 rounded-lg bg-slate-50/50 text-[11px]">
-                            <p className="font-bold text-slate-700 uppercase text-[10px]">Bank & Payment Details:</p>
-                            <p className="text-slate-600">Bank: <b>HDFC Bank Ltd, Jaipur Main</b></p>
-                            <p className="text-slate-600">A/C No: <b>50200088912044</b></p>
-                            <p className="text-slate-600">IFSC Code: <b>HDFC0000054</b> | UPI: <b>shoppy@hdfcbank</b></p>
-                            {invoice.paymentRef && (
-                              <p className="text-[#00a2c7] font-bold font-mono">
-                                Payment Ref ({invoice.paymentMethod}): {invoice.paymentRef}
-                              </p>
-                            )}
-
-                            {isPakka && (
-                              <div className="pt-1.5 border-t border-slate-200 flex items-center justify-between">
-                                <div className="text-[9px] text-slate-500 font-mono">
-                                  IRN: 9f8a32b0c1e8d7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0<br />
-                                  Signed by GST Suvidha Provider (E-Invoice Portal)
-                                </div>
-                                <QrCode className="w-9 h-9 text-slate-800" />
-                              </div>
-                            )}
+                        <div className="text-center min-w-[210px]">
+                          <div className="text-[11px] font-black text-slate-900 uppercase tracking-tight">
+                            For {displayStoreName}
                           </div>
-
-                          <div className="border border-slate-200 rounded-lg p-2.5 space-y-1 font-mono text-xs">
-                            <div className="flex justify-between text-slate-600 text-[11px]">
-                              <span>Taxable Subtotal:</span>
-                              <span>₹ {itemsSubtotal.toFixed(2)}</span>
-                            </div>
-                            {couponDiscount > 0 && (
-                              <div className="flex justify-between text-emerald-700 font-bold text-[11px]">
-                                <span>Coupon Savings ({couponCode}):</span>
-                                <span>-₹ {couponDiscount.toFixed(2)}</span>
-                              </div>
-                            )}
-                            {shippingCharge > 0 && (
-                              <div className="flex justify-between text-slate-600 text-[11px]">
-                                <span>Courier Freight / Shipping:</span>
-                                <span>+₹ {shippingCharge.toFixed(2)}</span>
-                              </div>
-                            )}
-                            {codCharge > 0 && (
-                              <div className="flex justify-between text-slate-600 text-[11px]">
-                                <span>COD Convenience Fee:</span>
-                                <span>+₹ {codCharge.toFixed(2)}</span>
-                              </div>
-                            )}
-                            {isPakka && (
-                              <>
-                                <div className="flex justify-between text-slate-600 text-[11px]">
-                                  <span>CGST (Intra-state):</span>
-                                  <span>₹ {(gstCalculated / 2).toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-600 text-[11px]">
-                                  <span>SGST (Intra-state):</span>
-                                  <span>₹ {(gstCalculated / 2).toFixed(2)}</span>
-                                </div>
-                              </>
-                            )}
-                            <div className="flex justify-between font-black text-sm text-slate-900 pt-1.5 border-t border-slate-300">
-                              <span>TOTAL INVOICE VALUE:</span>
-                              <span>₹ {grandTotal.toFixed(2)}</span>
-                            </div>
-                            {isCod ? (
-                              <div className="flex justify-between font-extrabold text-amber-900 bg-amber-50 p-1.5 rounded text-xs border border-amber-200">
-                                <span>COD AMOUNT TO COLLECT:</span>
-                                <span>₹ {grandTotal.toFixed(2)}</span>
-                              </div>
-                            ) : (
-                              <div className="flex justify-between font-bold text-emerald-700 text-xs">
-                                <span>Amount Received:</span>
-                                <span>₹ {paidAmount.toFixed(2)}</span>
-                              </div>
-                            )}
-                            {!isCod && duesAmount > 0 && (
-                              <div className="flex justify-between font-extrabold text-rose-700 bg-rose-50 p-1 rounded text-xs">
-                                <span>REMAINING DUES (UDHAAR):</span>
-                                <span>₹ {duesAmount.toFixed(2)}</span>
-                              </div>
-                            )}
-                            {!isCod && duesAmount === 0 && (
-                              <div className="flex justify-between font-bold text-emerald-700 text-[10px]">
-                                <span>Balance Outstanding:</span>
-                                <span>NIL (Full Payment)</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Signatory Footer */}
-                        <div className="mt-5 pt-3 border-t border-slate-300 flex justify-between items-end text-[11px] text-slate-600">
-                          <div>
-                            <p className="font-bold">Terms & Conditions:</p>
-                            <p>1. Goods once sold will not be taken back after 7 days.</p>
-                            <p>2. Subject to Jaipur jurisdiction only.</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Page {totalPages} of {totalPages}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="h-8"></div>
-                            <p className="font-bold text-slate-900 border-t border-slate-400 pt-1 px-4 uppercase">
-                              For {displayStoreName}
-                            </p>
-                            <p className="text-[10px] text-slate-500">Authorized Signatory</p>
+                          <div className="h-11"></div>
+                          <div className="border-t border-slate-400 pt-1 text-[9px] text-slate-600 font-bold uppercase tracking-wider">
+                            Authorized Signatory
                           </div>
                         </div>
                       </div>
@@ -1261,10 +1419,23 @@ export default function InvoicePrintModal({ invoice, onClose }) {
         {/* Scoped CSS for browser print targeting only the active preview */}
         <style dangerouslySetInnerHTML={{
           __html: `
+          /* Fixed row height for all A4 product rows — uniform regardless of content */
+          .a4-product-row {
+            height: 22px !important;
+            max-height: 22px !important;
+            overflow: hidden !important;
+          }
+          .a4-product-row td {
+            height: 22px !important;
+            max-height: 22px !important;
+            overflow: hidden !important;
+            white-space: nowrap !important;
+          }
+
           @media print {
             @page {
               size: ${printFormat === 'thermal' ? '80mm auto' : printFormat === 'dotmatrix' ? `215mm ${dotMatrixPaperSize === 'half' ? '140mm' : '280mm'}` : 'A4 portrait'};
-              margin: ${printFormat === 'thermal' ? '2mm' : printFormat === 'dotmatrix' ? '2mm 4mm' : '8mm 10mm'};
+              margin: ${printFormat === 'thermal' ? '2mm' : printFormat === 'dotmatrix' ? '2mm 4mm' : '10mm 8mm'};
             }
             *, *::before, *::after {
               -webkit-print-color-adjust: exact !important;
@@ -1329,7 +1500,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
               width: 100% !important;
               max-width: 100% !important;
               margin: 0 !important;
-              padding: 0 0 6mm 0 !important;
+              padding: 10mm 8mm !important;
               border: none !important;
               box-shadow: none !important;
               border-radius: 0 !important;
@@ -1338,16 +1509,29 @@ export default function InvoicePrintModal({ invoice, onClose }) {
               break-after: page !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              min-height: 255mm !important;
               display: flex !important;
               flex-direction: column !important;
               justify-content: space-between !important;
               box-sizing: border-box !important;
+              overflow: hidden !important;
+              height: 277mm !important;
+              min-height: 277mm !important;
+              max-height: 277mm !important;
             }
             .a4-page-sheet:last-child {
               page-break-after: avoid !important;
               break-after: avoid !important;
-              padding-bottom: 0 !important;
+            }
+            /* Fixed row height in print too */
+            .a4-product-row {
+              height: 22px !important;
+              max-height: 22px !important;
+            }
+            .a4-product-row td {
+              height: 22px !important;
+              max-height: 22px !important;
+              overflow: hidden !important;
+              white-space: nowrap !important;
             }
             .dotmatrix-receipt {
               position: static !important;

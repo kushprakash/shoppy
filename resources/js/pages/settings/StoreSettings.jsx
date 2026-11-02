@@ -35,7 +35,8 @@ import {
   Download,
   Link2,
   X,
-  ZoomIn
+  ZoomIn,
+  Sliders
 } from 'lucide-react';
 
 export default function StoreSettings() {
@@ -193,6 +194,8 @@ export default function StoreSettings() {
       printer: 'USB Generic / Text Printer (USB-001)',
       dotmatrix_printer: 'Epson LX-300+II / TVS MSP Dot Matrix (LPT1/USB)',
       default_invoice_format: 'a4',
+      a4_items_per_page: storeSettings.a4_items_per_page || 10,
+      a4_paging_mode: storeSettings.a4_paging_mode || 'fixed',
       scale: 'COM3 Serial Port (9600 Baud, 8N1)',
       barcode: 'USB HID Keyboard Hook (Fast)',
     }
@@ -334,8 +337,15 @@ export default function StoreSettings() {
           footer_copyright: formData.footer_copyright,
           meta_title: formData.meta_title,
           logo: formData.logo,
-          favicon: formData.favicon
+          favicon: formData.favicon,
+          a4_items_per_page: formData.hardware.a4_items_per_page,
+          a4_paging_mode: formData.hardware.a4_paging_mode,
+          default_invoice_format: formData.hardware.default_invoice_format
         });
+        try {
+          localStorage.setItem('shoppy_a4_items_per_page', (formData.hardware.a4_items_per_page || 10).toString());
+          localStorage.setItem('shoppy_a4_paging_mode', formData.hardware.a4_paging_mode || 'fixed');
+        } catch {}
 
         setSaveSuccess(true);
         showToast('Store Branding, GST, Footer, SEO Meta, SMS & SMTP settings saved successfully!');
@@ -356,8 +366,15 @@ export default function StoreSettings() {
         footer_copyright: formData.footer_copyright,
         meta_title: formData.meta_title,
         logo: formData.logo,
-        favicon: formData.favicon
+        favicon: formData.favicon,
+        a4_items_per_page: formData.hardware.a4_items_per_page,
+        a4_paging_mode: formData.hardware.a4_paging_mode,
+        default_invoice_format: formData.hardware.default_invoice_format
       });
+      try {
+        localStorage.setItem('shoppy_a4_items_per_page', (formData.hardware.a4_items_per_page || 10).toString());
+        localStorage.setItem('shoppy_a4_paging_mode', formData.hardware.a4_paging_mode || 'fixed');
+      } catch {}
       setSaveSuccess(true);
       showToast('Settings saved locally! (Backend synchronized)');
       setTimeout(() => setSaveSuccess(false), 4000);
@@ -1849,6 +1866,35 @@ export default function StoreSettings() {
                 <option value="thermal">🧾 1. Thermal POS Receipt (80mm/58mm Roll)</option>
                 <option value="a4">📄 2. A4 Size (Multi-Page Auto C/F & B/F)</option>
                 <option value="dotmatrix">📑 3. Dot Matrix / Tractor Roll (Medical 1-Page Tear-Off)</option>
+              </select>
+            </div>
+
+            {/* A4 Products Per Page Capacity (User Requirement) */}
+            <div className="p-4 rounded-xl border border-cyan-200 dark:border-cyan-800 bg-cyan-50/50 dark:bg-cyan-950/20 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-xs text-slate-900 dark:text-white">
+                <Sliders className="w-4 h-4 text-[#00a2c7]" /> A4 Products Per Page (पेज क्षमता)
+              </div>
+              <p className="text-[11px] text-slate-500">1 A4 पेज में कितने उत्पाद सेट होंगे</p>
+              <select
+                value={formData.hardware.a4_items_per_page || 10}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  handleHardwareChange('a4_items_per_page', val);
+                  handleHardwareChange('a4_paging_mode', 'fixed');
+                  try {
+                    localStorage.setItem('shoppy_a4_items_per_page', val.toString());
+                    localStorage.setItem('shoppy_a4_paging_mode', 'fixed');
+                  } catch {}
+                }}
+                className="w-full px-2.5 py-1.5 rounded text-xs bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 font-bold text-slate-900 dark:text-white"
+              >
+                <option value="6">6 Products / Page (Spacious / Luxury Layout)</option>
+                <option value="8">8 Products / Page (Comfortable Spacing)</option>
+                <option value="10">10 Products / Page (Standard Recommended)</option>
+                <option value="12">12 Products / Page (High Density)</option>
+                <option value="14">14 Products / Page (Compact Paper Saver)</option>
+                <option value="15">15 Products / Page (Dense Continuous)</option>
+                <option value="18">18 Products / Page (Maximum Single Page Fit)</option>
               </select>
             </div>
 
