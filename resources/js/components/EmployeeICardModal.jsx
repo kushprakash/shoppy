@@ -354,7 +354,7 @@ export default function EmployeeICardModal({ onClose, targetEmployeeId = null })
                 {/* Signatory Stamp */}
                 <div className="text-right">
                   <div className="font-serif italic text-xs font-bold text-indigo-900 tracking-wider">
-                    Ramesh Sundaram
+                    {storeSettings?.owner_name || storeSettings?.ownerName || currentUser?.name || 'Authorized Signatory'}
                   </div>
                   <div className="w-20 border-b border-slate-400 mt-0.5 mb-0.5 ml-auto" />
                   <div className="text-[8px] font-bold uppercase tracking-wider text-slate-500">

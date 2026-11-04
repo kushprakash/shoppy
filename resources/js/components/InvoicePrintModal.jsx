@@ -428,14 +428,28 @@ export default function InvoicePrintModal({ invoice, onClose }) {
           break-after: avoid !important;
         }
         .a4-product-row {
-          height: 22px !important;
-          max-height: 22px !important;
+          height: 24px !important;
+          max-height: 24px !important;
         }
         .a4-product-row td {
-          height: 22px !important;
-          max-height: 22px !important;
+          height: 24px !important;
+          max-height: 24px !important;
           overflow: hidden !important;
           white-space: nowrap !important;
+        }
+        @media print {
+          body, html {
+            color: #000000 !important;
+            background: #ffffff !important;
+          }
+          .a4-page-sheet {
+            color: #000000 !important;
+            background: #ffffff !important;
+          }
+          .a4-page-sheet * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
         .thermal-receipt {
           width: 80mm !important;
@@ -875,58 +889,56 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                     <div className="shrink-0">
                       {/* PAGE HEADER: Full Header on Page 1, Compact Continuity Header on Page 2+ */}
                       {isFirstPage ? (
-                        <div className="flex items-start justify-between border-b-2 border-slate-900 pb-2.5">
+                        <div className="flex items-start justify-between border-b-2 border-slate-800 pb-2">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-2xl font-black tracking-tight text-slate-900 uppercase">
+                              <span className="text-xl font-bold tracking-tight text-slate-900 uppercase">
                                 {displayStoreName}
                               </span>
-                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded uppercase ${isPakka ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
-                                }`}>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded uppercase border border-slate-700 bg-slate-100 text-slate-800">
                                 {isPakka ? 'TAX INVOICE' : 'ESTIMATE BILL / CHALLAN'}
                               </span>
                             </div>
-                            <p className="text-slate-600 text-xs mt-0.5">Wholesale, Retail & Multi-Branch Garments Merchant</p>
-                            <p className="text-slate-600 text-xs">Unit 14, Bapu Bazar, Jaipur, Rajasthan - 302003</p>
-                            <p className="text-slate-700 font-semibold text-xs mt-0.5">
-                              GSTIN: <span className="font-mono font-bold">{displayGstin}</span> | State Code: 08 (Rajasthan)
+                            <p className="text-slate-600 font-normal text-xs mt-0.5">Wholesale, Retail &amp; Multi-Branch Garments Merchant</p>
+                            <p className="text-slate-600 font-normal text-xs">Unit 14, Bapu Bazar, Jaipur, Rajasthan - 302003</p>
+                            <p className="text-slate-700 font-medium text-xs mt-0.5">
+                              GSTIN: <span className="font-mono font-bold text-slate-900">{displayGstin}</span> | State Code: 08 (Rajasthan)
                             </p>
-                            <p className="text-slate-600 text-xs">Phone: {displayPhone} | Email: support@shoppyerp.in</p>
+                            <p className="text-slate-600 font-normal text-xs">Phone: {displayPhone} | Email: support@shoppyerp.in</p>
                           </div>
 
-                          <div className="text-right border-l-2 border-slate-200 pl-4 space-y-1">
-                            <div className="text-sm font-black font-mono text-[#00a2c7]">{invoice.id}</div>
-                            <div className="text-slate-500 text-[11px]">Date: <b>{invoice.date}</b></div>
-                            <div className="text-slate-500 text-[11px]">Channel: <b>{isOffline ? 'Offline Store POS' : 'Online Storefront'}</b></div>
-                            <div className="text-slate-500 text-[11px]">Payment: <b>{invoice.paymentMethod || 'Cash'}</b></div>
+                          <div className="text-right border-l-2 border-slate-700 pl-4 space-y-1">
+                            <div className="text-base font-bold font-mono text-slate-900">{invoice.id}</div>
+                            <div className="text-slate-600 text-[11px]">Date: <span className="font-semibold text-slate-800">{invoice.date}</span></div>
+                            <div className="text-slate-600 text-[11px]">Channel: <span className="font-medium text-slate-800">{isOffline ? 'Offline Store POS' : 'Online Storefront'}</span></div>
+                            <div className="text-slate-600 text-[11px]">Payment: <span className="font-medium text-slate-800">{invoice.paymentMethod || 'Cash'}</span></div>
                             {totalPages > 1 && (
-                              <div className="text-[#00a2c7] font-bold text-[11px]">
+                              <div className="text-slate-700 font-semibold text-[11px]">
                                 Page {pageIdx + 1} of {totalPages}
                               </div>
                             )}
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between border-b-2 border-slate-900 pb-1.5 mb-2">
+                        <div className="flex items-center justify-between border-b-2 border-slate-700 pb-1.5 mb-2">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-base font-black tracking-tight text-slate-900 uppercase">
+                              <span className="text-base font-bold tracking-tight text-slate-900 uppercase">
                                 {displayStoreName}
                               </span>
-                              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${isPakka ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
-                                }`}>
+                              <span className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded uppercase border border-slate-700 bg-slate-100 text-slate-800">
                                 {isPakka ? 'TAX INVOICE (CONTINUED)' : 'ESTIMATE BILL (CONTINUED)'}
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-500 font-mono">
+                            <p className="text-[11px] text-slate-600 font-mono font-medium">
                               Invoice #{invoice.id} • Date: {invoice.date}
                             </p>
                           </div>
                           <div className="text-right">
-                            <span className="font-extrabold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded">
+                            <span className="font-semibold text-xs text-slate-800 border border-slate-400 bg-slate-100 px-2.5 py-1 rounded">
                               Page {pageIdx + 1} of {totalPages}
                             </span>
-                            <span className="text-slate-500 block text-[10px] mt-0.5">
+                            <span className="text-slate-600 font-medium block text-[10.5px] mt-0.5">
                               Buyer: {invoice.customerName || 'Customer'}
                             </span>
                           </div>
@@ -935,51 +947,51 @@ export default function InvoicePrintModal({ invoice, onClose }) {
 
                       {/* Buyer & Bill Details Box (Page 1 Only) */}
                       {isFirstPage && (
-                        <div className="grid grid-cols-2 gap-3 py-2 border border-slate-300 bg-slate-50/70 p-2.5 rounded-lg my-2">
+                        <div className="grid grid-cols-2 gap-3 py-2 border border-slate-300 bg-slate-50/50 p-2.5 rounded-lg my-2 text-slate-800">
                           <div>
-                            <p className="font-bold text-slate-500 uppercase text-[10px]">Billed To (Customer Details):</p>
-                            <h4 className="font-extrabold text-slate-900 text-sm mt-0.5">{invoice.customerName || 'Cash Customer'}</h4>
-                            <p className="text-slate-600">Mobile: {invoice.phone || 'N/A'}</p>
-                            <p className="text-slate-600">Shipping Address: {invoice.city || 'Jaipur, RJ'}</p>
+                            <p className="font-semibold text-slate-600 uppercase text-[10px] tracking-wider">Billed To (Customer Details):</p>
+                            <h4 className="font-bold text-slate-900 text-sm mt-0.5">{invoice.customerName || 'Cash Customer'}</h4>
+                            <p className="text-slate-600 font-normal text-[11px]">Mobile: <span className="text-slate-800 font-medium">{invoice.phone || 'N/A'}</span></p>
+                            <p className="text-slate-600 font-normal text-[11px]">Shipping Address: <span className="text-slate-800 font-medium">{invoice.city || 'Jaipur, RJ'}</span></p>
                             {isPakka && (
                               <p className="text-slate-600 font-mono text-[11px]">
-                                GSTIN: {invoice.customerGstin || 'URP (Unregistered Consumer)'}
+                                GSTIN: <span className="text-slate-800 font-semibold">{invoice.customerGstin || 'URP (Unregistered Consumer)'}</span>
                               </p>
                             )}
                             {courierPartner && (
-                              <p className="text-purple-700 font-bold text-[10px] mt-1 font-mono">
+                              <p className="text-slate-700 font-medium text-[10.5px] mt-1 font-mono">
                                 🚚 Courier: {courierPartner} {awbNumber ? `(AWB: ${awbNumber})` : ''}
                               </p>
                             )}
                             {dims && (
-                              <p className="text-slate-500 font-mono text-[9px]">
+                              <p className="text-slate-500 font-mono text-[9.5px]">
                                 📦 Dimensions: {dims.lengthCm}×{dims.widthCm}×{dims.heightCm} cm • Weight: {dims.weightKg} kg
                               </p>
                             )}
                           </div>
                           <div className="text-right space-y-1">
-                            <p className="font-bold text-slate-500 uppercase text-[10px]">Dispatch & Payment Info:</p>
+                            <p className="font-semibold text-slate-600 uppercase text-[10px] tracking-wider">Dispatch &amp; Payment Info:</p>
                             <div className="inline-block">
                               {isCod ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-slate-400 bg-slate-100 text-slate-800">
                                   COD (Cash on Delivery)
                                 </span>
                               ) : (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                  PAID (Online Gateway / Cash)
+                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold border border-slate-400 bg-slate-100 text-slate-800">
+                                  PAID (Online / Cash)
                                 </span>
                               )}
                             </div>
-                            <p className="font-semibold text-slate-800 text-[11px]">Mode: {invoice.paymentMethod || 'Cash'}</p>
+                            <p className="font-normal text-slate-600 text-[11px]">Mode: <span className="text-slate-800 font-medium">{invoice.paymentMethod || 'Cash'}</span></p>
                             {invoice.paymentRef && (
-                              <p className="text-[11px] font-mono font-bold text-[#00a2c7]">Ref: {invoice.paymentRef}</p>
+                              <p className="text-[11px] font-mono text-slate-600">Ref: <span className="text-slate-800 font-semibold">{invoice.paymentRef}</span></p>
                             )}
-                            <p className="font-bold text-xs">
-                              Fulfillment: <span className="text-cyan-800 font-extrabold">
+                            <p className="text-slate-600 font-normal text-xs">
+                              Fulfillment: <span className="text-slate-800 font-medium">
                                 {invoice.fulfillment || (isOffline ? 'Counter Handover' : 'Ready to Dispatch')}
                               </span>
                             </p>
-                            <p className="text-slate-500 text-[10px]">Place of Supply: Rajasthan (08)</p>
+                            <p className="text-slate-500 font-normal text-[10.5px]">Place of Supply: Rajasthan (08)</p>
                           </div>
                         </div>
                       )}
@@ -987,22 +999,20 @@ export default function InvoicePrintModal({ invoice, onClose }) {
 
                     {/* MIDDLE SECTION: Paginated Items Table (Full-Height Flex, Columns continuous top-to-bottom, NO horizontal row lines in product list) */}
                     <div className="flex-1 flex flex-col min-h-0 my-1">
-                      <table className="w-full h-full border-collapse border-2 border-slate-900 table-fixed text-left">
+                      <table className="w-full h-full border-collapse border-2 border-slate-800 table-fixed text-left">
                         <colgroup>
-                          <col style={{ width: '4%' }} />
-                          <col style={{ width: isPakka ? '38%' : '44%' }} />
-                          <col style={{ width: '14%' }} />
+                          <col style={{ width: '5%' }} />
+                          <col style={{ width: isPakka ? '48%' : '55%' }} />
                           <col style={{ width: '8%' }} />
                           <col style={{ width: '8%' }} />
-                          <col style={{ width: '10%' }} />
-                          {isPakka && <col style={{ width: '6%' }} />}
-                          <col style={{ width: '12%' }} />
+                          <col style={{ width: '11%' }} />
+                          {isPakka && <col style={{ width: '7%' }} />}
+                          <col style={{ width: '13%' }} />
                         </colgroup>
-                        <thead className="bg-slate-100 text-slate-900 font-bold uppercase text-[10px] border-b-2 border-slate-900 shrink-0">
+                        <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b-2 border-slate-800 shrink-0">
                           <tr>
                             <th className="border-r border-slate-400 px-1 py-1.5 text-center">#</th>
                             <th className="border-r border-slate-400 px-2 py-1.5 text-left">Description of Goods</th>
-                            <th className="border-r border-slate-400 px-1.5 py-1.5 text-center whitespace-nowrap">Batch / Expiry</th>
                             <th className="border-r border-slate-400 px-1 py-1.5 text-center font-mono">HSN</th>
                             <th className="border-r border-slate-400 px-1 py-1.5 text-center whitespace-nowrap">Qty</th>
                             <th className="border-r border-slate-400 px-2 py-1.5 text-right font-mono">Rate (₹)</th>
@@ -1015,12 +1025,12 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                           {/* USER REQUIREMENT: "first page la total second ke top row me show hoga (B/F)" */}
                           {/* TOP ROW FOR PAGE 2+: Total Brought Forward (B/F) from previous page */}
                           {!isFirstPage && (
-                            <tr className="bg-amber-50 font-bold border-b-2 border-slate-900" style={{ height: '22px', maxHeight: '22px', overflow: 'hidden' }}>
-                              <td colSpan={isPakka ? 7 : 6} className="border-r border-slate-400 px-2 py-0 text-right uppercase text-[9px] text-amber-950 tracking-wider" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                <span className="bg-amber-200 text-amber-900 px-1 rounded mr-1 font-black text-[8px]">B/F</span>
+                            <tr className="bg-slate-50 font-semibold border-b border-slate-700" style={{ height: '22px', maxHeight: '22px', overflow: 'hidden' }}>
+                              <td colSpan={isPakka ? 6 : 5} className="border-r border-slate-400 px-2 py-0 text-right uppercase text-[9.5px] text-slate-700 font-semibold tracking-wider" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                <span className="border border-slate-400 bg-slate-200 text-slate-800 px-1.5 py-0.2 rounded mr-1.5 font-bold text-[9px]">B/F</span>
                                 Total Brought Forward from Page {pageIdx}:
                               </td>
-                              <td className="px-2 py-0 text-right font-mono text-[10px] text-amber-950 font-black" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              <td className="px-2 py-0 text-right font-mono text-[10.5px] text-slate-900 font-semibold" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                 ₹ {runningBefore.toFixed(2)}
                               </td>
                             </tr>
@@ -1036,46 +1046,40 @@ export default function InvoicePrintModal({ invoice, onClose }) {
 
                             return (
                               <tr key={itemIdx} className="a4-product-row">
-                                <td className="border-r border-slate-400 px-1 py-0 text-center text-slate-500 font-bold align-middle text-[10px]">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center text-slate-600 font-medium align-middle text-[10.5px]">
                                   {itemNumber}
                                 </td>
-                                <td className="border-r border-slate-400 px-2 py-0 align-middle">
-                                  <div className="font-bold text-slate-900 text-[10px] leading-tight truncate">{it.name}</div>
-                                  {(it.pack || it.variant || it.barcode) && (
-                                    <div className="flex items-center gap-1 text-[8px] text-slate-500 leading-none">
-                                      {it.pack && <span className="bg-slate-100 px-1 rounded text-slate-700">{it.pack}</span>}
-                                      {it.variant && <span>{it.variant}</span>}
-                                      {it.barcode && <span className="font-mono text-slate-400">BC:{it.barcode}</span>}
-                                    </div>
-                                  )}
+                                <td className="border-r border-slate-400 px-2 py-0.5 align-middle">
+                                  <div className="font-semibold text-slate-900 text-[11px] leading-tight truncate">{it.name}</div>
+                                  <div className="flex items-center gap-2 text-[9px] text-slate-600 mt-0.5 leading-none">
+                                    {it.batchNo && (
+                                      <span>Batch: <span className="font-mono font-medium text-slate-800">{it.batchNo}</span></span>
+                                    )}
+                                    {it.expiryDate && (
+                                      <span>Exp: <span className="font-mono font-medium text-slate-800">{it.expiryDate}</span></span>
+                                    )}
+                                    {it.pack && (
+                                      <span className="border border-slate-300 px-1 rounded text-slate-600 bg-slate-50">{it.pack}</span>
+                                    )}
+                                    {it.variant && <span className="text-slate-600">{it.variant}</span>}
+                                    {it.barcode && <span className="font-mono text-slate-400">BC:{it.barcode}</span>}
+                                  </div>
                                 </td>
-                                <td className="border-r border-slate-400 px-1 py-0 text-center align-middle whitespace-nowrap">
-                                  {it.batchNo ? (
-                                    <div className="font-mono text-[9px] text-slate-800 font-bold leading-tight">
-                                      <span>{it.batchNo}</span>
-                                      {it.expiryDate && (
-                                        <span className="block text-[8px] text-slate-500 font-normal">{it.expiryDate}</span>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-400 text-[10px]">—</span>
-                                  )}
-                                </td>
-                                <td className="border-r border-slate-400 px-1 py-0 text-center font-mono text-[10px] text-slate-700 align-middle">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center font-mono font-normal text-[10.5px] text-slate-700 align-middle">
                                   {it.hsn || '6205'}
                                 </td>
-                                <td className="border-r border-slate-400 px-1 py-0 text-center font-bold text-[10px] text-slate-900 align-middle whitespace-nowrap">
+                                <td className="border-r border-slate-400 px-1 py-0 text-center font-medium text-[11px] text-slate-800 align-middle whitespace-nowrap">
                                   {it.qty} {it.unit || 'pcs'}
                                 </td>
-                                <td className="border-r border-slate-400 px-2 py-0 text-right font-mono text-[10px] text-slate-800 align-middle">
+                                <td className="border-r border-slate-400 px-2 py-0 text-right font-mono font-normal text-[10.5px] text-slate-800 align-middle">
                                   {parseFloat(it.price || 0).toFixed(2)}
                                 </td>
                                 {isPakka && (
-                                  <td className="border-r border-slate-400 px-1 py-0 text-center font-bold text-slate-700 text-[10px] align-middle">
+                                  <td className="border-r border-slate-400 px-1 py-0 text-center font-normal text-slate-700 text-[10px] align-middle">
                                     {it.gst || (it.gstRate ? `${it.gstRate}%` : '5%')}
                                   </td>
                                 )}
-                                <td className="px-2 py-0 text-right font-bold font-mono text-[10px] text-slate-900 align-middle">
+                                <td className="px-2 py-0 text-right font-medium font-mono text-[11px] text-slate-900 align-middle">
                                   {rowAmount.toFixed(2)}
                                 </td>
                               </tr>
@@ -1089,7 +1093,6 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                             <td className="border-r border-slate-400 p-0">&nbsp;</td>
                             <td className="border-r border-slate-400 p-0">&nbsp;</td>
                             <td className="border-r border-slate-400 p-0">&nbsp;</td>
-                            <td className="border-r border-slate-400 p-0">&nbsp;</td>
                             {isPakka && <td className="border-r border-slate-400 p-0">&nbsp;</td>}
                             <td className="p-0">&nbsp;</td>
                           </tr>
@@ -1097,12 +1100,12 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                           {/* USER REQUIREMENT: C/F on all intermediate / non-last pages */}
                           {/* BOTTOM ROW FOR PAGE 1..(N-1): Carried Forward (C/F) to next page */}
                           {!isLastPage && (
-                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-900" style={{ height: '22px', maxHeight: '22px', overflow: 'hidden' }}>
-                              <td colSpan={isPakka ? 7 : 6} className="border-r border-slate-400 px-2 py-0 text-right uppercase text-[9px] text-slate-800 tracking-wider" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                <span className="bg-slate-200 text-slate-800 px-1 rounded mr-1 font-black text-[8px]">C/F</span>
+                            <tr className="bg-slate-50 font-semibold border-t border-slate-700" style={{ height: '22px', maxHeight: '22px', overflow: 'hidden' }}>
+                              <td colSpan={isPakka ? 6 : 5} className="border-r border-slate-400 px-2 py-0 text-right uppercase text-[9.5px] text-slate-700 font-semibold tracking-wider" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                <span className="border border-slate-400 bg-slate-200 text-slate-800 px-1.5 py-0.2 rounded mr-1.5 font-bold text-[9px]">C/F</span>
                                 Total Carried Forward to Page {pageIdx + 2}:
                               </td>
-                              <td className="px-2 py-0 text-right font-mono text-[10px] text-slate-900 font-black" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              <td className="px-2 py-0 text-right font-mono text-[10.5px] text-slate-900 font-semibold" style={{ height: '22px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                 ₹ {runningUpTo.toFixed(2)}
                               </td>
                             </tr>
@@ -1113,32 +1116,32 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                           {isLastPage && (
                             <>
                               {/* 1. Taxable Subtotal Row (Aligns Qty & Amount directly with table columns above) */}
-                              <tr className="bg-slate-50 font-bold border-t-2 border-slate-900" style={{ height: '22px', maxHeight: '22px' }}>
-                                <td colSpan={4} className="border-r border-slate-400 px-2 py-0 text-left uppercase text-[9px] text-slate-700 align-middle" style={{ whiteSpace: 'nowrap' }}>
-                                  <span className="font-bold text-slate-500">Total Items:</span> <span className="font-black text-slate-900">{activeItems.length}</span>
+                              <tr className="bg-slate-50 font-semibold border-t-2 border-slate-800" style={{ height: '24px', maxHeight: '24px' }}>
+                                <td colSpan={3} className="border-r border-slate-400 px-2 py-0 text-left uppercase text-[9.5px] text-slate-700 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                  <span className="font-normal text-slate-600">Total Items:</span> <span className="font-bold text-slate-800">{activeItems.length}</span>
                                 </td>
-                                <td className="border-r border-slate-400 px-1 py-0 text-center font-bold font-mono text-[9px] text-slate-900 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                <td className="border-r border-slate-400 px-1 py-0 text-center font-semibold font-mono text-[10.5px] text-slate-800 align-middle" style={{ whiteSpace: 'nowrap' }}>
                                   {activeItems.reduce((acc, it) => acc + parseFloat(it.qty || 1), 0)} pcs
                                 </td>
-                                <td colSpan={isPakka ? 2 : 1} className="border-r border-slate-400 px-2 py-0 text-right font-bold uppercase text-[9px] text-slate-700 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                <td colSpan={isPakka ? 2 : 1} className="border-r border-slate-400 px-2 py-0 text-right font-semibold uppercase text-[9.5px] text-slate-700 align-middle" style={{ whiteSpace: 'nowrap' }}>
                                   Taxable Subtotal:
                                 </td>
-                                <td className="px-2 py-0 text-right font-mono font-bold text-[10px] text-slate-900 align-middle" style={{ whiteSpace: 'nowrap' }}>
+                                <td className="px-2 py-0 text-right font-mono font-bold text-[11px] text-slate-900 align-middle" style={{ whiteSpace: 'nowrap' }}>
                                   ₹ {itemsSubtotal.toFixed(2)}
                                 </td>
                               </tr>
 
                               {/* 2. Total items ke niche = AMOUNT IN WORDS Row */}
                               {lastPageSummaryRows.length > 0 && (
-                                <tr className="border-t border-slate-300" style={{ height: '22px', maxHeight: '22px' }}>
-                                  <td colSpan={5} className="border-r border-slate-400 px-2 py-0 align-middle" style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                    <span className="font-bold text-slate-500 uppercase text-[9px] mr-1.5">Amount in Words:</span>
-                                    <span className="font-black text-slate-900 text-[9px]">{numberToWordsINR(grandTotal)}</span>
+                                <tr className="border-t border-slate-300" style={{ height: '24px', maxHeight: '24px' }}>
+                                  <td colSpan={4} className="border-r border-slate-400 px-2 py-0 align-middle" style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                    <span className="font-semibold text-slate-600 uppercase text-[9px] mr-1.5">Amount in Words:</span>
+                                    <span className="font-medium text-slate-900 text-[10px]">{numberToWordsINR(grandTotal)}</span>
                                   </td>
-                                  <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9px] ${lastPageSummaryRows[0].isTotal ? 'font-black uppercase text-[10px] text-slate-900 tracking-wider' : lastPageSummaryRows[0].cls || 'font-bold text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
+                                  <td colSpan={isPakka ? 2 : 1} className="border-r border-slate-400 px-2 py-0 text-right align-middle text-[9.5px] font-medium uppercase tracking-wider text-slate-700" style={{ whiteSpace: 'nowrap' }}>
                                     {lastPageSummaryRows[0].label}
                                   </td>
-                                  <td className={`px-2 py-0 text-right font-mono align-middle ${lastPageSummaryRows[0].isTotal ? 'font-black text-[11px] text-[#00a2c7]' : lastPageSummaryRows[0].cls || 'font-bold text-[10px] text-slate-900'}`} style={{ whiteSpace: 'nowrap' }}>
+                                  <td className="px-2 py-0 text-right font-mono font-medium align-middle text-[10.5px] text-slate-800" style={{ whiteSpace: 'nowrap' }}>
                                     {lastPageSummaryRows[0].val}
                                   </td>
                                 </tr>
@@ -1147,47 +1150,47 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                               {/* 3. Below Amount in Words: Bank Details (Left with rowSpan) + Remaining Summary rows (Right) */}
                               {lastPageSummaryRows.length > 1 && (
                                 <>
-                                  <tr className={lastPageSummaryRows[1].isTotal ? 'bg-slate-100 border-t-2 border-b-2 border-slate-900' : 'border-t border-slate-200'} style={{ height: lastPageSummaryRows[1].isTotal ? '26px' : '20px' }}>
+                                  <tr className={lastPageSummaryRows[1].isTotal ? 'bg-slate-100 border-t-2 border-b-2 border-slate-800' : 'border-t border-slate-300'} style={{ height: lastPageSummaryRows[1].isTotal ? '26px' : '22px' }}>
                                     {/* Left Cell: Spans across all remaining right-side rows */}
                                     <td
                                       rowSpan={lastPageSummaryRows.length - 1}
-                                      colSpan={5}
-                                      className="border-r border-slate-400 px-2.5 py-1.5 align-top text-[9px] text-slate-700 bg-white"
+                                      colSpan={4}
+                                      className="border-r border-slate-400 px-2.5 py-1.5 align-top text-slate-700 bg-white"
                                     >
-                                      <div className="font-bold text-slate-800 uppercase text-[8px] mb-0.5 tracking-wider">BANK &amp; PAYMENT DETAILS:</div>
-                                      <div>Bank: <b>HDFC Bank Ltd, Jaipur Main</b> &nbsp;|&nbsp; A/C: <b>50200088912044</b></div>
-                                      <div>IFSC: <b>HDFC0000054</b> &nbsp;|&nbsp; UPI: <b>shoppy@hdfcbank</b></div>
-                                      <div className="mt-0.5">
-                                        <span>Payment: <b>{invoice.paymentMethod || 'Cash'}</b></span>
-                                        {invoice.paymentRef && <span className="ml-2 font-mono font-bold text-[#00a2c7]">Ref: {invoice.paymentRef}</span>}
+                                      <div className="font-bold text-slate-800 uppercase text-[9px] mb-0.5 tracking-wider">BANK &amp; PAYMENT DETAILS:</div>
+                                      <div className="text-[9.5px] text-slate-600">Bank: <span className="font-semibold text-slate-800">HDFC Bank Ltd, Jaipur Main</span> &nbsp;|&nbsp; A/C: <span className="font-semibold text-slate-800">50200088912044</span></div>
+                                      <div className="text-[9.5px] text-slate-600">IFSC: <span className="font-semibold text-slate-800">HDFC0000054</span> &nbsp;|&nbsp; UPI: <span className="font-semibold text-slate-800">shoppy@hdfcbank</span></div>
+                                      <div className="mt-0.5 text-[9.5px] text-slate-600">
+                                        <span>Payment: <span className="font-semibold text-slate-800">{invoice.paymentMethod || 'Cash'}</span></span>
+                                        {invoice.paymentRef && <span className="ml-2 font-mono font-medium text-slate-800">Ref: {invoice.paymentRef}</span>}
                                         {isCod ? (
-                                          <span className="ml-2 bg-amber-100 text-amber-900 text-[8px] font-black px-1.5 py-0.2 rounded border border-amber-300">COD DUE</span>
+                                          <span className="ml-2 bg-slate-100 text-slate-800 text-[8.5px] font-semibold px-1.5 py-0.2 rounded border border-slate-300">COD DUE</span>
                                         ) : (
-                                          <span className="ml-2 bg-emerald-100 text-emerald-900 text-[8px] font-black px-1.5 py-0.2 rounded border border-emerald-300">PAID</span>
+                                          <span className="ml-2 bg-slate-100 text-slate-800 text-[8.5px] font-semibold px-1.5 py-0.2 rounded border border-slate-300">PAID</span>
                                         )}
                                       </div>
-                                      {isPakka && <div className="text-slate-400 text-[8px] font-mono mt-0.5">IRN: 9f8a32b0c1e8d7f6...Signed by GSP (E-Invoice)</div>}
+                                      {isPakka && <div className="text-slate-500 text-[8.5px] font-mono mt-0.5">IRN: 9f8a32b0c1e8d7f6...Signed by GSP (E-Invoice)</div>}
                                     </td>
 
-                                    <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9px] ${lastPageSummaryRows[1].isTotal ? 'font-black uppercase text-[10px] text-slate-900 tracking-wider' : lastPageSummaryRows[1].cls || 'font-bold text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
+                                    <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9.5px] ${lastPageSummaryRows[1].isTotal ? 'font-bold uppercase text-[10.5px] text-slate-900 tracking-wider' : 'font-medium text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
                                       {lastPageSummaryRows[1].label}
                                     </td>
-                                    <td className={`px-2 py-0 text-right font-mono align-middle ${lastPageSummaryRows[1].isTotal ? 'font-black text-[11px] text-[#00a2c7]' : lastPageSummaryRows[1].cls || 'font-bold text-[10px] text-slate-900'}`} style={{ whiteSpace: 'nowrap' }}>
+                                    <td className={`px-2 py-0 text-right font-mono align-middle ${lastPageSummaryRows[1].isTotal ? 'font-bold text-[12.5px] text-slate-950' : 'font-medium text-[10.5px] text-slate-800'}`} style={{ whiteSpace: 'nowrap' }}>
                                       {lastPageSummaryRows[1].val}
                                     </td>
                                   </tr>
 
-                                  {/* Subsequent right-side rows (cols 1-5 already spanned by Bank Details above) */}
+                                  {/* Subsequent right-side rows (cols 1-4 already spanned by Bank Details above) */}
                                   {lastPageSummaryRows.slice(2).map((r, idx) => (
                                     <tr
                                       key={idx}
-                                      className={r.isTotal ? 'bg-slate-100 border-t-2 border-b-2 border-slate-900' : r.isDues ? 'bg-rose-50 border-t border-slate-200' : 'border-t border-slate-200'}
-                                      style={{ height: r.isTotal ? '26px' : '20px' }}
+                                      className={r.isTotal ? 'bg-slate-100 border-t-2 border-b-2 border-slate-800' : 'border-t border-slate-200'}
+                                      style={{ height: r.isTotal ? '26px' : '22px' }}
                                     >
-                                      <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9px] ${r.isTotal ? 'font-black uppercase text-[10px] text-slate-900 tracking-wider' : r.isDues ? 'font-black text-rose-700' : r.cls || 'font-bold text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
+                                      <td colSpan={isPakka ? 2 : 1} className={`border-r border-slate-400 px-2 py-0 text-right align-middle text-[9.5px] ${r.isTotal ? 'font-bold uppercase text-[10.5px] text-slate-900 tracking-wider' : 'font-medium text-slate-700'}`} style={{ whiteSpace: 'nowrap' }}>
                                         {r.label}
                                       </td>
-                                      <td className={`px-2 py-0 text-right font-mono align-middle ${r.isTotal ? 'font-black text-[11px] text-[#00a2c7]' : r.isDues ? 'font-black text-[10px] text-rose-700' : r.cls || 'font-bold text-[10px] text-slate-900'}`} style={{ whiteSpace: 'nowrap' }}>
+                                      <td className={`px-2 py-0 text-right font-mono align-middle ${r.isTotal ? 'font-bold text-[12.5px] text-slate-950' : 'font-medium text-[10.5px] text-slate-800'}`} style={{ whiteSpace: 'nowrap' }}>
                                         {r.val}
                                       </td>
                                     </tr>
@@ -1214,18 +1217,18 @@ export default function InvoicePrintModal({ invoice, onClose }) {
                     {/* LAST PAGE OUTSIDE FOOTER: Terms & Conditions on Left, Authorized Signatory on Right */}
                     {isLastPage && (
                       <div className="shrink-0 mt-3 pt-2 border-t border-slate-300 flex justify-between items-end">
-                        <div className="text-[9px] text-slate-500 max-w-[62%] space-y-0.5">
-                          <p className="font-bold text-slate-700">Terms &amp; Conditions:</p>
-                          <p>1. Goods once sold will only be exchanged within 7 days with original tag and bill.</p>
-                          <p>2. Subject to Jaipur jurisdiction only. This is a computer generated invoice.</p>
-                          <p className="text-[8px] text-slate-400 font-mono mt-0.5">Page {pageIdx + 1} of {totalPages}</p>
+                        <div className="text-[9.5px] text-slate-600 max-w-[62%] space-y-0.5">
+                          <p className="font-bold text-slate-800">Terms &amp; Conditions:</p>
+                          <p className="font-normal text-slate-600">1. Goods once sold will only be exchanged within 7 days with original tag and bill.</p>
+                          <p className="font-normal text-slate-600">2. Subject to Jaipur jurisdiction only. This is a computer generated invoice.</p>
+                          <p className="text-[9px] text-slate-500 font-mono mt-0.5">Page {pageIdx + 1} of {totalPages}</p>
                         </div>
                         <div className="text-center min-w-[210px]">
-                          <div className="text-[11px] font-black text-slate-900 uppercase tracking-tight">
+                          <div className="text-xs font-bold text-slate-900 uppercase tracking-tight">
                             For {displayStoreName}
                           </div>
                           <div className="h-11"></div>
-                          <div className="border-t border-slate-400 pt-1 text-[9px] text-slate-600 font-bold uppercase tracking-wider">
+                          <div className="border-t border-slate-700 pt-1 text-[10px] text-slate-700 font-semibold uppercase tracking-wider">
                             Authorized Signatory
                           </div>
                         </div>

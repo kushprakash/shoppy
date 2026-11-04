@@ -4,6 +4,9 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { useErp } from '../context/ErpContext';
 import InvoicePrintModal from '../components/InvoicePrintModal';
+import EmployeeICardModal from '../components/EmployeeICardModal';
+import ProfileUpdateModal from '../components/ProfileUpdateModal';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 import {
   CheckCircle2,
   X,
@@ -29,6 +32,15 @@ export default function MainLayout() {
     setIsZReportOpen,
     isStockAdjustmentOpen,
     setIsStockAdjustmentOpen,
+    isICardOpen,
+    setIsICardOpen,
+    isProfileModalOpen,
+    setIsProfileModalOpen,
+    isChangePasswordOpen,
+    setIsChangePasswordOpen,
+    storeName,
+    storeSettings,
+    shopCode,
     shiftData,
     products,
     setProducts
@@ -86,6 +98,23 @@ export default function MainLayout() {
         <main className="px-6 pb-12 flex-1">
           <Outlet />
         </main>
+
+        {/* Dynamic ERP Footer with Shop Name */}
+        <footer className="mt-auto px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 bg-white/40 dark:bg-slate-900/40">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-800 dark:text-slate-200">{storeName}</span>
+            <span>•</span>
+            <span>{storeSettings?.footer_copyright || `© ${new Date().getFullYear()} ${storeName}. All Rights Reserved.`}</span>
+          </div>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span>Shop Code: <b className="font-mono text-cyan-600 dark:text-cyan-400">{shopCode}</b></span>
+            <span>•</span>
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Isolated Cloud Active
+            </span>
+          </div>
+        </footer>
       </div>
 
       {/* 3-IN-1 INVOICE PRINT MODAL (Thermal, A4 Auto-Paginated, Dot Matrix Sprocket) */}
@@ -111,7 +140,7 @@ export default function MainLayout() {
             </div>
 
             <div className="my-5 p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white text-slate-900 text-center font-sans space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider">Ramesh Fashion Store</p>
+              <p className="text-xs font-bold uppercase tracking-wider">{storeName}</p>
               <h4 className="font-extrabold text-sm">{selectedBarcodeProduct.name}</h4>
 
               <div className="flex justify-center items-center py-2">
@@ -168,7 +197,7 @@ export default function MainLayout() {
 
             <div className="my-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950 font-mono text-xs text-slate-800 dark:text-slate-200 space-y-2 border border-dashed border-slate-300 dark:border-slate-700">
               <div className="text-center pb-2 border-b border-dashed border-slate-300">
-                <div className="font-bold">RAMESH FASHION STORE</div>
+                <div className="font-bold">{storeName.toUpperCase()}</div>
                 <div className="text-[10px] text-slate-400">SHIFT CLOSE SUMMARY (Z-REPORT)</div>
                 <div className="text-[10px] text-slate-400">{shiftData.openedAt} - NOW</div>
               </div>
@@ -313,6 +342,21 @@ export default function MainLayout() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* MODAL 5: EMPLOYEE I-CARD VIEW & PRINT */}
+      {isICardOpen && (
+        <EmployeeICardModal onClose={() => setIsICardOpen(false)} />
+      )}
+
+      {/* MODAL 6: USER PROFILE UPDATE */}
+      {isProfileModalOpen && (
+        <ProfileUpdateModal onClose={() => setIsProfileModalOpen(false)} />
+      )}
+
+      {/* MODAL 7: CHANGE PASSWORD */}
+      {isChangePasswordOpen && (
+        <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
       )}
     </div>
   );

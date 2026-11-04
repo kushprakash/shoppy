@@ -16,7 +16,9 @@ import {
   Store,
   Sliders,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  UserCheck,
+  KeyRound
 } from 'lucide-react';
 
 export default function Header() {
@@ -29,7 +31,14 @@ export default function Header() {
     mobileSidebarOpen,
     setMobileSidebarOpen,
     shopCode,
-    showToast
+    showToast,
+    storeName,
+    storeSettings,
+    updateStoreSettings,
+    currentUser,
+    setIsICardOpen,
+    setIsProfileModalOpen,
+    setIsChangePasswordOpen
   } = useErp();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -40,19 +49,19 @@ export default function Header() {
     try {
       const saved = localStorage.getItem('shoppy_store_branding');
       return saved ? JSON.parse(saved) : {
-        storeName: 'Ramesh Fashion Store',
-        tagline: 'Retail & Multi-Tenant SaaS',
-        ownerName: 'Ramesh Sundaram',
-        phone: '+91 98290 00192',
-        gstin: '08AABCR1290M1Z5',
-        themeColor: '#00a2c7',
-        footerNote: 'Thank you for shopping with us! Visit again.'
+        storeName: storeName || 'Store',
+        tagline: storeSettings?.meta_title || 'Retail & Multi-Tenant SaaS',
+        ownerName: currentUser?.name || storeSettings?.owner_name || 'Ramesh Sundaram',
+        phone: storeSettings?.contact_phone || '+91 98290 00192',
+        gstin: storeSettings?.gst_number || '08AABCR1290M1Z5',
+        themeColor: storeSettings?.theme_color || '#00a2c7',
+        footerNote: storeSettings?.footer_copyright || 'Thank you for shopping with us! Visit again.'
       };
     } catch (e) {
       return {
-        storeName: 'Ramesh Fashion Store',
+        storeName: storeName || 'Store',
         tagline: 'Retail & Multi-Tenant SaaS',
-        ownerName: 'Ramesh Sundaram',
+        ownerName: 'Store Owner',
         phone: '+91 98290 00192',
         gstin: '08AABCR1290M1Z5',
         themeColor: '#00a2c7',
@@ -65,6 +74,16 @@ export default function Header() {
     e.preventDefault();
     try {
       localStorage.setItem('shoppy_store_branding', JSON.stringify(branding));
+      if (updateStoreSettings) {
+        updateStoreSettings({
+          store_name: branding.storeName,
+          owner_name: branding.ownerName,
+          contact_phone: branding.phone,
+          gst_number: branding.gstin,
+          theme_color: branding.themeColor,
+          footer_copyright: branding.footerNote
+        });
+      }
     } catch (e) {}
     setIsBrandingOpen(false);
     showToast('Store branding & invoice settings saved successfully!');
@@ -139,13 +158,13 @@ export default function Header() {
 
           <div className="flex items-center gap-2">
             <h1 className="text-base font-semibold text-slate-800 dark:text-white tracking-tight">
-              Ramesh Fashion Store ERP
+              {storeName} ERP
             </h1>
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] border border-cyan-200 dark:border-cyan-800">
               {shopCode}
             </span>
             <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              <ShieldCheck className="w-3 h-3" /> Dedicated DB: tenant_ramesh_fashion
+              <ShieldCheck className="w-3 h-3" /> Dedicated DB: tenant_{shopCode?.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'store'}
             </span>
           </div>
         </div>
@@ -192,7 +211,7 @@ export default function Header() {
               title="Profile & Store Branding"
             >
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"
+                src={currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"}
                 alt="Profile"
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -213,17 +232,17 @@ export default function Header() {
                   <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-cyan-500 shrink-0">
                       <img
-                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"
+                        src={currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"}
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="truncate">
                       <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {branding.ownerName}
+                        {currentUser?.name || branding.ownerName}
                       </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                        {branding.storeName}
+                        {storeName}
                       </p>
                       <span className="inline-block px-1.5 py-0.5 text-[9px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950 text-[#00a2c7] rounded mt-0.5">
                         {shopCode}
@@ -233,6 +252,48 @@ export default function Header() {
 
                   {/* Menu Options */}
                   <div className="py-1 space-y-0.5 text-xs font-semibold">
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        setIsProfileModalOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                    >
+                      <User className="w-4 h-4 text-emerald-500" />
+                      <div>
+                        <div className="font-bold">My Profile</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Personal details & emergency contact</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        setIsICardOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                    >
+                      <UserCheck className="w-4 h-4 text-cyan-500" />
+                      <div>
+                        <div className="font-bold">Staff ID Card</div>
+                        <div className="text-[10px] text-slate-400 font-normal">View & print employee I-Card</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        setIsChangePasswordOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition cursor-pointer"
+                    >
+                      <KeyRound className="w-4 h-4 text-amber-500" />
+                      <div>
+                        <div className="font-bold">Change Password</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Security credentials & PIN</div>
+                      </div>
+                    </button>
+
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
