@@ -9,7 +9,9 @@ import {
 import InvoicePrintModal from '../components/InvoicePrintModal';
 
 export default function PosBilling() {
-  const [shopCode, setShopCode] = useState(document.getElementById('root')?.dataset?.shopCode || 'SHP-A4IFYK');
+  const [shopCode, setShopCode] = useState(
+    document.getElementById('root')?.dataset?.shopCode || localStorage.getItem('shoppy_active_store_code') || ''
+  );
   
   // Dual Billing: Barcode Scanner & Manual Search
   const [barcodeQuery, setBarcodeQuery] = useState('');
@@ -21,7 +23,7 @@ export default function PosBilling() {
   const [billType, setBillType] = useState('pakka'); // 'pakka' (GST) | 'kachha' (Estimate/Challan)
   
   // Customer State: Mobile Auto-Detection & On-The-Fly Add
-  const [customerPhone, setCustomerPhone] = useState('9988776655');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerCity, setCustomerCity] = useState('Jaipur, RJ');
   const [customerDues, setCustomerDues] = useState(0);

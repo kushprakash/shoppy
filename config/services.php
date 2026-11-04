@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'payu' => [
+        'key' => env('PAYU_MERCHANT_KEY', env('PAYU_KEY', '3VzQpX')),
+        'salt' => env('PAYU_MERCHANT_SALT', env('PAYU_SALT', '5suoTv1yxsgU53Q5fr1Ucb2gapTG9yBa')),
+        'env' => env('PAYU_ENV', 'production'), // 'test' or 'production'
+    ],
+
+    'payu' => [
+        'key' => env('PAYU_MERCHANT_KEY', env('PAYU_KEY', 'gtKFFx')),
+        'salt' => env('PAYU_MERCHANT_SALT', env('PAYU_SALT', 'eCwWELxi')),
+        'env' => env('PAYU_ENV', 'test'), // 'test' or 'production'
+    ],
+
 ];

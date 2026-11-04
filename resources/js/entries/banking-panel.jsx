@@ -1938,7 +1938,7 @@ export default function BankingPanel() {
                     <tr>
                       <td className="p-3 font-mono font-semibold">COMM-4910</td>
                       <td className="p-3">Shop SaaS Subscription</td>
-                      <td className="p-3">Ramesh Fashion Store (SHP-A4IFYK)</td>
+                      <td className="p-3">Shoppy Retail Merchant (STORE-ACTIVE)</td>
                       <td className="p-3">₹ 4,999.00</td>
                       <td className="p-3 font-bold text-emerald-600">+ ₹ 999.80</td>
                       <td className="p-3"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700">Processed</span></td>

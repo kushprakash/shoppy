@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'payu/*',
+            'api/payu/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -5,6 +5,7 @@ use App\Http\Controllers\Central\MasterPortalApiController;
 use App\Http\Controllers\Pos\PosController;
 use App\Http\Controllers\Storefront\StorefrontController;
 use App\Http\Controllers\Tenant\SettingsController;
+use App\Http\Controllers\Tenant\TenantErpApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,7 +49,9 @@ Route::post('/store/login', [MasterPortalApiController::class, 'storeLogin']);
 // Public Dynamic Website APIs
 Route::get('/public/landing-data', [MasterPortalApiController::class, 'getPublicLandingData']);
 Route::get('/blogs', [MasterPortalApiController::class, 'getBlogs']);
+Route::get('/captcha', [MasterPortalApiController::class, 'generateCaptcha']);
 Route::post('/contact', [MasterPortalApiController::class, 'submitContactInquiry']);
+Route::post('/contacts', [MasterPortalApiController::class, 'submitContactInquiry']);
 
 Route::prefix('central')->group(function () {
     Route::get('/stats', [CentralAdminController::class, 'getStats']);
@@ -107,4 +110,28 @@ Route::prefix('pos')->middleware('tenant')->group(function () {
     Route::get('/shift/status', [PosController::class, 'getShiftStatus']);
     Route::post('/shift/open', [PosController::class, 'openShift']);
     Route::post('/shift/close', [PosController::class, 'closeShift']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| 5. Production Tenant Store ERP Data API (Real MySQL DB Persistence)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('tenant/erp')->group(function () {
+    Route::get('/init', [TenantErpApiController::class, 'getInitData']);
+    Route::post('/products', [TenantErpApiController::class, 'saveProduct']);
+    Route::delete('/products/{id}', [TenantErpApiController::class, 'deleteProduct']);
+    Route::post('/orders', [TenantErpApiController::class, 'saveOrder']);
+    Route::post('/roles', [TenantErpApiController::class, 'saveRole']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| 6. PayU Money Payment Gateway Routes (Store Signup & Renewal)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('payu')->group(function () {
+    Route::post('/initiate', [\App\Http\Controllers\Central\PayUController::class, 'initiate']);
+    Route::post('/verify', [\App\Http\Controllers\Central\PayUController::class, 'verifyAndComplete']);
+    Route::match(['get', 'post'], '/callback/{result}', [\App\Http\Controllers\Central\PayUController::class, 'handleCallback']);
 });

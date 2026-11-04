@@ -1,21 +1,38 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 
 // Dedicated portals
 Route::get('/storefront', function () {
+    $shopCode = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
+    if (!$shopCode) {
+        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+        $shopCode = $shop->shop_code ?? '';
+    } else {
+        $shop = DB::connection('mysql')->table('shops')->where('shop_code', $shopCode)->first();
+    }
+    $title = ($shop ? $shop->name : 'Shoppy Store') . ' — Online Shopping';
     return view('app', [
         'entry' => 'storefront',
-        'title' => 'Ramesh Fashion Store — Online Shopping',
-        'shopCode' => 'SHP-A4IFYK',
+        'title' => $title,
+        'shopCode' => $shopCode,
     ]);
 });
 
 Route::get('/pos-terminal', function () {
+    $shopCode = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
+    if (!$shopCode) {
+        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+        $shopCode = $shop->shop_code ?? '';
+    } else {
+        $shop = DB::connection('mysql')->table('shops')->where('shop_code', $shopCode)->first();
+    }
+    $title = ($shop ? $shop->name : 'Shoppy') . ' — POS Billing Counter Terminal';
     return view('app', [
         'entry' => 'pos',
-        'title' => 'POS Billing Counter — High Speed Terminal',
-        'shopCode' => 'SHP-A4IFYK',
+        'title' => $title,
+        'shopCode' => $shopCode,
     ]);
 });
 
@@ -52,7 +69,11 @@ Route::get('/master/{any?}', function () {
 
 // Merchant Store Login Portal (http://domain/store)
 Route::get('/store', function () {
-    $code = strtoupper(request()->query('code', 'SHP-A4IFYK'));
+    $code = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
+    if (!$code) {
+        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+        $code = $shop->shop_code ?? '';
+    }
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
     return response()
@@ -75,59 +96,22 @@ Route::get('/store-login', function () {
 Route::get('/{storeCode}', function ($storeCode) {
     $normalizedCode = strtoupper($storeCode);
 
-    // Tenant registry (in-memory demo data + fallback, works 100% even if local MySQL is offline)
-    $shops = [
-        'STORE983515' => [
-            'name' => 'Verma General & Kirana Store',
-            'plan' => 'GST Billing Software + Ecommerce + Whatsapp Messaging',
-            'has_ecommerce' => true,
-        ],
-        'STORE441029' => [
-            'name' => 'Sharma Textile & Garments',
-            'plan' => 'GST Billing Software',
-            'has_ecommerce' => false,
-        ],
-        'SHP-A4IFYK' => [
-            'name' => 'Ramesh Fashion Store',
-            'plan' => 'GST Billing Software + Ecommerce',
-            'has_ecommerce' => true,
-        ],
-        'STORE552190' => [
-            'name' => 'Apex Mobile & Electronics',
-            'plan' => 'GST Billing Software + Ecommerce',
-            'has_ecommerce' => true,
-        ],
-        'STORE118833' => [
-            'name' => 'Kisan Agro Seed & Fertilizer',
-            'plan' => 'GST Billing Software + Whatsapp Message suite',
-            'has_ecommerce' => false,
-        ],
-    ];
-
-    $shop = null;
-    $hasEcommerce = false;
-
+    $dbShop = null;
     try {
-        $dbShop = \Illuminate\Support\Facades\DB::connection('mysql')->table('shops')->where('shop_code', $normalizedCode)->first();
-        if ($dbShop) {
-            $settings = json_decode($dbShop->settings, true) ?: [];
-            $hasEcommerce = !empty($settings['has_ecommerce']);
-            $shop = [
-                'name' => $dbShop->name,
-                'plan' => $settings['plan_name'] ?? 'GST Billing Software',
-                'has_ecommerce' => $hasEcommerce,
-            ];
-        }
+        $dbShop = DB::connection('mysql')->table('shops')->where('shop_code', $normalizedCode)->first();
     } catch (\Throwable $e) {}
 
-    if (!$shop) {
-        $shop = $shops[$normalizedCode] ?? [
-            'name' => 'Retail Merchant Counter',
-            'plan' => 'GST Billing Software',
-            'has_ecommerce' => false,
-        ];
-        $hasEcommerce = $shop['has_ecommerce'];
+    if (!$dbShop) {
+        return redirect('/store?code=' . $normalizedCode);
     }
+
+    $settings = json_decode($dbShop->settings, true) ?: [];
+    $hasEcommerce = !empty($settings['has_ecommerce']);
+    $shop = [
+        'name' => $dbShop->name,
+        'plan' => $settings['plan_name'] ?? 'Shoppy ERP Package',
+        'has_ecommerce' => $hasEcommerce,
+    ];
 
     // Check if toggle cookie override exists (e.g. from Super Admin desk)
     $cookieOverride = request()->cookie('shoppy_ecom_' . $normalizedCode);
@@ -148,16 +132,24 @@ Route::get('/{storeCode}', function ($storeCode) {
     return redirect('/store?code=' . $normalizedCode);
 })->where('storeCode', '^(STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$');
 
+// PayU Web Callback handler for external browser redirects
+Route::match(['get', 'post'], '/payu/callback/{result}', [\App\Http\Controllers\Central\PayUController::class, 'handleCallback']);
+
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)
 // Handles direct URLs: /shop-admin, /shop-admin/products, /shop-admin/orders, /shop-admin/inventory, etc.
 Route::get('/{any}', function () {
+    $shopCode = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
+    if (!$shopCode) {
+        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+        $shopCode = $shop->shop_code ?? '';
+    }
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
     return response()
         ->view('app', [
             'entry' => 'app',
-            'title' => 'Ramesh Fashion ERP — Enterprise Retail & POS Dashboard',
-            'shopCode' => 'SHP-A4IFYK',
+            'title' => 'Shoppy ERP — Enexa IT Solutions Private Limited',
+            'shopCode' => $shopCode,
             'htmlClass' => $isDark ? 'h-full bg-slate-950 text-slate-100 dark' : 'h-full bg-[#f4f7fa] text-slate-800',
             'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white' : 'min-h-full flex flex-col bg-[#f4f7fa] text-slate-800 selection:bg-cyan-500 selection:text-white',
         ])

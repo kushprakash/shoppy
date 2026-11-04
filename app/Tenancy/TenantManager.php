@@ -248,6 +248,19 @@ class TenantManager
             'updated_at' => now(),
         ]);
 
+        // Seed Required Roles & Granular Permissions into Tenant Database
+        foreach (self::getRequiredRoles() as $role) {
+            DB::connection('tenant')->table('roles')->updateOrInsert(
+                ['slug' => $role['slug']],
+                [
+                    'name' => $role['name'],
+                    'permissions' => $role['permissions'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
+
         // Seed Supported Business Categories
         $categories = [
             ['code' => 'fashion', 'name' => 'Fashion & Apparel'],
@@ -305,5 +318,79 @@ class TenantManager
                 'updated_at' => now(),
             ]);
         }
+    }
+
+    /**
+     * Get the 6 Required Roles & Granular Permissions for every provisioned Store
+     */
+    public static function getRequiredRoles(): array
+    {
+        return [
+            [
+                'name' => 'Super Admin',
+                'slug' => 'role-superadmin',
+                'permissions' => json_encode(['*']),
+            ],
+            [
+                'name' => 'Store Manager',
+                'slug' => 'role-manager',
+                'permissions' => json_encode([
+                    'overview.dashboard', 'overview.profit_loss', 'overview.print_pnl',
+                    'catalog.view_products', 'catalog.create_product', 'catalog.edit_product',
+                    'catalog.categories_setup', 'catalog.barcode_desk',
+                    'inventory.view_stock', 'inventory.adjust_stock', 'inventory.low_stock_alerts',
+                    'sales.pos_billing', 'sales.view_orders', 'sales.view_gst_invoices',
+                    'sales.print_invoice', 'sales.manage_coupons', 'sales.courier_post',
+                    'sales.track_shipment', 'sales.eway_bill',
+                    'crm.view_customers', 'crm.repay_dues', 'crm.manage_leads',
+                    'crm.view_quotations', 'crm.create_quotation', 'crm.quotation_convert',
+                    'crm.print_quotation',
+                    'purchase.view_suppliers', 'purchase.create_supplier', 'purchase.repay_dues',
+                    'purchase.view_bills', 'purchase.create_bill',
+                    'hrm.view_employees', 'hrm.attendance_punch', 'hrm.manage_leaves',
+                    'expenses.view', 'expenses.create'
+                ]),
+            ],
+            [
+                'name' => 'POS Cashier & Billing',
+                'slug' => 'role-cashier',
+                'permissions' => json_encode([
+                    'overview.dashboard', 'catalog.view_products', 'sales.pos_billing',
+                    'sales.view_orders', 'sales.print_invoice', 'sales.manage_coupons',
+                    'crm.view_customers', 'crm.repay_dues', 'hrm.attendance_punch'
+                ]),
+            ],
+            [
+                'name' => 'Warehouse & Stock Clerk',
+                'slug' => 'role-inventory',
+                'permissions' => json_encode([
+                    'catalog.view_products', 'catalog.barcode_desk', 'inventory.view_stock',
+                    'inventory.adjust_stock', 'inventory.low_stock_alerts', 'sales.courier_post',
+                    'sales.track_shipment', 'purchase.view_bills', 'purchase.create_bill',
+                    'hrm.attendance_punch'
+                ]),
+            ],
+            [
+                'name' => 'Chief Accountant',
+                'slug' => 'role-accountant',
+                'permissions' => json_encode([
+                    'overview.dashboard', 'overview.profit_loss', 'overview.print_pnl',
+                    'sales.view_orders', 'sales.view_gst_invoices', 'sales.print_invoice',
+                    'crm.view_customers', 'crm.repay_dues', 'purchase.view_suppliers',
+                    'purchase.repay_dues', 'purchase.view_bills', 'hrm.view_employees',
+                    'hrm.view_payroll', 'hrm.salary_pay', 'hrm.print_payslip',
+                    'expenses.view', 'expenses.create', 'expenses.edit_delete'
+                ]),
+            ],
+            [
+                'name' => 'Sales & CRM Representative',
+                'slug' => 'role-sales',
+                'permissions' => json_encode([
+                    'overview.dashboard', 'catalog.view_products', 'sales.pos_billing',
+                    'sales.view_orders', 'crm.view_customers', 'crm.manage_leads',
+                    'crm.view_quotations', 'crm.create_quotation', 'hrm.attendance_punch'
+                ]),
+            ]
+        ];
     }
 }

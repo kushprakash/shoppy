@@ -74,341 +74,11 @@ import InvoicePrintModal from '../components/InvoicePrintModal';
 // 1. INITIAL ENTERPRISE ERP DATASETS (Matching PRD v2.2 Multi-Category)
 // ============================================================================
 
-const INITIAL_PRODUCTS = [
-  {
-    id: 'PRD-101',
-    name: 'Premium Cotton Slim Fit Shirt',
-    category: 'Fashion & Apparel',
-    businessCategory: 'fashion',
-    sku: 'FSH-SHIRT-01',
-    barcode: '890123400101',
-    purchasePrice: 650.0,
-    sellingPrice: 1299.0,
-    mrp: 1999.0,
-    gstRate: 5,
-    hsnCode: '6205',
-    unit: 'pcs',
-    stock: 52,
-    reorderLevel: 15,
-    branch: 'Main Branch (Downtown)',
-    variants: [
-      { size: 'M', color: 'Sky Blue', stock: 18 },
-      { size: 'L', color: 'White', stock: 22 },
-      { size: 'XL', color: 'Navy Blue', stock: 12 }
-    ],
-    status: 'In Stock'
-  },
-  {
-    id: 'PRD-102',
-    name: 'Dark Indigo Stretch Denim Jeans',
-    category: 'Fashion & Apparel',
-    businessCategory: 'fashion',
-    sku: 'FSH-JEANS-01',
-    barcode: '890123400102',
-    purchasePrice: 950.0,
-    sellingPrice: 1899.0,
-    mrp: 2499.0,
-    gstRate: 12,
-    hsnCode: '6203',
-    unit: 'pcs',
-    stock: 34,
-    reorderLevel: 10,
-    branch: 'Main Branch (Downtown)',
-    variants: [
-      { size: '32', color: 'Dark Indigo', stock: 14 },
-      { size: '34', color: 'Dark Indigo', stock: 20 }
-    ],
-    status: 'In Stock'
-  },
-  {
-    id: 'PRD-103',
-    name: 'Royal Basmati Rice 5kg Aged Pack',
-    category: 'Grocery & Supermarket',
-    businessCategory: 'grocery',
-    sku: 'GROC-RICE-05',
-    barcode: '890123400103',
-    purchasePrice: 380.0,
-    sellingPrice: 480.0,
-    mrp: 550.0,
-    gstRate: 0,
-    hsnCode: '1006',
-    unit: 'pack',
-    stock: 120,
-    reorderLevel: 30,
-    branch: 'Central Warehouse',
-    batchNo: 'BAT-2026-R09',
-    mfgDate: '2026-08-01',
-    expiryDate: '2028-07-31',
-    fssai: '10019022001429',
-    status: 'In Stock'
-  },
-  {
-    id: 'PRD-104',
-    name: 'Pure Desi Cow Ghee 1L Tin',
-    category: 'Grocery & Supermarket',
-    businessCategory: 'grocery',
-    sku: 'GROC-GHEE-01',
-    barcode: '890123400104',
-    purchasePrice: 520.0,
-    sellingPrice: 650.0,
-    mrp: 720.0,
-    gstRate: 12,
-    hsnCode: '0405',
-    unit: 'tin',
-    stock: 8,
-    reorderLevel: 15,
-    branch: 'Main Branch (Downtown)',
-    batchNo: 'BAT-2026-G42',
-    mfgDate: '2026-09-10',
-    expiryDate: '2027-03-10',
-    fssai: '10019022001429',
-    status: 'Low Stock'
-  },
-  {
-    id: 'PRD-105',
-    name: 'True Wireless Stereo Earbuds v5.3',
-    category: 'Electronics & Gadgets',
-    businessCategory: 'electronics',
-    sku: 'ELEC-BUDS-01',
-    barcode: '890123400105',
-    purchasePrice: 850.0,
-    sellingPrice: 1499.0,
-    mrp: 2999.0,
-    gstRate: 18,
-    hsnCode: '8518',
-    unit: 'pcs',
-    stock: 24,
-    reorderLevel: 10,
-    branch: 'Outlet #2 (Mall Road)',
-    serials: ['SN-882901-A', 'SN-882902-A', 'SN-882903-A'],
-    warrantyMonths: 12,
-    status: 'In Stock'
-  },
-  {
-    id: 'PRD-106',
-    name: 'GaN 65W Fast Wall Charger (Type-C + USB)',
-    category: 'Electronics & Gadgets',
-    businessCategory: 'electronics',
-    sku: 'ELEC-CHRG-65',
-    barcode: '890123400106',
-    purchasePrice: 620.0,
-    sellingPrice: 1199.0,
-    mrp: 1899.0,
-    gstRate: 18,
-    hsnCode: '8504',
-    unit: 'pcs',
-    stock: 5,
-    reorderLevel: 12,
-    branch: 'Outlet #2 (Mall Road)',
-    serials: ['SN-65W-1092', 'SN-65W-1093'],
-    warrantyMonths: 18,
-    status: 'Low Stock'
-  },
-  {
-    id: 'PRD-107',
-    name: 'Pure Organic Wild Forest Honey 500g',
-    category: 'Grocery & Supermarket',
-    businessCategory: 'grocery',
-    sku: 'GROC-HNY-500',
-    barcode: '890123400107',
-    purchasePrice: 220.0,
-    sellingPrice: 340.0,
-    mrp: 410.0,
-    gstRate: 5,
-    hsnCode: '0409',
-    unit: 'jar',
-    stock: 0,
-    reorderLevel: 15,
-    branch: 'Central Warehouse',
-    batchNo: 'BAT-2026-H11',
-    expiryDate: '2027-09-30',
-    status: 'Out of Stock'
-  },
-  {
-    id: 'PRD-108',
-    name: 'Handcrafted Festive Linen Kurta',
-    category: 'Fashion & Apparel',
-    businessCategory: 'fashion',
-    sku: 'FSH-KURTA-09',
-    barcode: '890123400108',
-    purchasePrice: 850.0,
-    sellingPrice: 1699.0,
-    mrp: 2299.0,
-    gstRate: 5,
-    hsnCode: '6205',
-    unit: 'pcs',
-    stock: 45,
-    reorderLevel: 10,
-    branch: 'Main Branch (Downtown)',
-    variants: [
-      { size: 'M', color: 'Beige', stock: 15 },
-      { size: 'L', color: 'Mustard', stock: 18 },
-      { size: 'XL', color: 'Teal', stock: 12 }
-    ],
-    status: 'In Stock'
-  }
-];
-
-const INITIAL_ORDERS = [
-  {
-    id: 'ORD-2026-9041',
-    customerName: 'Vikramaditya Rathore',
-    phone: '+91 98290 11234',
-    itemsCount: 3,
-    subtotal: 3198.0,
-    gstTotal: 184.0,
-    total: 3382.0,
-    paymentMethod: 'PhonePe UPI',
-    paymentStatus: 'Paid',
-    channel: 'Storefront Online',
-    fulfillment: 'Shiprocket Dispatched',
-    awb: 'SR-9920148102',
-    date: '2026-10-21 02:45 PM',
-    items: [
-      { name: 'Premium Cotton Slim Fit Shirt (L)', qty: 1, price: 1299.0, gst: '5%' },
-      { name: 'Dark Indigo Stretch Denim Jeans (34)', qty: 1, price: 1899.0, gst: '12%' }
-    ]
-  },
-  {
-    id: 'ORD-2026-9040',
-    customerName: 'Ananya Deshmukh',
-    phone: '+91 97412 88451',
-    itemsCount: 2,
-    subtotal: 1130.0,
-    gstTotal: 78.0,
-    total: 1208.0,
-    paymentMethod: 'Cash Counter (POS)',
-    paymentStatus: 'Paid',
-    channel: 'POS Counter 01',
-    fulfillment: 'Completed (Handover)',
-    awb: 'POS-WALK-IN',
-    date: '2026-10-21 01:20 PM',
-    items: [
-      { name: 'Pure Desi Cow Ghee 1L Tin', qty: 1, price: 650.0, gst: '12%' },
-      { name: 'Royal Basmati Rice 5kg Aged Pack', qty: 1, price: 480.0, gst: '0%' }
-    ]
-  },
-  {
-    id: 'ORD-2026-9039',
-    customerName: 'Gaurav Kulkarni',
-    phone: '+91 99200 44102',
-    itemsCount: 1,
-    subtotal: 1499.0,
-    gstTotal: 228.66,
-    total: 1499.0,
-    paymentMethod: 'Razorpay Cards',
-    paymentStatus: 'Paid',
-    channel: 'Storefront Online',
-    fulfillment: 'NimbusPost In-Transit',
-    awb: 'NP-4481092811',
-    date: '2026-10-20 06:15 PM',
-    items: [
-      { name: 'True Wireless Stereo Earbuds v5.3', qty: 1, price: 1499.0, gst: '18%' }
-    ]
-  },
-  {
-    id: 'ORD-2026-9038',
-    customerName: 'Rajesh Meena',
-    phone: '+91 94140 22910',
-    itemsCount: 1,
-    subtotal: 1699.0,
-    gstTotal: 80.9,
-    total: 1699.0,
-    paymentMethod: 'Cash on Delivery (COD)',
-    paymentStatus: 'Pending Delivery',
-    channel: 'Storefront Online',
-    fulfillment: 'iThink Logistics Booked',
-    awb: 'ITL-772901923',
-    date: '2026-10-20 03:10 PM',
-    items: [
-      { name: 'Handcrafted Festive Linen Kurta (L)', qty: 1, price: 1699.0, gst: '5%' }
-    ]
-  }
-];
-
-const INITIAL_SUPPLIERS = [
-  {
-    id: 'SUP-101',
-    name: 'Raymond Textiles & Garments Ltd',
-    contactPerson: 'Sanjay Kapoor',
-    phone: '+91 98201 55678',
-    email: 'b2b@raymondapparel.com',
-    gstin: '27AAACR1290M1ZP',
-    city: 'Bhiwandi, Maharashtra',
-    category: 'Fabrics & Apparel',
-    balancePayable: 42500.0,
-    status: 'Active'
-  },
-  {
-    id: 'SUP-102',
-    name: 'ITC Agri & Foods Distribution',
-    contactPerson: 'Manoj Bajpai',
-    phone: '+91 99340 77123',
-    email: 'supply@itcagri.in',
-    gstin: '19AAACI2210K1ZV',
-    city: 'Kolkata, WB',
-    category: 'Grains, Ghee & Agro',
-    balancePayable: 18200.0,
-    status: 'Active'
-  },
-  {
-    id: 'SUP-103',
-    name: 'Alpha Gadgets & Wireless Importers',
-    contactPerson: 'Nitin Singhania',
-    phone: '+91 98110 33490',
-    email: 'sales@alphagadgets.co.in',
-    gstin: '07AAACA9910J1ZU',
-    city: 'Nehru Place, New Delhi',
-    category: 'TWS & Fast Chargers',
-    balancePayable: 65400.0,
-    status: 'Active'
-  }
-];
-
-const INITIAL_CUSTOMERS = [
-  {
-    id: 'CUST-801',
-    name: 'Vikramaditya Rathore',
-    mobile: '+91 98290 11234',
-    email: 'vikram.rathore@outlook.com',
-    city: 'Jaipur, RJ',
-    totalOrders: 14,
-    lifetimeSpend: 42800.0,
-    loyaltyPoints: 428,
-    gstin: '08ABCDE1234F1Z5',
-    category: 'B2B Wholesale'
-  },
-  {
-    id: 'CUST-802',
-    name: 'Ananya Deshmukh',
-    mobile: '+91 97412 88451',
-    email: 'ananya.d@gmail.com',
-    city: 'Mumbai, MH',
-    totalOrders: 6,
-    lifetimeSpend: 9450.0,
-    loyaltyPoints: 94,
-    gstin: 'N/A',
-    category: 'Retail Walk-in'
-  },
-  {
-    id: 'CUST-803',
-    name: 'Gaurav Kulkarni',
-    mobile: '+91 99200 44102',
-    email: 'gaurav.k@tcs.com',
-    city: 'Pune, MH',
-    totalOrders: 4,
-    lifetimeSpend: 7850.0,
-    loyaltyPoints: 78,
-    gstin: 'N/A',
-    category: 'Online Direct'
-  }
-];
-
-const INITIAL_BRANCHES = [
-  { id: 'BR-01', name: 'Main Branch (Downtown)', code: 'HQ-MAIN', city: 'Jaipur', type: 'Retail Store + POS', skus: 142, activeTill: 'POS-01 (Online)' },
-  { id: 'BR-02', name: 'Outlet #2 (Mall Road)', code: 'OUT-MALL', city: 'Jaipur', type: 'Retail Store + POS', skus: 98, activeTill: 'POS-02 (Online)' },
-  { id: 'BR-03', name: 'Central Warehouse & Hub', code: 'WH-CENTRAL', city: 'Sanganer', type: 'Central Fulfillment', skus: 210, activeTill: 'No Till (Dispatches Only)' }
-];
+const INITIAL_PRODUCTS = [];
+const INITIAL_ORDERS = [];
+const INITIAL_SUPPLIERS = [];
+const INITIAL_CUSTOMERS = [];
+const INITIAL_BRANCHES = [];
 
 // ============================================================================
 // 2. MAIN SHOP ADMIN & ERP COMPONENT
@@ -416,8 +86,19 @@ const INITIAL_BRANCHES = [
 
 export default function ShopAdmin() {
   const [shopCode, setShopCode] = useState(
-    document.getElementById('root')?.dataset?.shopCode || 'SHP-A4IFYK'
+    document.getElementById('root')?.dataset?.shopCode || localStorage.getItem('shoppy_active_store_code') || ''
   );
+
+  const activeStore = useMemo(() => {
+    try {
+      const s = localStorage.getItem('shoppy_active_store');
+      return s ? JSON.parse(s) : null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
+  const storeDisplayName = activeStore?.name || 'Shoppy Store';
+  const tenantDbName = activeStore?.database_name || `tenant_${(shopCode || 'store').toLowerCase()}`;
 
   // Navigation & View state (matching banking-panel.jsx architecture)
   const [activeMenu, setActiveMenu] = useState('dashboard');
@@ -443,6 +124,27 @@ export default function ShopAdmin() {
   const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
   const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
   const [branches, setBranches] = useState(INITIAL_BRANCHES);
+
+  // Live sync from Tenant ERP API
+  useEffect(() => {
+    let isMounted = true;
+    fetch(`/api/tenant/erp/init?shop_code=${shopCode}`)
+      .then((res) => res.json())
+      .then((res) => {
+        if (isMounted && res.success && res.data) {
+          const d = res.data;
+          if (Array.isArray(d.products) && d.products.length > 0) setProducts(d.products);
+          if (Array.isArray(d.orders) && d.orders.length > 0) setOrders(d.orders);
+          if (Array.isArray(d.suppliers) && d.suppliers.length > 0) setSuppliers(d.suppliers);
+          if (Array.isArray(d.customers) && d.customers.length > 0) setCustomers(d.customers);
+          if (Array.isArray(d.branches) && d.branches.length > 0) setBranches(d.branches);
+        }
+      })
+      .catch((err) => {
+        console.warn('ShopAdmin live API fallback:', err);
+      });
+    return () => { isMounted = false; };
+  }, [shopCode]);
 
   // Payment Gateways & Courier Integrations State (PRD Phase 6)
   const [gateways, setGateways] = useState([
@@ -506,11 +208,11 @@ export default function ShopAdmin() {
 
   // Current POS Shift Drawer State (PRD Section 10 & 14)
   const [shiftData, setShiftData] = useState({
-    shiftId: 'SHT-2026-1021-01',
-    cashier: 'Ramesh Verma (Store Manager)',
-    openedAt: '2026-10-21 09:00 AM',
-    openingFloat: 2500.0,
-    cashSales: 18450.0,
+    shiftId: `SHT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-01`,
+    cashier: 'Store Manager',
+    openedAt: '09:00 AM',
+    openingFloat: 0.0,
+    cashSales: 0.0,
     upiSales: 24300.0,
     cardSales: 5500.0,
     pettyCashOut: 450.0,
@@ -715,7 +417,7 @@ export default function ShopAdmin() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ramesh_fashion_inventory_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `store_inventory_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1028,7 +730,7 @@ export default function ShopAdmin() {
             {/* Logo Text */}
             <div className="leading-none">
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-extrabold text-slate-900 tracking-tight">Ramesh</span>
+                <span className="text-base font-extrabold text-slate-900 tracking-tight">Shoppy</span>
                 <span className="text-[11px] font-black uppercase text-[#00a2c7] tracking-wider">ERP</span>
               </div>
               <p className="text-[8px] font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
@@ -1108,10 +810,10 @@ export default function ShopAdmin() {
         <div className="p-3 border-t border-slate-800/80 bg-[#0d1624]">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
-              RF
+              {(storeDisplayName || 'SH').slice(0, 2).toUpperCase()}
             </div>
             <div className="truncate">
-              <p className="text-xs font-semibold text-white truncate">Ramesh Fashion Store</p>
+              <p className="text-xs font-semibold text-white truncate">{storeDisplayName}</p>
               <p className="text-[10px] text-slate-400 truncate">Store ID: {shopCode}</p>
             </div>
           </div>
@@ -1146,13 +848,13 @@ export default function ShopAdmin() {
 
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold text-slate-800 dark:text-white tracking-tight">
-                Ramesh Fashion Store ERP
+                {storeDisplayName} — ERP
               </h1>
               <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] border border-cyan-200 dark:border-cyan-800">
                 {shopCode}
               </span>
               <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                <ShieldCheck className="w-3 h-3" /> Dedicated DB: tenant_ramesh_fashion
+                <ShieldCheck className="w-3 h-3" /> Dedicated DB: {tenantDbName}
               </span>
             </div>
           </div>
@@ -1300,7 +1002,7 @@ export default function ShopAdmin() {
                     </p>
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">₹ 20,500.00</h3>
                     <div className="flex items-center gap-1 text-[11px] font-bold text-cyan-600 mt-1">
-                      <span>Shift #1 — Open (Ramesh)</span>
+                      <span>Shift #1 — Active Terminal</span>
                     </div>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center">
@@ -2487,7 +2189,7 @@ export default function ShopAdmin() {
 
             {/* Barcode Tag Simulation */}
             <div className="my-5 p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white text-slate-900 text-center font-sans space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider">Ramesh Fashion Store</p>
+              <p className="text-xs font-bold uppercase tracking-wider">{storeDisplayName}</p>
               <h4 className="font-extrabold text-sm">{selectedBarcodeProduct.name}</h4>
 
               {/* 1D Barcode Graphic Simulation */}
@@ -2683,7 +2385,7 @@ export default function ShopAdmin() {
 
             <div className="my-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950 font-mono text-xs text-slate-800 dark:text-slate-200 space-y-2 border border-dashed border-slate-300 dark:border-slate-700">
               <div className="text-center pb-2 border-b border-dashed border-slate-300">
-                <div className="font-bold">RAMESH FASHION STORE</div>
+                <div className="font-bold uppercase">{storeDisplayName}</div>
                 <div className="text-[10px] text-slate-400">SHIFT CLOSE SUMMARY (Z-REPORT)</div>
                 <div className="text-[10px] text-slate-400">{shiftData.openedAt} - NOW</div>
               </div>

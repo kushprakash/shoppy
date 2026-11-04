@@ -26,20 +26,89 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 2. Subscription Plans
-        DB::connection('mysql')->table('subscription_plans')->updateOrInsert(
-            ['code' => 'all_categories'],
+        // 2. Subscription Packages (The 4 Official Packages)
+        $packages = [
             [
-                'name' => 'All-in-One Enterprise Plan',
+                'code' => 'monthly-package',
+                'name' => 'Monthly Package',
+                'short_name' => 'MONTHLY',
+                'category' => 'business',
+                'badge' => 'Starter Package',
+                'ribbon_bg' => 'bg-[#008ba3]',
+                'button_text' => 'SIGN UP NOW',
+                'has_whatsapp' => true,
+                'has_ecommerce' => true,
+                'subtext' => 'Billed monthly • Complete ERP & E-Commerce Suite',
+                'monthly_price' => 1000.00,
+                'annual_price' => 12000.00,
+                'sort_order' => 1,
+            ],
+            [
+                'code' => 'quarterly-package',
+                'name' => 'Quarterly Package',
+                'short_name' => 'QUARTERLY',
+                'category' => 'business',
+                'badge' => 'Save ₹500',
+                'ribbon_bg' => 'bg-[#6b21a8]',
+                'button_text' => 'SIGN UP NOW',
+                'has_whatsapp' => true,
+                'has_ecommerce' => true,
+                'subtext' => 'Billed quarterly (₹833/mo) • Save ₹500 on billing',
+                'monthly_price' => 833.33,
+                'annual_price' => 10000.00,
+                'sort_order' => 2,
+            ],
+            [
+                'code' => 'half-yearly-package',
+                'name' => 'Half Yearly Package',
+                'short_name' => 'HALF YEARLY',
+                'category' => 'business',
+                'badge' => 'Save ₹1,500',
+                'ribbon_bg' => 'bg-[#00a2c7]',
+                'button_text' => 'SIGN UP NOW',
+                'has_whatsapp' => true,
+                'has_ecommerce' => true,
+                'subtext' => 'Billed every 6 months (₹750/mo) • Save ₹1,500',
                 'monthly_price' => 750.00,
-                'annual_price' => 7500.00,
-                'all_category_access' => true,
-                'features' => json_encode(['unlimited_products', 'all_categories', 'pos_offline', '5_payment_gateways', '5_courier_partners']),
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
+                'annual_price' => 9000.00,
+                'sort_order' => 3,
+            ],
+            [
+                'code' => 'yearly-package',
+                'name' => 'Yearly Package',
+                'short_name' => 'YEARLY',
+                'category' => 'business',
+                'badge' => 'Best Value • Save ₹4,000',
+                'ribbon_bg' => 'bg-[#0a3e7e]',
+                'button_text' => 'SIGN UP NOW',
+                'has_whatsapp' => true,
+                'has_ecommerce' => true,
+                'subtext' => 'Billed annually (₹667/mo) • Maximum Savings of ₹4,000',
+                'monthly_price' => 666.66,
+                'annual_price' => 8000.00,
+                'sort_order' => 4,
+            ],
+        ];
+
+        foreach ($packages as $pkg) {
+            DB::connection('mysql')->table('subscription_plans')->updateOrInsert(
+                ['code' => $pkg['code']],
+                array_merge($pkg, [
+                    'all_category_access' => true,
+                    'is_active' => true,
+                    'features' => json_encode([
+                        'GST Billing Software',
+                        'Ecommerce Store Features',
+                        'WhatsApp Features',
+                        'High-Speed POS Counter Billing (<50ms)',
+                        '5 Payment Gateways & 5 Courier Partners',
+                        'Real-time Stock & Inventory Sync'
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])
+            );
+        }
 
         // 3. Category Pricing for Per-Category model
         $categories = [

@@ -424,7 +424,7 @@ export default function MasterPortal() {
 
   // Price calculation helper
   const getPlanPrice = (plan) => {
-    return subscriptionService.calculatePrice(plan, billingCycle, !!ownWhatsapp[plan.id]);
+    return subscriptionService.calculatePrice(plan, plan?.billingCycle || billingCycle, !!ownWhatsapp[plan.id]);
   };
 
   // Add Feature to Plan
@@ -1450,7 +1450,7 @@ export default function MasterPortal() {
               </a>
 
               <a
-                href="/STORE983515"
+                href="/SHP-A4IFYK"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-between px-3 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/40"
@@ -2095,7 +2095,7 @@ export default function MasterPortal() {
                               {(priceInfo.offerPrice ?? priceInfo.offer ?? 0).toLocaleString('en-IN')}
                             </span>
                             <span className="text-xs font-semibold text-slate-400">
-                              /{billingCycle === 'monthly' ? 'mo' : billingCycle === 'yearly' ? 'yr' : billingCycle}
+                              {priceInfo.label}
                             </span>
                           </div>
 
@@ -2111,10 +2111,10 @@ export default function MasterPortal() {
                           )}
                         </div>
 
-                        {/* WhatsApp Own Number Add-on Switch */}
+                        {/* WhatsApp Message Suite Add-on (+₹500/month) */}
                         {plan.hasWhatsappOption && (
-                          <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
-                            <label className="flex items-start gap-2 cursor-pointer select-none">
+                          <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                            <label className="flex items-start gap-2.5 cursor-pointer select-none">
                               <input
                                 type="checkbox"
                                 checked={!!ownWhatsapp[plan.id]}
@@ -2128,10 +2128,13 @@ export default function MasterPortal() {
                               />
                               <div className="text-[11px] leading-tight">
                                 <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                                  Use Own WhatsApp Number
+                                  WhatsApp Message Suite
                                 </span>
-                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">
-                                  + ₹{(subscriptionService.calculatePrice(plan, billingCycle, true).whatsappAddon || 400)} (₹400/mo)
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                                  + ₹500 / month (+₹{priceInfo.whatsappAddon})
+                                </span>
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                  {ownWhatsapp[plan.id] ? 'Addon active' : 'Optional (+₹500/mo)'}
                                 </span>
                               </div>
                             </label>

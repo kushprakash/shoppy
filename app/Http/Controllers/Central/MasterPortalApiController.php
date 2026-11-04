@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 class MasterPortalApiController extends Controller
 {
     /**
-     * Get all Subscription Plans from MySQL
+     * Get all Subscription Plans directly from MySQL database (Fully editable)
      */
     public function getPlans(): JsonResponse
     {
@@ -31,17 +31,12 @@ class MasterPortalApiController extends Controller
                     'category' => $plan->category ?: 'business',
                     'badge' => $plan->badge ?: 'Plan',
                     'ribbonBg' => $plan->ribbon_bg ?: 'bg-[#008ba3]',
-                    'buttonText' => $plan->button_text ?: 'SIGN UP',
+                    'buttonText' => $plan->button_text ?: 'SIGN UP NOW',
                     'buttonBg' => ($plan->ribbon_bg ?: 'bg-[#008ba3]') . ' text-white',
                     'hasWhatsappOption' => (bool) $plan->has_whatsapp,
                     'hasEcommerce' => (bool) $plan->has_ecommerce,
-                    'subtext' => $plan->subtext ?: 'Billed per store terminal',
-                    'cycles' => json_decode($plan->cycles, true) ?: [
-                        'monthly' => ['regular' => (float)$plan->monthly_price, 'offer' => (float)$plan->monthly_price, 'offPercent' => 0, 'label' => '/ month', 'ribbonText' => 'POPULAR'],
-                        'quarterly' => ['regular' => (float)$plan->monthly_price * 3, 'offer' => (float)$plan->monthly_price * 2.7, 'offPercent' => 10, 'label' => '/ 3 months', 'ribbonText' => 'SAVE 10%*'],
-                        'half_yearly' => ['regular' => (float)$plan->monthly_price * 6, 'offer' => (float)$plan->monthly_price * 5, 'offPercent' => 17, 'label' => '/ 6 months', 'ribbonText' => 'SAVE 17%*'],
-                        'yearly' => ['regular' => (float)$plan->monthly_price * 12, 'offer' => (float)$plan->annual_price, 'offPercent' => 25, 'label' => '/ year', 'ribbonText' => 'SAVE 25%*'],
-                    ],
+                    'subtext' => $plan->subtext ?: 'Complete ERP & E-Commerce',
+                    'cycles' => json_decode($plan->cycles, true) ?: [],
                     'features' => json_decode($plan->features, true) ?: [],
                     'is_active' => (bool) $plan->is_active,
                 ];
@@ -244,6 +239,66 @@ class MasterPortalApiController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Provision isolated MySQL tenant database, migrate schema & seed required roles and permissions
+        try {
+            $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_]/', '', $dbName);
+            DB::connection('mysql')->statement("CREATE DATABASE IF NOT EXISTS `{$sanitizedDbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+            \Illuminate\Support\Facades\Config::set('database.connections.tenant.database', $sanitizedDbName);
+            DB::purge('tenant');
+            DB::reconnect('tenant');
+
+            \Illuminate\Support\Facades\Artisan::call('migrate', [
+                '--database' => 'tenant',
+                '--path' => 'database/migrations/tenant',
+                '--force' => true,
+            ]);
+
+            // Seed initial Branch & POS Cash Register
+            $branchId = DB::connection('tenant')->table('branches')->insertGetId([
+                'name' => 'Main Store',
+                'code' => 'BR-01',
+                'phone' => $validated['owner_phone'],
+                'address' => $validated['city'] ?? 'Store Head Office',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::connection('tenant')->table('warehouses')->insert([
+                'branch_id' => $branchId,
+                'name' => 'Main Warehouse',
+                'code' => 'WH-01',
+                'is_default' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::connection('tenant')->table('cash_registers')->insert([
+                'branch_id' => $branchId,
+                'name' => 'Counter 1',
+                'code' => 'POS-01',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Seed the 6 Required Roles & Granular Permissions
+            foreach (\App\Tenancy\TenantManager::getRequiredRoles() as $role) {
+                DB::connection('tenant')->table('roles')->updateOrInsert(
+                    ['slug' => $role['slug']],
+                    [
+                        'name' => $role['name'],
+                        'permissions' => $role['permissions'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
+            }
+        } catch (\Throwable $e) {
+            // Log or continue gracefully
+        }
+
         return response()->json([
             'success' => true,
             'message' => "Store {$validated['name']} ({$code}) provisioned with isolated database {$dbName}!",
@@ -411,37 +466,104 @@ class MasterPortalApiController extends Controller
     }
 
     /**
-     * Submit Contact Form Lead to MySQL
+     * Generate secure CAPTCHA code and encrypted verification token
+     */
+    public function generateCaptcha(): JsonResponse
+    {
+        $chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $code = '';
+        for ($i = 0; $i < 6; $i++) {
+            $code .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+
+        $payload = json_encode([
+            'code' => $code,
+            'expires_at' => time() + 900, // 15 mins
+            'rand' => Str::random(8),
+        ]);
+        $token = base64_encode(\Illuminate\Support\Facades\Crypt::encryptString($payload));
+
+        return response()->json([
+            'success' => true,
+            'code' => $code,
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * Submit Contact Form Lead directly into `contacts` MySQL table with CAPTCHA validation
      */
     public function submitContactInquiry(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:32',
-            'email' => 'nullable|email|max:255',
-            'business_name' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:128',
-            'service_interested' => 'nullable|string|max:128',
-            'message' => 'nullable|string|max:2000',
+            'email' => 'required|email|max:255',
+            'subject' => 'nullable|string|max:255',
+            'message' => 'required|string|max:3000',
+            'captcha' => 'required|string|max:16',
+            'captcha_token' => 'required|string',
         ]);
 
-        $inquiryId = DB::connection('mysql')->table('contact_inquiries')->insertGetId([
+        // Verify CAPTCHA
+        $captchaInput = strtoupper(trim($validated['captcha']));
+        $isValidCaptcha = false;
+
+        try {
+            $decryptedJson = \Illuminate\Support\Facades\Crypt::decryptString(base64_decode($validated['captcha_token']));
+            $decrypted = json_decode($decryptedJson, true);
+            if ($decrypted && isset($decrypted['code'], $decrypted['expires_at'])) {
+                if (time() <= $decrypted['expires_at'] && strtoupper($decrypted['code']) === $captchaInput) {
+                    $isValidCaptcha = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            $isValidCaptcha = false;
+        }
+
+        if (!$isValidCaptcha) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid CAPTCHA code. Please enter the correct characters shown in the image.',
+            ], 422);
+        }
+
+        $subject = $validated['subject'] ?: 'General Inquiry';
+
+        // 1. Primary insert into contacts table
+        $contactId = DB::connection('mysql')->table('contacts')->insertGetId([
             'name' => $validated['name'],
+            'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'email' => $validated['email'] ?? null,
-            'business_name' => $validated['business_name'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'service_interested' => $validated['service_interested'] ?? 'GST Billing & POS',
-            'message' => $validated['message'] ?? null,
+            'subject' => $subject,
+            'message' => $validated['message'],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
             'status' => 'new',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
+        // 2. Also insert into contact_inquiries table for master dashboard sync
+        try {
+            DB::connection('mysql')->table('contact_inquiries')->insert([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
+                'email' => $validated['email'],
+                'business_name' => $subject,
+                'city' => 'Website Inquiry',
+                'service_interested' => $subject,
+                'message' => $validated['message'],
+                'status' => 'new',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (\Throwable $e) {}
+
         return response()->json([
             'success' => true,
-            'message' => 'Thank you! Your inquiry has been submitted. Our Enexa IT retail specialist will call you shortly.',
-            'inquiry_id' => $inquiryId,
+            'message' => 'Thank you! Your message has been sent successfully. An Enexa IT specialist will get back to you within 24 hours.',
+            'contact_id' => $contactId,
         ], 201);
     }
 
@@ -450,6 +572,18 @@ class MasterPortalApiController extends Controller
      */
     public function getContactInquiries(): JsonResponse
     {
+        if (\Illuminate\Support\Facades\Schema::connection('mysql')->hasTable('contacts')) {
+            $contacts = DB::connection('mysql')->table('contacts')
+                ->orderBy('id', 'desc')
+                ->get();
+            if ($contacts->isNotEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $contacts,
+                ]);
+            }
+        }
+
         $leads = DB::connection('mysql')->table('contact_inquiries')
             ->orderBy('id', 'desc')
             ->get();

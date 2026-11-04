@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -7,6 +7,8 @@ import InvoicePrintModal from '../components/InvoicePrintModal';
 import EmployeeICardModal from '../components/EmployeeICardModal';
 import ProfileUpdateModal from '../components/ProfileUpdateModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import StoreRenewalModal from '../components/StoreRenewalModal';
+import subscriptionService from '../services/subscriptionService';
 import {
   CheckCircle2,
   X,
@@ -16,7 +18,10 @@ import {
   Printer,
   Barcode,
   Warehouse,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Clock,
+  Zap
 } from 'lucide-react';
 
 export default function MainLayout() {
@@ -45,6 +50,29 @@ export default function MainLayout() {
     products,
     setProducts
   } = useErp();
+
+  // Active Store Code & Expiry Status
+  const activeCode = localStorage.getItem('shoppy_active_store_code') || shopCode || '';
+  const [expiryStatus, setExpiryStatus] = useState(() => subscriptionService.getStoreExpiryStatus(activeCode));
+  const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
+
+  useEffect(() => {
+    const status = subscriptionService.getStoreExpiryStatus(activeCode);
+    setExpiryStatus(status);
+
+    // Auto popup Renewal modal after merchant logs in if expiring soon (<= 5 days) or expired
+    const shouldPopup = localStorage.getItem('shoppy_trigger_renewal_popup') === 'true' ||
+                        sessionStorage.getItem('shoppy_show_renewal_popup') === 'true' ||
+                        (status && status.showAlert);
+
+    if (shouldPopup) {
+      setIsRenewalModalOpen(true);
+      try {
+        localStorage.removeItem('shoppy_trigger_renewal_popup');
+        sessionStorage.removeItem('shoppy_show_renewal_popup');
+      } catch (err) {}
+    }
+  }, [activeCode]);
 
   // Stock Adjustment Form
   const [stockForm, setStockForm] = useState({
@@ -92,6 +120,39 @@ export default function MainLayout() {
 
       {/* 2. Main Workspace */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Top Expiry Warning Banner (last 5 days or expired) */}
+        {expiryStatus && expiryStatus.showAlert && (
+          <div className={`w-full py-2.5 px-6 text-xs font-bold flex flex-wrap items-center justify-between gap-3 shadow-md shrink-0 ${
+            expiryStatus.isExpired
+              ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white'
+              : 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              {expiryStatus.isExpired ? (
+                <AlertTriangle className="w-4 h-4 text-white shrink-0 animate-pulse" />
+              ) : (
+                <Clock className="w-4 h-4 text-slate-950 shrink-0 animate-pulse" />
+              )}
+              <span>
+                {expiryStatus.isExpired
+                  ? `Store License Expired on ${expiryStatus.validUntil}! Renew now to maintain uninterrupted billing & online services.`
+                  : `Store Plan Expiry Alert: Your subscription expires in ${expiryStatus.daysRemaining} days (${expiryStatus.validUntil}).`}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsRenewalModalOpen(true)}
+              className={`px-4 py-1.5 rounded-full text-xs font-extrabold shadow-sm transition cursor-pointer flex items-center gap-1.5 ${
+                expiryStatus.isExpired
+                  ? 'bg-white text-red-700 hover:bg-slate-100'
+                  : 'bg-slate-950 text-white hover:bg-slate-900'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Renew Subscription Now</span>
+            </button>
+          </div>
+        )}
+
         <Header />
 
         {/* Content Outlet for dynamic routes */}
@@ -358,6 +419,17 @@ export default function MainLayout() {
       {isChangePasswordOpen && (
         <ChangePasswordModal onClose={() => setIsChangePasswordOpen(false)} />
       )}
+
+      {/* MODAL 8: STORE LICENSE & SUBSCRIPTION RENEWAL POPUP */}
+      <StoreRenewalModal
+        isOpen={isRenewalModalOpen}
+        onClose={() => setIsRenewalModalOpen(false)}
+        shopCode={activeCode}
+        onRenewSuccess={(updated) => {
+          setExpiryStatus(subscriptionService.getStoreExpiryStatus(activeCode));
+          showToast(`Store ${activeCode} license extended successfully!`);
+        }}
+      />
     </div>
   );
 }

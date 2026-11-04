@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Building2,
   Store,
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
+  RotateCw,
   Zap,
   Globe,
   Sliders,
@@ -50,13 +51,49 @@ import {
   ArrowLeft,
   Eye,
   EyeOff,
-  User
+  User,
+  AlertCircle,
+  MessageCircle,
+  QrCode
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import subscriptionService from '../../services/subscriptionService';
+import StoreRenewalModal from '../../components/StoreRenewalModal';
+
+// Social Icon Components for Contact section
+const FacebookIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+  </svg>
+);
+
+const InstagramIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+  </svg>
+);
+
+const LinkedinIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+  </svg>
+);
+
+const YoutubeIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
 
 export default function LandingPage({ defaultPage = 'home' }) {
   const navigate = useNavigate();
+
+  // Set website title as requested: Shoppy ERP — Enexa IT Solutions Private Limited
+  useEffect(() => {
+    document.title = 'Shoppy ERP — Enexa IT Solutions Private Limited';
+  }, []);
 
   // Determine initial active page from URL path or prop
   const getInitialPage = () => {
@@ -80,10 +117,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
     official_domain: 'www.enexa.in',
     brand_title: 'Shoppy ERP & Retail Omnichannel Platform',
     brand_tagline: 'Next-Generation POS Billing, GST Compliance & Omnichannel Digital Commerce for Indian Retailers',
-    support_phone: '+91 98290 00192',
-    support_email: 'info@enexa.in',
-    sales_email: 'sales@enexa.in',
-    corporate_address: 'Enexa IT Solutions Private Limited, IT Park, Tech Zone, Jaipur, Rajasthan - 302020',
+    support_phone: '+91 9546042639',
+    support_email: 'contact@enexa.in',
+    sales_email: 'contact@enexa.in',
+    corporate_address: 'Bhagwanpur, Muzaffarpur, Bihar 842001',
     company_gstin: '08AABCE1290M1Z5',
     company_cin: 'U72900RJ2021PTC075482'
   });
@@ -110,18 +147,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
   const [activeBlogModal, setActiveBlogModal] = useState(null);
   const [blogCategoryFilter, setBlogCategoryFilter] = useState('all');
 
-  // Working Contact Form State
+  // Working Contact Form State (enexa.in design)
   const [contactForm, setContactForm] = useState({
     name: '',
-    phone: '',
     email: '',
-    business_name: '',
-    city: '',
-    service_interested: 'GST Billing & POS',
-    message: ''
+    phone: '',
+    subject: '',
+    message: '',
+    captcha: '',
+    captcha_token: ''
   });
+  const [captchaCode, setCaptchaCode] = useState('');
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
   const [contactSuccess, setContactSuccess] = useState(null);
+  const [contactError, setContactError] = useState(null);
+  const captchaCanvasRef = useRef(null);
 
   // Onboarding Wizard Modal State
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
@@ -131,19 +171,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
     storeName: '',
     ownerName: '',
     ownerPhone: '',
-    city: 'Jaipur, Rajasthan',
-    category: 'Retail & POS Invoicing',
-    subCategory: 'Apparel & Fashion Garments',
-    paymentMethod: 'phonepe_upi'
+    city: '',
+    category: '',
+    subCategory: '',
+    paymentMethod: 'payu_money'
   });
   const [provisionedStore, setProvisionedStore] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [payuOnboardData, setPayuOnboardData] = useState(null);
+  const [payuError, setPayuError] = useState(null);
 
   // Renewal / Upgrade Modal State
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
-  const [lookupStoreCode, setLookupStoreCode] = useState('STORE441029');
+  const [lookupStoreCode, setLookupStoreCode] = useState('');
   const [foundStore, setFoundStore] = useState(null);
-  const [renewPlanId, setRenewPlanId] = useState('gst-billing-ecommerce-whatsapp');
+  const [renewPlanId, setRenewPlanId] = useState('yearly-package');
   const [renewCycle, setRenewCycle] = useState('yearly');
   const [renewOwnWhatsapp, setRenewOwnWhatsapp] = useState(true);
   const [renewSuccess, setRenewSuccess] = useState(null);
@@ -219,7 +261,14 @@ export default function LandingPage({ defaultPage = 'home' }) {
             localStorage.setItem('shoppy_active_store', JSON.stringify(data.store));
           }
           document.cookie = `shoppy_active_store=${cleanCode}; path=/; max-age=86400`;
-        } catch (err) {}
+
+          // Check if store subscription is expiring in last 5 days (or expired) to auto-trigger renewal popup!
+          const expCheck = subscriptionService.getStoreExpiryStatus(cleanCode);
+          if (expCheck && expCheck.showAlert) {
+            localStorage.setItem('shoppy_trigger_renewal_popup', 'true');
+            sessionStorage.setItem('shoppy_show_renewal_popup', 'true');
+          }
+        } catch (err) { }
 
         showToast(data.message || `Welcome! Store ${cleanCode} authenticated`);
         navigate('/shop-admin/dashboard');
@@ -329,103 +378,236 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Calculate live price for any plan
   const getPrice = (plan) => {
-    return subscriptionService.calculatePrice(plan, billingCycle, !!ownWhatsapp[plan.id]);
+    return subscriptionService.calculatePrice(plan, plan?.billingCycle || billingCycle, !!ownWhatsapp[plan?.id]);
   };
 
   // Start Onboarding Flow
   const handleStartOnboarding = (plan) => {
     setSelectedOnboardPlan(plan);
+    setBillingCycle(plan?.billingCycle || 'monthly');
     setOnboardStep(1);
+    setPayuOnboardData(null);
+    setPayuError(null);
     setIsOnboardingOpen(true);
   };
 
-  // Submit Contact Form
+  // Draw CAPTCHA on canvas with noise lines matching enexa.in
+  const drawCaptcha = (code) => {
+    const canvas = captchaCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Random noise lines like in image 2
+    const colors = ['#e11d48', '#2563eb', '#059669', '#d97706', '#7c3aed', '#0891b2', '#111827'];
+    for (let i = 0; i < 7; i++) {
+      ctx.strokeStyle = colors[i % colors.length];
+      ctx.lineWidth = 1 + Math.random() * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * 15, Math.random() * canvas.height);
+      ctx.bezierCurveTo(
+        Math.random() * canvas.width, Math.random() * canvas.height,
+        Math.random() * canvas.width, Math.random() * canvas.height,
+        canvas.width - Math.random() * 15, Math.random() * canvas.height
+      );
+      ctx.stroke();
+    }
+
+    // Characters with slight rotation and distortion
+    const chars = (code || '').split('');
+    const charWidth = (canvas.width - 20) / Math.max(chars.length, 1);
+    ctx.font = 'bold 22px "Times New Roman", Georgia, serif';
+    ctx.textBaseline = 'middle';
+
+    chars.forEach((char, index) => {
+      ctx.save();
+      const x = 12 + index * charWidth + (Math.random() * 4 - 2);
+      const y = canvas.height / 2 + (Math.random() * 4 - 2);
+      const angle = (Math.random() * 24 - 12) * (Math.PI / 180);
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = '#111827';
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    });
+  };
+
+  // Fetch new CAPTCHA from API
+  const refreshCaptcha = async () => {
+    try {
+      const res = await fetch('/api/captcha');
+      const data = await res.json();
+      if (data && data.success) {
+        setCaptchaCode(data.code);
+        setContactForm(prev => ({ ...prev, captcha_token: data.token, captcha: '' }));
+        setTimeout(() => drawCaptcha(data.code), 60);
+      }
+    } catch (err) {
+      console.error('Failed to fetch captcha:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentPage === 'contact') {
+      refreshCaptcha();
+    }
+  }, [currentPage]);
+
+  // Submit Contact Form (enexa.in design, stored in contacts table)
   const handleContactSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmittingContact(true);
+    setContactError(null);
     setContactSuccess(null);
 
-    const result = await subscriptionService.submitContact(contactForm);
-    setIsSubmittingContact(false);
+    if (!contactForm.captcha || contactForm.captcha.trim().length === 0) {
+      setContactError('Please enter the CAPTCHA characters shown in the image.');
+      return;
+    }
 
-    if (result && result.success) {
-      setContactSuccess(result.message || 'Your inquiry has been submitted! Our Enexa IT retail specialist will call you shortly.');
-      setContactForm({
-        name: '',
-        phone: '',
-        email: '',
-        business_name: '',
-        city: '',
-        service_interested: 'GST Billing & POS',
-        message: ''
+    setIsSubmittingContact(true);
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(contactForm)
       });
-      showToast('Inquiry submitted to Enexa IT Solutions team!');
-    } else {
-      showToast('Notice: Inquiry received and logged!');
-      setContactSuccess('Thank you! Your inquiry has been registered with Enexa IT Solutions Private Limited.');
+      const result = await res.json();
+      setIsSubmittingContact(false);
+
+      if (res.ok && result.success) {
+        setContactSuccess(result.message || "Thank you! Your message has been sent successfully. We'll get back to you within 24 hours.");
+        setContactForm({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: '',
+          captcha: '',
+          captcha_token: ''
+        });
+        showToast('Message sent to Enexa IT Solutions team!');
+        refreshCaptcha();
+      } else {
+        setContactError(result.message || 'Verification failed. Please enter the correct CAPTCHA code.');
+        refreshCaptcha();
+      }
+    } catch (err) {
+      setIsSubmittingContact(false);
+      setContactError('Submission error. Please check your connection and try again.');
+      refreshCaptcha();
     }
   };
 
-  // Lookup store for renewal
+  // Lookup store for renewal (Opens PayU Money Renewal Modal)
   const handleLookupStore = (e) => {
     e.preventDefault();
-    const allStores = subscriptionService.getStores();
-    const matched = allStores.find(
-      (s) => s.shop_code.toUpperCase() === lookupStoreCode.trim().toUpperCase()
-    );
+    if (!lookupStoreCode.trim()) {
+      showToast('Please enter your merchant store code.');
+      return;
+    }
+    setIsRenewModalOpen(true);
+  };
 
-    if (matched) {
-      setFoundStore(matched);
-      setRenewPlanId(matched.plan_id || 'gst-billing-ecommerce-whatsapp');
-      setRenewCycle(matched.billing_cycle || 'yearly');
-      setRenewOwnWhatsapp(matched.whatsapp_mode === 'own_number');
-      setRenewSuccess(null);
+  // Proceed from Step 2 to Step 3: Initiate PayU Money Payment for Onboarding
+  const handleProceedToPayment = async () => {
+    if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone || !onboardForm.city) {
+      showToast('Please fill all required store details.');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    setPayuError(null);
+
+    const res = await subscriptionService.initiatePayU({
+      type: 'onboard',
+      plan_id: selectedOnboardPlan.id,
+      billing_cycle: billingCycle,
+      own_whatsapp: !!ownWhatsapp[selectedOnboardPlan.id],
+      name: onboardForm.storeName,
+      owner_name: onboardForm.ownerName,
+      owner_phone: onboardForm.ownerPhone,
+      city: onboardForm.city,
+      category: onboardForm.category,
+      sub_category: onboardForm.subCategory,
+    });
+
+    setIsProcessingPayment(false);
+
+    if (res && res.success) {
+      setPayuOnboardData(res);
+      setOnboardStep(3);
     } else {
-      showToast(`Store code "${lookupStoreCode}" not found. Try SHP-A4IFYK or STORE441029`);
-      setFoundStore(null);
+      setPayuError(res?.message || 'Could not connect to PayU Money gateway.');
+      setOnboardStep(3);
     }
   };
 
-  // Confirm Store Renewal
-  const handleConfirmRenewal = (e) => {
-    e.preventDefault();
-    if (!foundStore) return;
-
-    subscriptionService.renewOrUpgradeStore(
-      foundStore.shop_code,
-      renewPlanId,
-      renewCycle,
-      renewOwnWhatsapp
-    );
-
-    setRenewSuccess(
-      `Store ${foundStore.shop_code} subscription renewed successfully! New validity extended by 1 year.`
-    );
-    showToast(`Store ${foundStore.shop_code} renewed successfully!`);
-  };
-
-  // Complete Onboarding & Provision Store
-  const handleCompleteOnboarding = () => {
+  // Complete Onboarding: Verify PayU Payment and Provision Isolated Database Store
+  const handleCompleteOnboarding = async (paymentStatus = 'success') => {
     setIsProcessingPayment(true);
+    setPayuError(null);
 
-    setTimeout(() => {
-      const created = subscriptionService.onboardStore({
-        name: onboardForm.storeName || 'My Retail Counter',
-        ownerName: onboardForm.ownerName || 'Store Merchant',
-        ownerPhone: onboardForm.ownerPhone || '+91 98290 00192',
-        city: onboardForm.city,
-        category: onboardForm.category,
-        subCategory: onboardForm.subCategory,
-        planId: selectedOnboardPlan.id,
-        billingCycle: billingCycle,
-        ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+    if (payuOnboardData?.txnid) {
+      const result = await subscriptionService.verifyPayU({
+        txnid: payuOnboardData.txnid,
+        status: paymentStatus,
+        type: 'onboard',
+        store_data: {
+          storeName: onboardForm.storeName,
+          ownerName: onboardForm.ownerName,
+          ownerPhone: onboardForm.ownerPhone,
+          city: onboardForm.city,
+          category: onboardForm.category,
+          subCategory: onboardForm.subCategory,
+          planId: selectedOnboardPlan.id,
+          billingCycle: billingCycle,
+          ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+        }
       });
 
-      setProvisionedStore(created);
       setIsProcessingPayment(false);
-      setOnboardStep(4);
-      showToast(`Congratulations! Store ${created.shop_code} is now live!`);
-    }, 1200);
+
+      if (result && result.success && result.store) {
+        setProvisionedStore(result.store);
+        setOnboardStep(4);
+        showToast(`Congratulations! Store ${result.store.shop_code} is now live via PayU Money!`);
+      } else {
+        setPayuError(result?.message || 'PayU Money verification failed.');
+      }
+      return;
+    }
+
+    // Fallback provisioning
+    const created = subscriptionService.onboardStore({
+      name: onboardForm.storeName,
+      ownerName: onboardForm.ownerName,
+      ownerPhone: onboardForm.ownerPhone,
+      city: onboardForm.city,
+      category: onboardForm.category,
+      subCategory: onboardForm.subCategory,
+      planId: selectedOnboardPlan.id,
+      billingCycle: billingCycle,
+      ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+    });
+
+    setProvisionedStore(created);
+    setIsProcessingPayment(false);
+    setOnboardStep(4);
+    showToast(`Congratulations! Store ${created.shop_code} is now live!`);
+  };
+
+  // Redirect to PayU Hosted Checkout for Onboarding
+  const handleRedirectPayUOnboarding = () => {
+    if (!payuOnboardData) return;
+    subscriptionService.submitPayUForm(payuOnboardData.action, payuOnboardData.params);
   };
 
   // Dedicated Production Store Login Screen (Distraction-free, Store Code + Password, Zero clutter)
@@ -472,6 +654,65 @@ export default function LandingPage({ defaultPage = 'home' }) {
               </div>
             )}
 
+            {/* Store Subscription Expiry Alert (Last 5 days or expired) */}
+            {(() => {
+              const exp = subscriptionService.getStoreExpiryStatus(inputStoreCode);
+              if (!exp || !exp.showAlert) return null;
+
+              return (
+                <div
+                  className={`mb-5 p-4 rounded-2xl border text-xs space-y-2.5 animate-in fade-in shadow-xl ${exp.isExpired
+                    ? 'bg-red-500/15 border-red-500/40 text-red-200'
+                    : 'bg-amber-500/15 border-amber-500/40 text-amber-200'
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-black">
+                      {exp.isExpired ? (
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 animate-pulse" />
+                      ) : (
+                        <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+                      )}
+                      <span className={exp.isExpired ? 'text-red-300 font-extrabold' : 'text-amber-300 font-extrabold'}>
+                        {exp.isExpired ? 'Subscription Expired' : 'Subscription Expiry Alert'}
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${exp.isExpired ? 'bg-red-500/25 text-red-300' : 'bg-amber-500/25 text-amber-300'
+                        }`}
+                    >
+                      {exp.daysRemaining < 0
+                        ? `Expired ${Math.abs(exp.daysRemaining)}d ago`
+                        : exp.daysRemaining === 0
+                          ? 'Expires Today'
+                          : `${exp.daysRemaining} Days Left`}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Store <strong>{exp.storeName}</strong> ({exp.shopCode}) validity {exp.isExpired ? 'expired on' : 'valid until'}{' '}
+                    <strong className="text-white font-mono">{exp.validUntil}</strong>. Please renew to keep your POS terminal, billing desk & ecommerce storefront active.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLookupStoreCode(exp.shopCode);
+                      setFoundStore(exp.store);
+                      setIsRenewModalOpen(true);
+                    }}
+                    className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${exp.isExpired
+                      ? 'bg-red-600 hover:bg-red-500 text-white'
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black'
+                      }`}
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>Renew / Extend Subscription Now</span>
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Form: Store Code + Password */}
             <form onSubmit={handleStoreLogin} className="space-y-4">
               <div>
@@ -489,7 +730,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       setInputStoreCode(e.target.value.toUpperCase());
                       setLoginError(null);
                     }}
-                    placeholder="e.g. SHP-A4IFYK"
+                    placeholder="e.g. SHP-XXXXXX"
                     autoFocus
                     required
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white font-mono text-xs font-bold tracking-wider placeholder:font-sans placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition"
@@ -606,9 +847,9 @@ export default function LandingPage({ defaultPage = 'home' }) {
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-4 text-[11px] shrink-0 font-semibold">
-            <a href="tel:+919829000192" className="text-slate-300 hover:text-white flex items-center gap-1 transition">
+            <a href="tel:+919546042639" className="text-slate-300 hover:text-white flex items-center gap-1 transition">
               <Phone className="w-3 h-3 text-cyan-400" />
-              <span>+91 98290 00192</span>
+              <span>+91 95460 42639</span>
             </a>
             <span className="text-slate-600">|</span>
             <a
@@ -720,7 +961,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => {
-              setLookupStoreCode('STORE441029');
+              const savedCode = localStorage.getItem('shoppy_saved_store_code') || '';
+              setLookupStoreCode(savedCode);
               setIsRenewModalOpen(true);
             }}
             className="hidden xl:flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer"
@@ -846,7 +1088,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 Enexa IT Solutions Pvt Ltd
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                support@enexa.in • +91 98290 00192
+                support@enexa.in • +91 95460 42639
               </p>
               <a
                 href="https://www.enexa.in"
@@ -1087,7 +1329,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 </p>
 
                 {/* Billing Cycle Pill Toggle Switch */}
-                <div className="inline-flex p-1 rounded-full bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-inner gap-1 mt-4">
+                <div style={{ display: 'none' }} className="inline-flex p-1 rounded-full bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-inner gap-1 mt-4">
                   {['monthly', 'quarterly', 'half_yearly', 'yearly'].map((cycle) => (
                     <button
                       key={cycle}
@@ -1141,7 +1383,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                               {Number(priceInfo.offerPrice ?? priceInfo.offer ?? 0).toLocaleString('en-IN')}
                             </span>
                             <span className="text-xs font-semibold text-slate-400">
-                              /{billingCycle === 'monthly' ? 'mo' : billingCycle === 'yearly' ? 'yr' : billingCycle}
+                              {priceInfo.label}
                             </span>
                           </div>
 
@@ -1157,9 +1399,9 @@ export default function LandingPage({ defaultPage = 'home' }) {
                           )}
                         </div>
 
-                        {/* WhatsApp Option Toggle */}
+                        {/* WhatsApp Option Toggle (+₹500/month) */}
                         {plan.hasWhatsappOption && (
-                          <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-left">
+                          <div className="mt-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-left">
                             <label className="flex items-start gap-2 cursor-pointer select-none text-xs">
                               <input
                                 type="checkbox"
@@ -1174,10 +1416,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                               />
                               <div className="leading-tight">
                                 <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">
-                                  Use Own WhatsApp Number
+                                  WhatsApp Message Suite
                                 </span>
-                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">
-                                  + ₹{(subscriptionService.calculatePrice(plan, billingCycle, true).whatsappAddon || 400)} (₹400/mo)
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                                  + ₹500 / month (+₹{priceInfo.whatsappAddon})
+                                </span>
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400 block">
+                                  {ownWhatsapp[plan.id] ? 'Add-on added (+₹500/mo)' : 'Optional • Unchecked is base price'}
                                 </span>
                               </div>
                             </label>
@@ -1603,7 +1848,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
               </p>
 
               {/* Billing Cycle Pill Toggle Switch */}
-              <div className="inline-flex p-1 rounded-full bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-inner gap-1 mt-4">
+              <div style={{ display: 'none' }} className="inline-flex p-1 rounded-full bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-inner gap-1 mt-4">
                 {['monthly', 'quarterly', 'half_yearly', 'yearly'].map((cycle) => (
                   <button
                     key={cycle}
@@ -1655,7 +1900,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                             {Number(priceInfo.offerPrice ?? priceInfo.offer ?? 0).toLocaleString('en-IN')}
                           </span>
                           <span className="text-xs font-semibold text-slate-400">
-                            /{billingCycle === 'monthly' ? 'mo' : billingCycle === 'yearly' ? 'yr' : billingCycle}
+                            {priceInfo.label}
                           </span>
                         </div>
 
@@ -1671,8 +1916,9 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         )}
                       </div>
 
+                      {/* WhatsApp Option Toggle (+₹500/month) */}
                       {plan.hasWhatsappOption && (
-                        <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-left">
+                        <div className="mt-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-left">
                           <label className="flex items-start gap-2 cursor-pointer select-none text-xs">
                             <input
                               type="checkbox"
@@ -1687,10 +1933,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                             />
                             <div className="leading-tight">
                               <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">
-                                Use Own WhatsApp Number
+                                WhatsApp Message Suite
                               </span>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">
-                                + ₹{(subscriptionService.calculatePrice(plan, billingCycle, true).whatsappAddon || 400)} (₹400/mo)
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                                + ₹500 / month (+₹{priceInfo.whatsappAddon})
+                              </span>
+                              <span className="text-[9px] text-slate-500 dark:text-slate-400 block">
+                                {ownWhatsapp[plan.id] ? 'Add-on added (+₹500/mo)' : 'Optional • Unchecked is base price'}
                               </span>
                             </div>
                           </label>
@@ -1724,837 +1973,915 @@ export default function LandingPage({ defaultPage = 'home' }) {
               })}
             </div>
           </div>
-        )}
+        )
+        }
 
         {/* ================================================================= */}
         {/* PAGE 5: BLOG & KNOWLEDGE HUB PAGE                                 */}
         {/* ================================================================= */}
-        {currentPage === 'blog' && (
-          <div className="max-w-6xl mx-auto px-6 py-12 space-y-10 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="text-center max-w-3xl mx-auto space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] text-xs font-bold border border-cyan-200 dark:border-cyan-800">
-                <FileText className="w-4 h-4" />
-                <span>Retail Knowledge Hub</span>
-              </div>
-              <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white font-heading tracking-tight">
-                Retail Growth, GST Guidelines & Automation Guides
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Curated by the technical desk and retail specialists at Enexa IT Solutions Private Limited.
-              </p>
+        {
+          currentPage === 'blog' && (
+            <div className="max-w-6xl mx-auto px-6 py-12 space-y-10 animate-in fade-in duration-300">
+              {/* Header */}
+              <div className="text-center max-w-3xl mx-auto space-y-3">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] text-xs font-bold border border-cyan-200 dark:border-cyan-800">
+                  <FileText className="w-4 h-4" />
+                  <span>Retail Knowledge Hub</span>
+                </div>
+                <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white font-heading tracking-tight">
+                  Retail Growth, GST Guidelines & Automation Guides
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Curated by the technical desk and retail specialists at Enexa IT Solutions Private Limited.
+                </p>
 
-              {/* Category Filter Pills */}
-              <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
-                {['all', 'Retail Growth', 'GST Compliance', 'WhatsApp Automation'].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setBlogCategoryFilter(cat)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${blogCategoryFilter === cat
-                      ? 'bg-[#00a2c7] text-white shadow-xs'
-                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                  >
-                    {cat === 'all' ? 'All Articles' : cat}
-                  </button>
-                ))}
+                {/* Category Filter Pills */}
+                <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                  {['all', 'Retail Growth', 'GST Compliance', 'WhatsApp Automation'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setBlogCategoryFilter(cat)}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${blogCategoryFilter === cat
+                        ? 'bg-[#00a2c7] text-white shadow-xs'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                    >
+                      {cat === 'all' ? 'All Articles' : cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Articles Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {blogs
+                  .filter((b) => (blogCategoryFilter === 'all' ? true : b.category === blogCategoryFilter))
+                  .map((b) => (
+                    <div
+                      key={b.id}
+                      onClick={() => setActiveBlogModal(b)}
+                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:border-[#00a2c7] transition cursor-pointer group flex flex-col justify-between"
+                    >
+                      {b.cover_image && (
+                        <div className="h-48 overflow-hidden relative">
+                          <img
+                            src={b.cover_image}
+                            alt={b.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          />
+                          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-900/85 text-white backdrop-blur-xs">
+                            {b.category}
+                          </span>
+                        </div>
+                      )}
+                      <div className="p-6 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-[#00a2c7] transition line-clamp-2">
+                            {b.title}
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-2.5 line-clamp-3 leading-relaxed">
+                            {b.excerpt}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-400 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                          <span className="font-semibold">{b.read_time || '4 min read'}</span>
+                          <span className="font-extrabold text-[#00a2c7] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            <span>Read Article</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
+          )
+        }
 
-            {/* Articles Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {blogs
-                .filter((b) => (blogCategoryFilter === 'all' ? true : b.category === blogCategoryFilter))
-                .map((b) => (
-                  <div
-                    key={b.id}
-                    onClick={() => setActiveBlogModal(b)}
-                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:border-[#00a2c7] transition cursor-pointer group flex flex-col justify-between"
-                  >
-                    {b.cover_image && (
-                      <div className="h-48 overflow-hidden relative">
-                        <img
-                          src={b.cover_image}
-                          alt={b.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                        />
-                        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-900/85 text-white backdrop-blur-xs">
-                          {b.category}
-                        </span>
-                      </div>
-                    )}
-                    <div className="p-6 flex-1 flex flex-col justify-between">
+        {/* ================================================================= */}
+        {/* PAGE 6: CONTACT (ENEXA.IN UI WITH CAPTCHA & CONTACTS DB TABLE)    */}
+        {/* ================================================================= */}
+        {
+          currentPage === 'contact' && (
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 animate-in fade-in duration-300">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Left Card: Let's Connect Form */}
+                <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-[28px] p-8 sm:p-10 shadow-sm border border-slate-100 dark:border-slate-800">
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0f172a] dark:text-white tracking-tight">
+                    Let's Connect
+                  </h1>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 mb-8">
+                    Share your details and we'll get back to you within 24 hours
+                  </p>
+
+                  {/* Feedback Alerts */}
+                  {contactSuccess && (
+                    <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5">
+                      <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
+                      <span>{contactSuccess}</span>
+                    </div>
+                  )}
+
+                  {contactError && (
+                    <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
+                      <span>{contactError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleContactSubmit} className="space-y-4 sm:space-y-5">
+                    {/* Row 1: Full Name & Email Address */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <h3 className="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-[#00a2c7] transition line-clamp-2">
-                          {b.title}
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-2.5 line-clamp-3 leading-relaxed">
-                          {b.excerpt}
-                        </p>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Full Name"
+                          value={contactForm.name}
+                          onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                          className="w-full px-4 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-[#0095d9] focus:ring-1 focus:ring-[#0095d9] transition"
+                        />
                       </div>
-                      <div className="flex items-center justify-between text-xs text-slate-400 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-                        <span className="font-semibold">{b.read_time || '4 min read'}</span>
-                        <span className="font-extrabold text-[#00a2c7] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                          <span>Read Article</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
+                      <div>
+                        <input
+                          type="email"
+                          required
+                          placeholder="Email Address"
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                          className="w-full px-4 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-[#0095d9] focus:ring-1 focus:ring-[#0095d9] transition"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 2: Phone Number & Subject */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <input
+                          type="tel"
+                          required
+                          placeholder="Phone Number"
+                          value={contactForm.phone}
+                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                          className="w-full px-4 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-[#0095d9] focus:ring-1 focus:ring-[#0095d9] transition"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Subject"
+                          value={contactForm.subject}
+                          onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                          className="w-full px-4 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-[#0095d9] focus:ring-1 focus:ring-[#0095d9] transition"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 3: Your Message */}
+                    <div>
+                      <textarea
+                        rows={4}
+                        required
+                        placeholder="Your Message"
+                        value={contactForm.message}
+                        onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                        className="w-full px-4 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-[#0095d9] focus:ring-1 focus:ring-[#0095d9] transition resize-y min-h-[110px]"
+                      />
+                    </div>
+
+                    {/* Row 4: Interactive CAPTCHA Display & Verification Input */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                      <div className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 h-[52px]">
+                        <canvas
+                          ref={captchaCanvasRef}
+                          width={155}
+                          height={40}
+                          className="rounded cursor-pointer select-none"
+                          onClick={refreshCaptcha}
+                          title="Click image to refresh CAPTCHA"
+                        />
+                        <button
+                          type="button"
+                          onClick={refreshCaptcha}
+                          title="Refresh CAPTCHA code"
+                          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
+                        >
+                          <RotateCw className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter CAPTCHA"
+                          value={contactForm.captcha}
+                          onChange={(e) => setContactForm({ ...contactForm, captcha: e.target.value })}
+                          className="w-full px-4 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-[#0095d9] focus:ring-1 focus:ring-[#0095d9] transition"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 5: Action Button (Orange solid styling matching enexa.in) */}
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={isSubmittingContact}
+                        className="w-full py-3.5 px-6 rounded-xl bg-[#f58220] hover:bg-[#e07315] active:bg-[#c9630e] text-white font-semibold text-sm transition-colors duration-150 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      >
+                        <span>{isSubmittingContact ? 'Sending Message...' : 'Send Message'}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Right Column: Contact Details, Social Links, Operating Hours */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Card 1: Quick Contact */}
+                  <div className="bg-white dark:bg-slate-900 rounded-[28px] p-7 sm:p-8 shadow-sm border border-slate-100 dark:border-slate-800 space-y-6">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Quick Contact</h2>
+
+                    <div className="space-y-5">
+                      {/* Phone */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-[#0095d9]/10 flex items-center justify-center text-[#0095d9] shrink-0">
+                          <Phone className="w-5 h-5 text-[#0095d9]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">PHONE</span>
+                          <a href="tel:+919546042639" className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
+                            +91 9546042639
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-[#0095d9]/10 flex items-center justify-center text-[#0095d9] shrink-0">
+                          <Mail className="w-5 h-5 text-[#0095d9]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">EMAIL</span>
+                          <a href="mailto:contact@enexa.in" className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
+                            contact@enexa.in
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* WhatsApp */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-[#0095d9]/10 flex items-center justify-center text-[#0095d9] shrink-0">
+                          <MessageCircle className="w-5 h-5 text-[#0095d9]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">WHATSAPP</span>
+                          <a href="https://wa.me/919546042639" target="_blank" rel="noreferrer" className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
+                            Chat with us
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Office */}
+                      <div className="flex items-start gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-[#0095d9]/10 flex items-center justify-center text-[#0095d9] shrink-0">
+                          <MapPin className="w-5 h-5 text-[#0095d9]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">OFFICE</span>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                            Bhagwanpur, Muzaffarpur, Bihar 842001
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
-            </div>
-          </div>
-        )}
 
-        {/* ================================================================= */}
-        {/* PAGE 6: CONTACT & DEMO REQUEST PAGE                               */}
-        {/* ================================================================= */}
-        {currentPage === 'contact' && (
-          <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="text-center max-w-3xl mx-auto space-y-3">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] text-xs font-bold border border-cyan-200 dark:border-cyan-800">
-                <Send className="w-4 h-4" />
-                <span>Get in Touch with Our Team</span>
+                  {/* Card 2: Follow Us */}
+                  <div className="bg-[#0095d9] dark:bg-[#0082bd] rounded-[24px] p-6 text-white shadow-sm space-y-4">
+                    <h3 className="text-base font-bold text-white">Follow Us</h3>
+                    <div className="flex items-center gap-3">
+                      <a
+                        href="https://facebook.com/enexait"
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="Facebook"
+                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition backdrop-blur-xs"
+                      >
+                        <FacebookIcon className="w-4 h-4" />
+                      </a>
+                      <a
+                        href="https://instagram.com/enexait"
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="Instagram"
+                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition backdrop-blur-xs"
+                      >
+                        <InstagramIcon className="w-4 h-4" />
+                      </a>
+                      <a
+                        href="https://linkedin.com/company/enexait"
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="LinkedIn"
+                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition backdrop-blur-xs"
+                      >
+                        <LinkedinIcon className="w-4 h-4" />
+                      </a>
+                      <a
+                        href="https://youtube.com/@enexait"
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="YouTube"
+                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition backdrop-blur-xs"
+                      >
+                        <YoutubeIcon className="w-4 h-4" />
+                      </a>
+                      <a
+                        href="https://wa.me/919546042639"
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="WhatsApp"
+                        className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition backdrop-blur-xs"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-white" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Operating Hours */}
+                  <div className="bg-[#fffbeb] dark:bg-amber-950/20 border border-[#fef3c7] dark:border-amber-900/30 rounded-[20px] p-4 flex items-center gap-3 text-amber-900 dark:text-amber-200 text-sm font-medium">
+                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Mon-Fri: 9:00 AM - 6:00 PM IST</span>
+                  </div>
+                </div>
               </div>
-              <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white font-heading tracking-tight">
-                Connect with Enexa IT Solutions
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Whether you need a personalized 1-on-1 demo, customized retail integration, or pricing guidance, our team is ready to assist.
-              </p>
             </div>
+          )
+        }
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Working Contact Form (Submits to MySQL contact_inquiries table) */}
-              <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Request a Callback / Live Demo</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Fill out the form below. An Enexa IT retail tech specialist will reach out within 2 hours.
+        {/* ================================================================= */}
+        {/* PAGE 7: PRIVACY POLICY                                            */}
+        {/* ================================================================= */}
+        {
+          currentPage === 'privacy-policy' && (
+            <div className="max-w-4xl mx-auto px-6 py-12 space-y-8 animate-in fade-in duration-300">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">Legal & Compliance</span>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white font-heading mt-1">
+                  Privacy Policy — Enexa IT Solutions Private Limited
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Last updated: October 21, 2026 • Governed under the Digital Personal Data Protection (DPDP) Act 2023
+                </p>
+              </div>
+
+              <div className="prose prose-sm dark:prose-invert max-w-none space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Introduction & Scope</h3>
+                  <p>
+                    <strong>Enexa IT Solutions Private Limited</strong> ("Company", "we", "us", or "our", official website: <a href="https://www.enexa.in" className="text-[#00a2c7] underline">www.enexa.in</a>) operates the Shoppy ERP multi-tenant retail SaaS platform. This Privacy Policy describes how personal, commercial, and financial information is collected, used, and safeguarded when merchants, contributors, and customer end-users access our software.
                   </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Dedicated Database Isolation & Data Ownership</h3>
+                  <p>
+                    Every retail merchant is provisioned a distinct, isolated tenant database instance (e.g. <code>tenant_{'{storeCode}'}</code>). Enexa IT Solutions Private Limited does not sell, license, or monetize your store catalog, customer phone numbers, invoices, or revenue numbers. You retain 100% full legal ownership of your data at all times.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Information We Collect</h3>
+                  <p>
+                    <strong>Merchant Details:</strong> Store name, registered business entity, GSTIN, owner mobile number, email, and billing address.<br />
+                    <strong>Transaction & Billing Data:</strong> Customer name, phone number, GST tax invoice line items, thermal receipt logs, payment gateway references.<br />
+                    <strong>Hardware & Diagnostics:</strong> Browser version, IP address, POS thermal printer status, and error telemetry.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">4. Meta WhatsApp Cloud API Privacy</h3>
+                  <p>
+                    When sending digital bills via WhatsApp, communications travel through official Meta Cloud API infrastructure. Phone numbers are utilized strictly for transaction fulfillment, dynamic UPI payment QR links, and requested delivery status alerts.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">5. Grievance Officer & Contact</h3>
+                  <p>
+                    For data protection inquiries or exercising right of erasure under DPDP Act 2023, contact our Grievance Officer at <code>privacy@enexa.in</code> or write to Enexa IT Solutions Private Limited, IT Park, Tech Zone, Jaipur, Rajasthan 302020.
+                  </p>
+                </section>
+              </div>
+            </div>
+          )
+        }
+
+        {/* ================================================================= */}
+        {/* PAGE 8: RETURN & REFUND POLICY                                    */}
+        {/* ================================================================= */}
+        {
+          currentPage === 'return-policy' && (
+            <div className="max-w-4xl mx-auto px-6 py-12 space-y-8 animate-in fade-in duration-300">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">Commercial Terms</span>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white font-heading mt-1">
+                  Return, Refund & Cancellation Policy
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Enexa IT Solutions Private Limited • Transparent SaaS Commercial Guarantees
+                </p>
+              </div>
+
+              <div className="space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-semibold">
+                  🛡️ 7-Day Unconditional Money-Back Guarantee on all new SaaS subscription plans.
                 </div>
 
-                {contactSuccess && (
-                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                    <span>{contactSuccess}</span>
-                  </div>
-                )}
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. 7-Day Trial Refund Window</h3>
+                  <p>
+                    If you are not completely satisfied with your Shoppy ERP subscription, you may request a 100% full refund within 7 days of initial plan activation. No questions asked. Refunds are credited back to the original UPI, debit card, or net banking account within 5-7 business days.
+                  </p>
+                </section>
 
-                <form onSubmit={handleContactSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Subscription Renewals & Upgrades</h3>
+                  <p>
+                    Merchants can upgrade or downgrade billing tiers (e.g. from GST Billing to Omnichannel Ecommerce) at any time. Unused credit from current plan is calculated on a pro-rata basis and adjusted automatically towards the new subscription invoice.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Hardware & Peripherals Warranty</h3>
+                  <p>
+                    Thermal printers, 1D/2D barcode scanners, and cash drawers procured through authorized Enexa IT Solutions channels carry a standard 1-year manufacturer replacement warranty. Defective hardware will be repaired or replaced free of charge during warranty term.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">4. How to Request Cancellation</h3>
+                  <p>
+                    Simply email your request along with store code (e.g. <code>SHP-XXXXXX</code>) to <code>billing@enexa.in</code> or call customer desk at <code>+91 95460 42639</code>.
+                  </p>
+                </section>
+              </div>
+            </div>
+          )
+        }
+
+        {/* ================================================================= */}
+        {/* PAGE 9: TERMS OF SERVICE                                          */}
+        {/* ================================================================= */}
+        {
+          currentPage === 'terms-of-service' && (
+            <div className="max-w-4xl mx-auto px-6 py-12 space-y-8 animate-in fade-in duration-300">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">Master Subscription Agreement</span>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white font-heading mt-1">
+                  Terms of Service — Enexa IT Solutions Private Limited
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Enexa IT Solutions Private Limited (CIN: U72900RJ2021PTC075482) • Effective: 2026
+                </p>
+              </div>
+
+              <div className="space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Acceptance of Terms</h3>
+                  <p>
+                    By registering, creating an account, or provisioning a store code on the Shoppy ERP platform, you enter into a legally binding Master SaaS Agreement with <strong>Enexa IT Solutions Private Limited</strong> (website: <a href="https://www.enexa.in" className="text-[#00a2c7] underline">www.enexa.in</a>).
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Service Level Agreement (99.9% Uptime)</h3>
+                  <p>
+                    Enexa IT Solutions guarantees 99.9% monthly availability for cloud POS APIs, isolated MySQL database clusters, and online storefront delivery. Planned maintenance windows are announced at least 48 hours in advance.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Merchant Responsibilities</h3>
+                  <p>
+                    Merchants are responsible for maintaining the accuracy of products, prices, and tax rates applied to consumer sales. Enexa IT Solutions does not act as seller of record; legal ownership of products sold through POS or web storefront remains entirely with merchant.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">4. Intellectual Property</h3>
+                  <p>
+                    All platform software, algorithms, UI components, and proprietary billing technologies are the exclusive intellectual property of Enexa IT Solutions Private Limited. Merchants receive a non-exclusive, non-transferable license for the active duration of their subscription.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">5. Governing Law & Jurisdiction</h3>
+                  <p>
+                    This agreement is governed by the laws of India. Any legal disputes arising in connection with these terms shall be subject to the exclusive jurisdiction of the competent courts in Jaipur, Rajasthan.
+                  </p>
+                </section>
+              </div>
+            </div>
+          )
+        }
+      </main >
+
+      {/* =================================================================== */}
+      {/* 5. ARTICLE READER MODAL (For Blogs)                                 */}
+      {/* =================================================================== */}
+      {
+        activeBlogModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#00a2c7]/10 text-[#00a2c7]">
+                  {activeBlogModal.category}
+                </span>
+                <button
+                  onClick={() => setActiveBlogModal(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {activeBlogModal.cover_image && (
+                <img
+                  src={activeBlogModal.cover_image}
+                  alt={activeBlogModal.title}
+                  className="w-full h-56 object-cover rounded-2xl"
+                />
+              )}
+
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900 dark:text-white font-heading">
+                  {activeBlogModal.title}
+                </h2>
+                <div className="flex items-center gap-3 text-xs text-slate-400 mt-2">
+                  <span>By {activeBlogModal.author || 'Enexa IT Team'}</span>
+                  <span>•</span>
+                  <span>{activeBlogModal.read_time || '4 min read'}</span>
+                  <span>•</span>
+                  <span>Verified Insights</span>
+                </div>
+              </div>
+
+              <div className="prose prose-sm dark:prose-invert max-w-none text-xs text-slate-600 dark:text-slate-300 leading-relaxed pt-2 border-t border-slate-100 dark:border-slate-800">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  {activeBlogModal.excerpt}
+                </p>
+                <p className="pt-2">
+                  {activeBlogModal.content}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <button
+                  onClick={() => setActiveBlogModal(null)}
+                  className="px-5 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-xs"
+                >
+                  Close Article
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* =================================================================== */}
+      {/* 6. ONBOARDING & STORE PROVISIONING MODAL                            */}
+      {/* =================================================================== */}
+      {
+        isOnboardingOpen && selectedOnboardPlan && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                    {onboardStep === 4 ? 'Store Activated & Live!' : `Onboard Your Store — ${selectedOnboardPlan.name}`}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Step {onboardStep} of 4 • Dedicated Database Provisioning
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsOnboardingOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Step 1: Confirm Plan & Price */}
+              {onboardStep === 1 && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800 space-y-2">
+                    <div className="flex justify-between items-baseline">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                        {selectedOnboardPlan.name}
+                      </span>
+                      <span className="font-black text-xl text-[#00a2c7]">
+                        ₹{getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Billed {billingCycle} • {ownWhatsapp[selectedOnboardPlan.id] ? 'Includes Own WhatsApp Addon' : 'Platform WhatsApp'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Features Included:</span>
+                    <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                      {(selectedOnboardPlan.features || []).slice(0, 5).map((f, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={() => setIsOnboardingOpen(false)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-500"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => setOnboardStep(2)}
+                      className="px-6 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs shadow-md"
+                    >
+                      Proceed to Store Details
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Store Details */}
+              {onboardStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Store / Shop Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Royal Garments & POS"
+                      value={onboardForm.storeName}
+                      onChange={(e) => setOnboardForm({ ...onboardForm, storeName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Your Name *
+                        Owner Name *
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Rahul Sharma"
-                        value={contactForm.name}
-                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:border-[#00a2c7]"
+                        placeholder="e.g. Rajesh Verma"
+                        value={onboardForm.ownerName}
+                        onChange={(e) => setOnboardForm({ ...onboardForm, ownerName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                       />
                     </div>
-
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Phone / WhatsApp *
+                        Mobile / WhatsApp *
                       </label>
                       <input
                         type="tel"
                         required
                         placeholder="+91 98765 43210"
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:border-[#00a2c7]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Business / Store Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Sharma Garments"
-                        value={contactForm.business_name}
-                        onChange={(e) => setContactForm({ ...contactForm, business_name: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:border-[#00a2c7]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        City & State
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Jaipur, Rajasthan"
-                        value={contactForm.city}
-                        onChange={(e) => setContactForm({ ...contactForm, city: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:border-[#00a2c7]"
+                        value={onboardForm.ownerPhone}
+                        onChange={(e) => setOnboardForm({ ...onboardForm, ownerPhone: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="rahul@example.com"
-                      value={contactForm.email}
-                      onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:border-[#00a2c7]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Interested In
-                    </label>
-                    <select
-                      value={contactForm.service_interested}
-                      onChange={(e) => setContactForm({ ...contactForm, service_interested: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
-                    >
-                      <option value="GST Billing & POS">GST Billing & Fast Counter POS</option>
-                      <option value="WhatsApp CRM Suite">WhatsApp CRM & Dynamic UPI QR Suite</option>
-                      <option value="Omnichannel Storefront">Omnichannel E-Commerce Storefront</option>
-                      <option value="Enterprise Complete Suite">Enterprise Omnichannel Retail Suite</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Message / Special Requirements
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Tell us about your store terminals, printers, or integration requirements..."
-                      value={contactForm.message}
-                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-none focus:border-[#00a2c7]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmittingContact}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#008ba3] to-[#00a2c7] hover:from-[#00768c] hover:to-[#008ba3] text-white font-extrabold text-xs shadow-md shadow-cyan-600/25 transition cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>{isSubmittingContact ? 'Submitting to Database...' : 'Submit Inquiry / Request Demo'}</span>
-                  </button>
-                </form>
-              </div>
-
-              {/* Direct Official Contact Cards */}
-              <div className="lg:col-span-5 space-y-5">
-                <div className="p-6 rounded-3xl bg-slate-900 text-white space-y-4 shadow-sm">
-                  <span className="text-xs font-black uppercase tracking-wider text-cyan-400">Official Channels</span>
-                  <h3 className="text-lg font-bold">Enexa IT Solutions Private Limited</h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Corporate headquarters and technical development center located in Jaipur Tech Park.
-                  </p>
-
-                  <div className="space-y-3 pt-2 text-xs">
-                    <a href="tel:+919829000192" className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition">
-                      <Phone className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-bold">PHONE / WHATSAPP</span>
-                        <span className="font-bold text-white">+91 98290 00192</span>
-                      </div>
-                    </a>
-
-                    <a href="mailto:info@enexa.in" className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition">
-                      <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-bold">EMAIL SUPPORT</span>
-                        <span className="font-bold text-white">info@enexa.in / sales@enexa.in</span>
-                      </div>
-                    </a>
-
-                    <a href="https://www.enexa.in" target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition">
-                      <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-bold">OFFICIAL WEBSITE</span>
-                        <span className="font-bold text-white">www.enexa.in</span>
-                      </div>
-                    </a>
-
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800">
-                      <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
-                      <div>
-                        <span className="text-[10px] text-slate-400 block font-bold">OFFICE ADDRESS</span>
-                        <span className="font-medium text-slate-200">
-                          {settings.corporate_address || 'Enexa IT Solutions Private Limited, IT Park, Tech Zone, Jaipur, Rajasthan 302020'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
-                  <span className="font-bold text-slate-900 dark:text-white block">Operating Hours & SLA</span>
-                  <p className="text-slate-500 leading-relaxed">
-                    Merchant phone support: Monday to Saturday, 9:30 AM to 8:30 PM IST. Critical server & POS billing infrastructure monitored 24/7 with 99.99% uptime SLA.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ================================================================= */}
-        {/* PAGE 7: PRIVACY POLICY                                            */}
-        {/* ================================================================= */}
-        {currentPage === 'privacy-policy' && (
-          <div className="max-w-4xl mx-auto px-6 py-12 space-y-8 animate-in fade-in duration-300">
-            <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-              <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">Legal & Compliance</span>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white font-heading mt-1">
-                Privacy Policy — Enexa IT Solutions Private Limited
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Last updated: October 21, 2026 • Governed under the Digital Personal Data Protection (DPDP) Act 2023
-              </p>
-            </div>
-
-            <div className="prose prose-sm dark:prose-invert max-w-none space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Introduction & Scope</h3>
-                <p>
-                  <strong>Enexa IT Solutions Private Limited</strong> ("Company", "we", "us", or "our", official website: <a href="https://www.enexa.in" className="text-[#00a2c7] underline">www.enexa.in</a>) operates the Shoppy ERP multi-tenant retail SaaS platform. This Privacy Policy describes how personal, commercial, and financial information is collected, used, and safeguarded when merchants, contributors, and customer end-users access our software.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Dedicated Database Isolation & Data Ownership</h3>
-                <p>
-                  Every retail merchant is provisioned a distinct, isolated tenant database instance (e.g. <code>tenant_{'{storeCode}'}</code>). Enexa IT Solutions Private Limited does not sell, license, or monetize your store catalog, customer phone numbers, invoices, or revenue numbers. You retain 100% full legal ownership of your data at all times.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Information We Collect</h3>
-                <p>
-                  <strong>Merchant Details:</strong> Store name, registered business entity, GSTIN, owner mobile number, email, and billing address.<br />
-                  <strong>Transaction & Billing Data:</strong> Customer name, phone number, GST tax invoice line items, thermal receipt logs, payment gateway references.<br />
-                  <strong>Hardware & Diagnostics:</strong> Browser version, IP address, POS thermal printer status, and error telemetry.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">4. Meta WhatsApp Cloud API Privacy</h3>
-                <p>
-                  When sending digital bills via WhatsApp, communications travel through official Meta Cloud API infrastructure. Phone numbers are utilized strictly for transaction fulfillment, dynamic UPI payment QR links, and requested delivery status alerts.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">5. Grievance Officer & Contact</h3>
-                <p>
-                  For data protection inquiries or exercising right of erasure under DPDP Act 2023, contact our Grievance Officer at <code>privacy@enexa.in</code> or write to Enexa IT Solutions Private Limited, IT Park, Tech Zone, Jaipur, Rajasthan 302020.
-                </p>
-              </section>
-            </div>
-          </div>
-        )}
-
-        {/* ================================================================= */}
-        {/* PAGE 8: RETURN & REFUND POLICY                                    */}
-        {/* ================================================================= */}
-        {currentPage === 'return-policy' && (
-          <div className="max-w-4xl mx-auto px-6 py-12 space-y-8 animate-in fade-in duration-300">
-            <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-              <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">Commercial Terms</span>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white font-heading mt-1">
-                Return, Refund & Cancellation Policy
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Enexa IT Solutions Private Limited • Transparent SaaS Commercial Guarantees
-              </p>
-            </div>
-
-            <div className="space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-semibold">
-                🛡️ 7-Day Unconditional Money-Back Guarantee on all new SaaS subscription plans.
-              </div>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. 7-Day Trial Refund Window</h3>
-                <p>
-                  If you are not completely satisfied with your Shoppy ERP subscription, you may request a 100% full refund within 7 days of initial plan activation. No questions asked. Refunds are credited back to the original UPI, debit card, or net banking account within 5-7 business days.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Subscription Renewals & Upgrades</h3>
-                <p>
-                  Merchants can upgrade or downgrade billing tiers (e.g. from GST Billing to Omnichannel Ecommerce) at any time. Unused credit from current plan is calculated on a pro-rata basis and adjusted automatically towards the new subscription invoice.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Hardware & Peripherals Warranty</h3>
-                <p>
-                  Thermal printers, 1D/2D barcode scanners, and cash drawers procured through authorized Enexa IT Solutions channels carry a standard 1-year manufacturer replacement warranty. Defective hardware will be repaired or replaced free of charge during warranty term.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">4. How to Request Cancellation</h3>
-                <p>
-                  Simply email your request along with store code (e.g. <code>STORE983515</code>) to <code>billing@enexa.in</code> or call customer desk at <code>+91 98290 00192</code>.
-                </p>
-              </section>
-            </div>
-          </div>
-        )}
-
-        {/* ================================================================= */}
-        {/* PAGE 9: TERMS OF SERVICE                                          */}
-        {/* ================================================================= */}
-        {currentPage === 'terms-of-service' && (
-          <div className="max-w-4xl mx-auto px-6 py-12 space-y-8 animate-in fade-in duration-300">
-            <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-              <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">Master Subscription Agreement</span>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white font-heading mt-1">
-                Terms of Service — Enexa IT Solutions Private Limited
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Enexa IT Solutions Private Limited (CIN: U72900RJ2021PTC075482) • Effective: 2026
-              </p>
-            </div>
-
-            <div className="space-y-6 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Acceptance of Terms</h3>
-                <p>
-                  By registering, creating an account, or provisioning a store code on the Shoppy ERP platform, you enter into a legally binding Master SaaS Agreement with <strong>Enexa IT Solutions Private Limited</strong> (website: <a href="https://www.enexa.in" className="text-[#00a2c7] underline">www.enexa.in</a>).
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Service Level Agreement (99.9% Uptime)</h3>
-                <p>
-                  Enexa IT Solutions guarantees 99.9% monthly availability for cloud POS APIs, isolated MySQL database clusters, and online storefront delivery. Planned maintenance windows are announced at least 48 hours in advance.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Merchant Responsibilities</h3>
-                <p>
-                  Merchants are responsible for maintaining the accuracy of products, prices, and tax rates applied to consumer sales. Enexa IT Solutions does not act as seller of record; legal ownership of products sold through POS or web storefront remains entirely with merchant.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">4. Intellectual Property</h3>
-                <p>
-                  All platform software, algorithms, UI components, and proprietary billing technologies are the exclusive intellectual property of Enexa IT Solutions Private Limited. Merchants receive a non-exclusive, non-transferable license for the active duration of their subscription.
-                </p>
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">5. Governing Law & Jurisdiction</h3>
-                <p>
-                  This agreement is governed by the laws of India. Any legal disputes arising in connection with these terms shall be subject to the exclusive jurisdiction of the competent courts in Jaipur, Rajasthan.
-                </p>
-              </section>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* =================================================================== */}
-      {/* 5. ARTICLE READER MODAL (For Blogs)                                 */}
-      {/* =================================================================== */}
-      {activeBlogModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#00a2c7]/10 text-[#00a2c7]">
-                {activeBlogModal.category}
-              </span>
-              <button
-                onClick={() => setActiveBlogModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {activeBlogModal.cover_image && (
-              <img
-                src={activeBlogModal.cover_image}
-                alt={activeBlogModal.title}
-                className="w-full h-56 object-cover rounded-2xl"
-              />
-            )}
-
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white font-heading">
-                {activeBlogModal.title}
-              </h2>
-              <div className="flex items-center gap-3 text-xs text-slate-400 mt-2">
-                <span>By {activeBlogModal.author || 'Enexa IT Team'}</span>
-                <span>•</span>
-                <span>{activeBlogModal.read_time || '4 min read'}</span>
-                <span>•</span>
-                <span>Verified Insights</span>
-              </div>
-            </div>
-
-            <div className="prose prose-sm dark:prose-invert max-w-none text-xs text-slate-600 dark:text-slate-300 leading-relaxed pt-2 border-t border-slate-100 dark:border-slate-800">
-              <p className="font-semibold text-slate-800 dark:text-slate-200">
-                {activeBlogModal.excerpt}
-              </p>
-              <p className="pt-2">
-                {activeBlogModal.content}
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-              <button
-                onClick={() => setActiveBlogModal(null)}
-                className="px-5 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-xs"
-              >
-                Close Article
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =================================================================== */}
-      {/* 6. ONBOARDING & STORE PROVISIONING MODAL                            */}
-      {/* =================================================================== */}
-      {isOnboardingOpen && selectedOnboardPlan && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">
-                  {onboardStep === 4 ? 'Store Activated & Live!' : `Onboard Your Store — ${selectedOnboardPlan.name}`}
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  Step {onboardStep} of 4 • Dedicated Database Provisioning
-                </p>
-              </div>
-              <button
-                onClick={() => setIsOnboardingOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Step 1: Confirm Plan & Price */}
-            {onboardStep === 1 && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800 space-y-2">
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                      {selectedOnboardPlan.name}
-                    </span>
-                    <span className="font-black text-xl text-[#00a2c7]">
-                      ₹{getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Billed {billingCycle} • {ownWhatsapp[selectedOnboardPlan.id] ? 'Includes Own WhatsApp Addon' : 'Platform WhatsApp'}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Features Included:</span>
-                  <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-                    {(selectedOnboardPlan.features || []).slice(0, 5).map((f, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    onClick={() => setIsOnboardingOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-500"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => setOnboardStep(2)}
-                    className="px-6 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs shadow-md"
-                  >
-                    Proceed to Store Details
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Store Details */}
-            {onboardStep === 2 && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Store / Shop Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Royal Garments & POS"
-                    value={onboardForm.storeName}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, storeName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Owner Name *
+                      City & State *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Rajesh Verma"
-                      value={onboardForm.ownerName}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, ownerName: e.target.value })}
+                      placeholder="e.g. Jaipur, Rajasthan"
+                      value={onboardForm.city}
+                      onChange={(e) => setOnboardForm({ ...onboardForm, city: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Mobile / WhatsApp *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+91 98765 43210"
-                      value={onboardForm.ownerPhone}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, ownerPhone: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                    />
+
+                  <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button onClick={() => setOnboardStep(1)} className="text-xs font-semibold text-slate-500">
+                      Back
+                    </button>
+                    <button
+                      onClick={handleProceedToPayment}
+                      disabled={isProcessingPayment}
+                      className="px-6 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs shadow-md shadow-cyan-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <RotateCcw className="w-4 h-4 animate-spin" />
+                          <span>Initiating PayU...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Proceed to PayU Payment</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    City & State *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Jaipur, Rajasthan"
-                    value={onboardForm.city}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, city: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                  />
-                </div>
-
-                <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button onClick={() => setOnboardStep(1)} className="text-xs font-semibold text-slate-500">
-                    Back
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone) {
-                        showToast('Please fill all required store fields');
-                        return;
-                      }
-                      setOnboardStep(3);
-                    }}
-                    className="px-6 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs"
-                  >
-                    Proceed to Payment
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Payment Gateway Simulation */}
-            {onboardStep === 3 && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-xs space-y-2">
-                  <div className="flex justify-between font-bold">
-                    <span>Store: {onboardForm.storeName}</span>
-                    <span className="text-[#00a2c7]">₹{getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}</span>
-                  </div>
-                  <p className="text-slate-400">Billing Cycle: {billingCycle}</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Select Indian Payment Gateway
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-bold">
-                    {['PhonePe UPI', 'Razorpay', 'PayU India', 'Cashfree'].map((gw) => (
-                      <button
-                        key={gw}
-                        type="button"
-                        onClick={() => setOnboardForm({ ...onboardForm, paymentMethod: gw })}
-                        className={`p-3 rounded-xl border text-left cursor-pointer transition ${onboardForm.paymentMethod === gw
-                          ? 'border-[#00a2c7] bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7]'
-                          : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-                          }`}
-                      >
-                        {gw}
+              {/* Step 3: PayU Money Payment Gateway */}
+              {onboardStep === 3 && (
+                <div className="space-y-4 animate-in fade-in">
+                  {payuError && (
+                    <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-between">
+                      <span>{payuError}</span>
+                      <button onClick={() => setPayuError(null)} className="text-rose-500 hover:text-rose-700">
+                        <X className="w-4 h-4" />
                       </button>
-                    ))}
+                    </div>
+                  )}
+
+                  {/* PayU Gateway Badge */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-[#00a2c7]/10 via-cyan-500/5 to-transparent border border-[#00a2c7]/30 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#00a2c7] text-white flex items-center justify-center font-black shadow-md shadow-cyan-600/20">
+                        <CreditCard className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-xs text-slate-900 dark:text-white">PayU Money Gateway</span>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-[#00a2c7] text-white">SECURE 256-BIT</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                          Official Indian Payment Partner • Instant Tenant Activation
+                        </span>
+                      </div>
+                    </div>
+                    <ShieldCheck className="w-6 h-6 text-emerald-500 shrink-0" />
+                  </div>
+
+                  {/* Order & Pricing Breakdown */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
+                    <div className="flex justify-between font-bold">
+                      <span className="text-slate-700 dark:text-slate-300">Store Name:</span>
+                      <span className="text-slate-900 dark:text-white font-extrabold">{onboardForm.storeName} ({onboardForm.city})</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Plan Package:</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedOnboardPlan.name} ({billingCycle})</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Base Plan Price:</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">₹{getPrice(selectedOnboardPlan).baseOffer.toLocaleString('en-IN')}</span>
+                    </div>
+                    {getPrice(selectedOnboardPlan).whatsappAddon > 0 && (
+                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span>WhatsApp Message Suite Add-on:</span>
+                        <span>+₹{getPrice(selectedOnboardPlan).whatsappAddon.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-baseline">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Payable</span>
+                        <span className="text-2xl font-black text-slate-900 dark:text-white">₹{getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}</span>
+                      </div>
+                      {payuOnboardData?.txnid && (
+                        <span className="text-[10px] font-mono text-slate-400">Ref: {payuOnboardData.txnid}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Accepted Payment Modes via PayU */}
+                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Accepted Modes on PayU:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
+                        <QrCode className="w-3.5 h-3.5 text-[#00a2c7]" />
+                        <span>UPI & QR</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
+                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Cards (Visa, RuPay)</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
+                        <Globe className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Net Banking</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>PayU Wallets</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PayU Actions */}
+                  <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    {payuOnboardData?.action && (
+                      <button
+                        type="button"
+                        onClick={handleRedirectPayUOnboarding}
+                        className="w-full py-3 px-4 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Lock className="w-4 h-4" />
+                        <span>Redirect to PayU Money Hosted Checkout</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteOnboarding('success')}
+                      disabled={isProcessingPayment}
+                      className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      {isProcessingPayment ? (
+                        <>
+                          <RotateCcw className="w-4 h-4 animate-spin" />
+                          <span>Provisioning Tenant Database in MySQL...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Instant PayU Approval & Activate Store (Fast Sandbox)</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex justify-between items-center pt-2">
+                      <button onClick={() => setOnboardStep(2)} className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-white">
+                        ← Back to Store Details
+                      </button>
+                      <span className="text-[10px] text-slate-400">Isolated MySQL Database auto-provisioned</span>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button onClick={() => setOnboardStep(2)} className="text-xs font-semibold text-slate-500">
-                    Back
-                  </button>
-                  <button
-                    onClick={handleCompleteOnboarding}
-                    disabled={isProcessingPayment}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5"
-                  >
-                    <span>{isProcessingPayment ? 'Provisioning Tenant Database...' : 'Pay & Activate Store'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
+              {/* Step 4: Live Store Provisioned */}
+              {onboardStep === 4 && provisionedStore && (
+                <div className="space-y-4 text-center">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                    Welcome to Shoppy ERP!
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Your store code <strong>{provisionedStore.shop_code}</strong> has been provisioned with dedicated isolated database <code>{provisionedStore.database_name}</code>.
+                  </p>
 
-            {/* Step 4: Live Store Provisioned */}
-            {onboardStep === 4 && provisionedStore && (
-              <div className="space-y-4 text-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h4 className="text-lg font-black text-slate-900 dark:text-white">
-                  Welcome to Shoppy ERP!
-                </h4>
-                <p className="text-xs text-slate-500">
-                  Your store code <strong>{provisionedStore.shop_code}</strong> has been provisioned with dedicated isolated database <code>{provisionedStore.database_name}</code>.
-                </p>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-xs text-left space-y-1.5">
+                    <p><strong>Store Name:</strong> {provisionedStore.name}</p>
+                    <p><strong>Storefront URL:</strong> <a href={`/${provisionedStore.shop_code}`} target="_blank" rel="noreferrer" className="text-[#00a2c7] underline font-bold">http://localhost:8000/{provisionedStore.shop_code}</a></p>
+                  </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-xs text-left space-y-1.5">
-                  <p><strong>Store Name:</strong> {provisionedStore.name}</p>
-                  <p><strong>Storefront URL:</strong> <a href={`/${provisionedStore.shop_code}`} target="_blank" rel="noreferrer" className="text-[#00a2c7] underline font-bold">http://localhost:8000/{provisionedStore.shop_code}</a></p>
+                  <div className="pt-2">
+                    <a
+                      href={`/${provisionedStore.shop_code}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-3 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-black text-xs block text-center shadow-md transition"
+                    >
+                      Launch Your Live Storefront Now
+                    </a>
+                  </div>
                 </div>
-
-                <div className="pt-2">
-                  <a
-                    href={`/${provisionedStore.shop_code}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full py-3 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-black text-xs block text-center shadow-md transition"
-                  >
-                    Launch Your Live Storefront Now
-                  </a>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* =================================================================== */}
       {/* 7. STORE RENEWAL & UPGRADE MODAL                                    */}
       {/* =================================================================== */}
-      {isRenewModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <RotateCcw className="w-5 h-5 text-emerald-500" />
-                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                  Renew or Upgrade Store Subscription
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsRenewModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleLookupStore} className="flex gap-2">
-              <input
-                type="text"
-                required
-                placeholder="Enter Store Code (e.g. STORE441029)"
-                value={lookupStoreCode}
-                onChange={(e) => setLookupStoreCode(e.target.value.toUpperCase())}
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs"
-              >
-                Search Store
-              </button>
-            </form>
-
-            {foundStore && (
-              <form onSubmit={handleConfirmRenewal} className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 text-xs space-y-1">
-                  <div className="flex justify-between font-bold">
-                    <span className="text-slate-900 dark:text-white">{foundStore.name} ({foundStore.shop_code})</span>
-                    <span className="text-emerald-600 font-bold uppercase">{foundStore.status}</span>
-                  </div>
-                  <p className="text-slate-400">Current Plan: {foundStore.plan_name}</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Select New or Renewed Plan:
-                  </label>
-                  <select
-                    value={renewPlanId}
-                    onChange={(e) => setRenewPlanId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
-                  >
-                    {plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} {p.hasEcommerce ? '(+Ecommerce)' : '(Billing Only)'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {renewSuccess && (
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>{renewSuccess}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsRenewModalOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-500"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
-                  >
-                    Confirm Renewal
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      <StoreRenewalModal
+        isOpen={isRenewModalOpen}
+        onClose={() => setIsRenewModalOpen(false)}
+        shopCode={lookupStoreCode || ''}
+        onRenewSuccess={(renewed) => {
+          showToast(`Store ${renewed?.shop_code || lookupStoreCode} subscription renewed successfully!`);
+          setIsRenewModalOpen(false);
+        }}
+      />
 
       {/* =================================================================== */}
       {/* 8. MODERN ENTERPRISE FOOTER (Powered by Enexa IT Solutions Pvt Ltd) */}
@@ -2647,6 +2974,6 @@ export default function LandingPage({ defaultPage = 'home' }) {
           </div>
         </div>
       </footer>
-    </div>
+    </div >
   );
 }

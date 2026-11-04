@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? 'Shoppy — Multi-Tenant E-Commerce & Retail ERP' }}</title>
+    <title>{{ $title ?? 'Shoppy ERP — Enexa IT Solutions Private Limited' }}</title>
 
     <!-- Google Fonts: Outfit & Inter & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,6 +45,6 @@
     @endif
 </head>
 <body class="min-h-full flex flex-col {{ $bodyClass ?? 'selection:bg-indigo-500 selection:text-white' }}">
-    <div id="root" class="flex-1 flex flex-col" data-shop-code="{{ $shopCode ?? 'SHP-A4IFYK' }}"></div>
+    <div id="root" class="flex-1 flex flex-col" data-shop-code="{{ $shopCode ?? '' }}"></div>
 </body>
 </html>

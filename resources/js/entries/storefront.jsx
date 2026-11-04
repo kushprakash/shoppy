@@ -15,7 +15,9 @@ import {
 } from '../context/ErpContext';
 
 export default function Storefront() {
-  const [shopCode, setShopCode] = useState(document.getElementById('root')?.dataset?.shopCode || 'SHP-A4IFYK');
+  const [shopCode, setShopCode] = useState(
+    document.getElementById('root')?.dataset?.shopCode || localStorage.getItem('shoppy_active_store_code') || ''
+  );
   const [storeInfo, setStoreInfo] = useState(null);
   
   // Categories from localStorage or defaults
@@ -70,14 +72,20 @@ export default function Storefront() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPayment, setSelectedPayment] = useState('cod');
-  const [customerForm, setCustomerForm] = useState({
-    name: 'Rohit Verma',
-    phone: '9876543210',
-    email: 'rohit@example.com',
-    address: 'Flat 402, Green Valley Apartments',
-    city: 'Jaipur',
-    state: 'Rajasthan',
-    pincode: '302001',
+  const [customerForm, setCustomerForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem('shoppy_customer_checkout_info');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+    };
   });
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -112,7 +120,7 @@ export default function Storefront() {
       }
     } catch (err) {
       setStoreInfo({
-        name: shopCode === 'STORE983515' ? 'Verma General & Kirana Store' : 'Ramesh Fashion & Lifestyle Store',
+        name: 'Shoppy Retail Store',
         code: shopCode,
       });
     } finally {
@@ -317,6 +325,15 @@ export default function Storefront() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!customerForm.name?.trim() || !customerForm.phone?.trim() || !customerForm.address?.trim()) {
+      alert('Please fill in your Full Name, Mobile Phone, and Delivery Address before placing the order.');
+      return;
+    }
+
+    try {
+      localStorage.setItem('shoppy_customer_checkout_info', JSON.stringify(customerForm));
+    } catch (e) {}
+
     const orderNumber = `ORD-2026-${Math.floor(10000 + Math.random() * 90000)}`;
     const invoiceNumber = `INV-2026-GST-${Math.floor(1000 + Math.random() * 9000)}`;
     const isCod = selectedPayment === 'cod';
@@ -325,11 +342,11 @@ export default function Storefront() {
     const newOrderObj = {
       id: orderNumber,
       invoiceNumber: invoiceNumber,
-      customerName: customerForm.name || 'Online Shopper',
-      phone: customerForm.phone || '+91 98765 43210',
-      email: customerForm.email || 'customer@store.in',
-      city: `${customerForm.city || 'Jaipur'}, ${customerForm.state || 'RJ'} - ${customerForm.pincode || '302001'}`,
-      address: customerForm.address || 'Doorstep Delivery',
+      customerName: customerForm.name.trim(),
+      phone: customerForm.phone.trim(),
+      email: customerForm.email?.trim() || '',
+      city: `${customerForm.city || ''}${customerForm.state ? ', ' + customerForm.state : ''}${customerForm.pincode ? ' - ' + customerForm.pincode : ''}`,
+      address: customerForm.address.trim(),
       subtotal: subtotal,
       couponCode: appliedCoupon?.code || '',
       couponDiscount: couponDiscount,
@@ -498,7 +515,7 @@ export default function Storefront() {
           </div>
           <div>
             <h1 className="text-xl font-extrabold font-heading text-white tracking-tight flex items-center gap-2">
-              {storeInfo?.name || 'Ramesh Fashion & Lifestyle Store'}
+              {storeInfo?.name || 'Shoppy Store'}
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold hidden sm:inline">
                 Verified Seller
               </span>
@@ -1022,25 +1039,28 @@ export default function Storefront() {
               <div className="grid grid-cols-2 gap-3">
                 <input 
                   type="text" 
-                  placeholder="Full Name" 
+                  placeholder="Full Name *" 
+                  required
                   value={customerForm.name} 
                   onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
-                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder:text-slate-500 focus:border-cyan-500 focus:outline-hidden"
                 />
                 <input 
-                  type="text" 
-                  placeholder="Mobile Phone" 
+                  type="tel" 
+                  placeholder="Mobile Phone (10 digits) *" 
+                  required
                   value={customerForm.phone} 
                   onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
-                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder:text-slate-500 focus:border-cyan-500 focus:outline-hidden"
                 />
               </div>
               <input 
                 type="text" 
-                placeholder="Complete Address (House/Flat No, Street, Landmark)" 
+                placeholder="Complete Address (House/Flat No, Street, Landmark) *" 
+                required
                 value={customerForm.address} 
                 onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder:text-slate-500 focus:border-cyan-500 focus:outline-hidden"
               />
               <div className="grid grid-cols-3 gap-3">
                 <input 

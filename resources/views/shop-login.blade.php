@@ -77,7 +77,7 @@
                         type="text" 
                         name="store"
                         value="{{ $shopCode ?? '' }}" 
-                        placeholder="e.g. SHP-A4IFYK"
+                        placeholder="e.g. SHP-XXXXXX"
                         required
                         class="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white text-xs font-bold font-mono tracking-wider focus:outline-none focus:border-cyan-500 transition"
                     />
