@@ -130,7 +130,7 @@ Route::get('/{storeCode}', function ($storeCode) {
 
     // If NOT subscribed to Ecommerce -> Open Billing Software Login Page
     return redirect('/store?code=' . $normalizedCode);
-})->where('storeCode', '^(STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$');
+})->where('storeCode', '^(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$');
 
 // PayU Web Callback handler for external browser redirects
 Route::match(['get', 'post'], '/payu/callback/{result}', [\App\Http\Controllers\Central\PayUController::class, 'handleCallback']);

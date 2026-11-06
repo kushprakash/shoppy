@@ -127,10 +127,12 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Category tab & billing cycle for pricing view
   const [selectedCategoryTab, setSelectedCategoryTab] = useState('business');
-  const [billingCycle, setBillingCycle] = useState('yearly');
+  const [billingCycle, setBillingCycle] = useState('monthly');
   const [ownWhatsapp, setOwnWhatsapp] = useState({
-    'gst-billing-whatsapp': false,
-    'gst-billing-ecommerce-whatsapp': true
+    'monthly-package': false,
+    'quarterly-package': false,
+    'half-yearly-package': false,
+    'yearly-package': false
   });
 
   // Hero Carousel State
@@ -167,11 +169,18 @@ export default function LandingPage({ defaultPage = 'home' }) {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
   const [selectedOnboardPlan, setSelectedOnboardPlan] = useState(null);
+  const [gstStates, setGstStates] = useState([]);
+  const [isVerifyingAgent, setIsVerifyingAgent] = useState(false);
   const [onboardForm, setOnboardForm] = useState({
+    referralCode: '',
+    agentName: '',
+    agentVerified: false,
+    agentError: null,
     storeName: '',
     ownerName: '',
     ownerPhone: '',
-    city: '',
+    stateCode: '10',
+    city: 'BIHAR',
     category: '',
     subCategory: '',
     paymentMethod: 'payu_money'
@@ -301,9 +310,37 @@ export default function LandingPage({ defaultPage = 'home' }) {
           if (json.plans && json.plans.length > 0) setPlans(json.plans);
           if (json.settings) setSettings((prev) => ({ ...prev, ...json.settings }));
           if (json.blogs && json.blogs.length > 0) setBlogs(json.blogs);
+          if (json.gst_states && json.gst_states.length > 0) setGstStates(json.gst_states);
         }
       })
       .catch(() => { });
+
+    // Fetch official GST States for Signup & POS Invoicing
+    fetch('/api/public/gst-states')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setGstStates(json.data);
+        }
+      })
+      .catch(() => { });
+
+    // Handle PayU Redirect Success Callback (?payu_status=success&shop=SP...)
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get('payu_status') === 'success') {
+        const paidShop = sp.get('shop');
+        if (paidShop) {
+          localStorage.setItem('shoppy_active_store_code', paidShop);
+          document.cookie = `shoppy_active_store=${paidShop}; path=/; max-age=86400`;
+          localStorage.setItem('shoppy_initial_setup', 'true');
+          showToast(`✓ Payment verified! Launching Store Settings for ${paidShop}...`);
+          setTimeout(() => {
+            navigate('/shop-admin/settings?setup=1');
+          }, 1000);
+        }
+      }
+    } catch (e) {}
 
     const handleMasterUpdate = () => loadData();
     window.addEventListener('shoppy:master_updated', handleMasterUpdate);
@@ -378,7 +415,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Calculate live price for any plan
   const getPrice = (plan) => {
-    return subscriptionService.calculatePrice(plan, plan?.billingCycle || billingCycle, !!ownWhatsapp[plan?.id]);
+    return subscriptionService.calculatePrice(plan, plan?.billingCycle, !!(ownWhatsapp[plan?.id] || ownWhatsapp[plan?.code]));
   };
 
   // Start Onboarding Flow
@@ -516,10 +553,58 @@ export default function LandingPage({ defaultPage = 'home' }) {
     setIsRenewModalOpen(true);
   };
 
+  // Verify Agent / Partner Referral Code
+  const handleVerifyAgent = async () => {
+    const code = (onboardForm.referralCode || '').trim().toUpperCase();
+    if (!code) {
+      setOnboardForm((prev) => ({
+        ...prev,
+        agentName: '',
+        agentVerified: false,
+        agentError: 'Please enter a referral / agent code.'
+      }));
+      return;
+    }
+
+    setIsVerifyingAgent(true);
+    setOnboardForm((prev) => ({ ...prev, agentError: null }));
+
+    try {
+      const res = await fetch(`/api/public/verify-agent?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (res.ok && data.success && data.agent) {
+        setOnboardForm((prev) => ({
+          ...prev,
+          agentName: data.agent.name,
+          referralCode: data.agent.referral_code,
+          agentVerified: true,
+          agentError: null
+        }));
+        showToast(`✓ Agent Verified: ${data.agent.name}`);
+      } else {
+        setOnboardForm((prev) => ({
+          ...prev,
+          agentName: '',
+          agentVerified: false,
+          agentError: data.message || 'Invalid or unverified Agent Code'
+        }));
+      }
+    } catch (e) {
+      setOnboardForm((prev) => ({
+        ...prev,
+        agentName: '',
+        agentVerified: false,
+        agentError: 'Connection error verifying agent.'
+      }));
+    } finally {
+      setIsVerifyingAgent(false);
+    }
+  };
+
   // Proceed from Step 2 to Step 3: Initiate PayU Money Payment for Onboarding
   const handleProceedToPayment = async () => {
-    if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone || !onboardForm.city) {
-      showToast('Please fill all required store details.');
+    if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone || !onboardForm.stateCode) {
+      showToast('Please fill all required store details (Shop Name, Owner Name, Mobile & State).');
       return;
     }
 
@@ -530,11 +615,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
       type: 'onboard',
       plan_id: selectedOnboardPlan.id,
       billing_cycle: billingCycle,
-      own_whatsapp: !!ownWhatsapp[selectedOnboardPlan.id],
+      own_whatsapp: !!(ownWhatsapp[selectedOnboardPlan.id] || ownWhatsapp[selectedOnboardPlan.code]),
       name: onboardForm.storeName,
       owner_name: onboardForm.ownerName,
       owner_phone: onboardForm.ownerPhone,
-      city: onboardForm.city,
+      state_code: onboardForm.stateCode,
+      referral_code: onboardForm.referralCode || '',
+      city: onboardForm.city || 'BIHAR',
       category: onboardForm.category,
       sub_category: onboardForm.subCategory,
     });
@@ -551,63 +638,93 @@ export default function LandingPage({ defaultPage = 'home' }) {
   };
 
   // Complete Onboarding: Verify PayU Payment and Provision Isolated Database Store
+  // Rule: Bina payment complete huye store create nahi hoga
   const handleCompleteOnboarding = async (paymentStatus = 'success') => {
     setIsProcessingPayment(true);
     setPayuError(null);
 
-    if (payuOnboardData?.txnid) {
-      const result = await subscriptionService.verifyPayU({
-        txnid: payuOnboardData.txnid,
-        status: paymentStatus,
-        type: 'onboard',
-        store_data: {
-          storeName: onboardForm.storeName,
-          ownerName: onboardForm.ownerName,
-          ownerPhone: onboardForm.ownerPhone,
-          city: onboardForm.city,
-          category: onboardForm.category,
-          subCategory: onboardForm.subCategory,
-          planId: selectedOnboardPlan.id,
-          billingCycle: billingCycle,
-          ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
-        }
-      });
-
+    if (!payuOnboardData?.txnid) {
+      setPayuError('No active payment session found. Please initiate PayU payment.');
       setIsProcessingPayment(false);
-
-      if (result && result.success && result.store) {
-        setProvisionedStore(result.store);
-        setOnboardStep(4);
-        showToast(`Congratulations! Store ${result.store.shop_code} is now live via PayU Money!`);
-      } else {
-        setPayuError(result?.message || 'PayU Money verification failed.');
-      }
       return;
     }
 
-    // Fallback provisioning
-    const created = subscriptionService.onboardStore({
-      name: onboardForm.storeName,
-      ownerName: onboardForm.ownerName,
-      ownerPhone: onboardForm.ownerPhone,
-      city: onboardForm.city,
-      category: onboardForm.category,
-      subCategory: onboardForm.subCategory,
-      planId: selectedOnboardPlan.id,
-      billingCycle: billingCycle,
-      ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+    const result = await subscriptionService.verifyPayU({
+      txnid: payuOnboardData.txnid,
+      status: paymentStatus,
+      type: 'onboard',
+      store_data: {
+        storeName: onboardForm.storeName,
+        ownerName: onboardForm.ownerName,
+        ownerPhone: onboardForm.ownerPhone,
+        stateCode: onboardForm.stateCode,
+        referralCode: onboardForm.referralCode,
+        planId: selectedOnboardPlan.id,
+        billingCycle: billingCycle,
+        ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+      }
     });
 
-    setProvisionedStore(created);
     setIsProcessingPayment(false);
-    setOnboardStep(4);
-    showToast(`Congratulations! Store ${created.shop_code} is now live!`);
+
+    if (result && result.success && result.store) {
+      setProvisionedStore(result.store);
+
+      // Automatic Store Login
+      localStorage.setItem('shoppy_active_store_code', result.store.shop_code);
+      localStorage.setItem('shoppy_active_store', JSON.stringify(result.store));
+      document.cookie = `shoppy_active_store=${result.store.shop_code}; path=/; max-age=86400`;
+      localStorage.setItem('shoppy_initial_setup', 'true');
+
+      setOnboardStep(4);
+      showToast(`Congratulations! Store ${result.store.shop_code} is live! Launching Store Settings...`);
+
+      // Auto redirect to Store Setting page after 1.8 seconds
+      setTimeout(() => {
+        setIsOnboardingOpen(false);
+        navigate('/shop-admin/settings?setup=1');
+      }, 1800);
+    } else {
+      setPayuError(result?.message || 'PayU Payment verification failed. Store cannot be created without verified payment.');
+    }
   };
 
-  // Redirect to PayU Hosted Checkout for Onboarding
-  const handleRedirectPayUOnboarding = () => {
-    if (!payuOnboardData) return;
-    subscriptionService.submitPayUForm(payuOnboardData.action, payuOnboardData.params);
+  // Redirect to PayU Hosted Checkout for Onboarding (Opens official PayU Money gateway directly)
+  const handleRedirectPayUOnboarding = async () => {
+    if (payuOnboardData?.action && payuOnboardData?.params) {
+      subscriptionService.submitPayUForm(payuOnboardData.action, payuOnboardData.params);
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    setPayuError(null);
+    try {
+      const res = await subscriptionService.initiatePayU({
+        type: 'onboard',
+        plan_id: selectedOnboardPlan.id,
+        billing_cycle: billingCycle,
+        own_whatsapp: !!(ownWhatsapp[selectedOnboardPlan.id] || ownWhatsapp[selectedOnboardPlan.code]),
+        name: onboardForm.storeName,
+        owner_name: onboardForm.ownerName,
+        owner_phone: onboardForm.ownerPhone,
+        state_code: onboardForm.stateCode,
+        referral_code: onboardForm.referralCode || '',
+        city: onboardForm.city || 'BIHAR',
+        category: onboardForm.category,
+        sub_category: onboardForm.subCategory,
+      });
+
+      if (res && res.success && res.action && res.params) {
+        setPayuOnboardData(res);
+        subscriptionService.submitPayUForm(res.action, res.params);
+      } else {
+        setPayuError(res?.message || 'Could not connect to PayU Money gateway.');
+      }
+    } catch (e) {
+      setPayuError('Error connecting to PayU Money gateway.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   // Dedicated Production Store Login Screen (Distraction-free, Store Code + Password, Zero clutter)
@@ -1356,7 +1473,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between overflow-hidden relative transition hover:border-[#00a2c7]"
                     >
                       {/* Ribbon */}
-                      {priceInfo.offPercent > 0 && (
+                      {priceInfo.ribbonText && (
                         <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
                           <div
                             className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${plan.ribbonBg || 'bg-[#008ba3]'
@@ -1405,11 +1522,12 @@ export default function LandingPage({ defaultPage = 'home' }) {
                             <label className="flex items-start gap-2 cursor-pointer select-none text-xs">
                               <input
                                 type="checkbox"
-                                checked={!!ownWhatsapp[plan.id]}
+                                checked={!!(ownWhatsapp[plan.id] || ownWhatsapp[plan.code])}
                                 onChange={(e) =>
                                   setOwnWhatsapp((prev) => ({
                                     ...prev,
-                                    [plan.id]: e.target.checked
+                                    [plan.id]: e.target.checked,
+                                    [plan.code || plan.id]: e.target.checked
                                   }))
                                 }
                                 className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
@@ -1419,10 +1537,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                                   WhatsApp Message Suite
                                 </span>
                                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                                  + ₹500 / month (+₹{priceInfo.whatsappAddon})
+                                  + ₹500 / month {priceInfo.months > 1 ? `(+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : ''}
                                 </span>
                                 <span className="text-[9px] text-slate-500 dark:text-slate-400 block">
-                                  {ownWhatsapp[plan.id] ? 'Add-on added (+₹500/mo)' : 'Optional • Unchecked is base price'}
+                                  {(ownWhatsapp[plan.id] || ownWhatsapp[plan.code]) ? `✓ Added (+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : 'Optional • Check to add'}
                                 </span>
                               </div>
                             </label>
@@ -1874,7 +1992,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     key={plan.id}
                     className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between overflow-hidden relative transition hover:border-[#00a2c7]"
                   >
-                    {priceInfo.offPercent > 0 && (
+                    {priceInfo.ribbonText && (
                       <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
                         <div
                           className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${plan.ribbonBg || 'bg-[#008ba3]'
@@ -1922,11 +2040,12 @@ export default function LandingPage({ defaultPage = 'home' }) {
                           <label className="flex items-start gap-2 cursor-pointer select-none text-xs">
                             <input
                               type="checkbox"
-                              checked={!!ownWhatsapp[plan.id]}
+                              checked={!!(ownWhatsapp[plan.id] || ownWhatsapp[plan.code])}
                               onChange={(e) =>
                                 setOwnWhatsapp((prev) => ({
                                   ...prev,
-                                  [plan.id]: e.target.checked
+                                  [plan.id]: e.target.checked,
+                                  [plan.code || plan.id]: e.target.checked
                                 }))
                               }
                               className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
@@ -1936,10 +2055,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                                 WhatsApp Message Suite
                               </span>
                               <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                                + ₹500 / month (+₹{priceInfo.whatsappAddon})
+                                + ₹500 / month {priceInfo.months > 1 ? `(+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : ''}
                               </span>
                               <span className="text-[9px] text-slate-500 dark:text-slate-400 block">
-                                {ownWhatsapp[plan.id] ? 'Add-on added (+₹500/mo)' : 'Optional • Unchecked is base price'}
+                                {(ownWhatsapp[plan.id] || ownWhatsapp[plan.code]) ? `✓ Added (+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : 'Optional • Check to add'}
                               </span>
                             </div>
                           </label>
@@ -2587,7 +2706,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Billed {billingCycle} • {ownWhatsapp[selectedOnboardPlan.id] ? 'Includes Own WhatsApp Addon' : 'Platform WhatsApp'}
+                      Billed {billingCycle} • {(ownWhatsapp[selectedOnboardPlan.id] || ownWhatsapp[selectedOnboardPlan.code]) ? 'Includes WhatsApp Message Suite' : 'Standard Suite'}
                     </p>
                   </div>
 
@@ -2620,24 +2739,67 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 </div>
               )}
 
-              {/* Step 2: Store Details */}
+              {/* Step 2: Store Details & Partner Agent Referral */}
               {onboardStep === 2 && (
-                <div className="space-y-4">
+                <div className="space-y-3.5">
+                  {/* Referral Code (Agent Code) with verification */}
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Referral Code / Agent Code
+                      </label>
+                      <span className="text-[10px] text-slate-400">Optional Partner Code</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. AGT-DEMO-101"
+                        value={onboardForm.referralCode}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          setOnboardForm({ ...onboardForm, referralCode: val, agentVerified: false, agentName: '', agentError: null });
+                        }}
+                        className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold uppercase tracking-wider focus:outline-none focus:border-[#00a2c7]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyAgent}
+                        disabled={isVerifyingAgent || !onboardForm.referralCode}
+                        className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-[#00a2c7] hover:text-white text-slate-700 dark:text-slate-200 font-bold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isVerifyingAgent ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+
+                    {/* Verified Agent Name Display */}
+                    {onboardForm.agentVerified && onboardForm.agentName && (
+                      <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-bold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Verified Partner Agent: {onboardForm.agentName}</span>
+                      </div>
+                    )}
+                    {onboardForm.agentError && (
+                      <p className="text-[11px] text-rose-500 font-semibold">{onboardForm.agentError}</p>
+                    )}
+                  </div>
+
+                  {/* Shop Name */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Store / Shop Name *
+                      Shop / Store Name *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Royal Garments & POS"
+                      placeholder="e.g. Sharma Garments & Retail POS"
                       value={onboardForm.storeName}
                       onChange={(e) => setOnboardForm({ ...onboardForm, storeName: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold focus:outline-none focus:border-[#00a2c7]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Owner Name & Mobile */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                         Owner Name *
@@ -2645,43 +2807,67 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Rajesh Verma"
+                        placeholder="e.g. Rajesh Sharma"
                         value={onboardForm.ownerName}
                         onChange={(e) => setOnboardForm({ ...onboardForm, ownerName: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-none focus:border-[#00a2c7]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Mobile / WhatsApp *
+                        Mobile Number *
                       </label>
                       <input
                         type="tel"
                         required
-                        placeholder="+91 98765 43210"
+                        maxLength={10}
+                        placeholder="10-digit Mobile Number"
                         value={onboardForm.ownerPhone}
-                        onChange={(e) => setOnboardForm({ ...onboardForm, ownerPhone: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                        onChange={(e) => setOnboardForm({ ...onboardForm, ownerPhone: e.target.value.replace(/[^0-9]/g, '') })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold tracking-wide focus:outline-none focus:border-[#00a2c7]"
                       />
                     </div>
                   </div>
 
+                  {/* State List Dropdown */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      City & State *
+                      State (GST Jurisdiction) *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Jaipur, Rajasthan"
-                      value={onboardForm.city}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, city: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                    />
+                    <select
+                      value={onboardForm.stateCode}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const selected = gstStates.find((s) => s.state_code === val);
+                        setOnboardForm({
+                          ...onboardForm,
+                          stateCode: val,
+                          city: selected ? selected.state_name : val
+                        });
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#00a2c7]"
+                    >
+                      {gstStates.length > 0 ? (
+                        gstStates.map((st) => (
+                          <option key={st.state_code} value={st.state_code}>
+                            {st.state_code} — {st.state_name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="10">10 — BIHAR</option>
+                          <option value="08">08 — RAJASTHAN</option>
+                          <option value="09">09 — UTTAR PRADESH</option>
+                          <option value="27">27 — MAHARASHTRA</option>
+                          <option value="07">07 — DELHI</option>
+                        </>
+                      )}
+                    </select>
+                    <span className="text-[10px] text-slate-400 mt-1 block">Used for GST Tax Billing (CGST + SGST vs IGST auto-determination)</span>
                   </div>
 
                   <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <button onClick={() => setOnboardStep(1)} className="text-xs font-semibold text-slate-500">
+                    <button onClick={() => setOnboardStep(1)} className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white">
                       Back
                     </button>
                     <button
@@ -2750,7 +2936,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       <span>Base Plan Price:</span>
                       <span className="font-medium text-slate-700 dark:text-slate-300">₹{getPrice(selectedOnboardPlan).baseOffer.toLocaleString('en-IN')}</span>
                     </div>
-                    {getPrice(selectedOnboardPlan).whatsappAddon > 0 && (
+                    {(ownWhatsapp[selectedOnboardPlan.id] || ownWhatsapp[selectedOnboardPlan.code]) && getPrice(selectedOnboardPlan).whatsappAddon > 0 && (
                       <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
                         <span>WhatsApp Message Suite Add-on:</span>
                         <span>+₹{getPrice(selectedOnboardPlan).whatsappAddon.toLocaleString('en-IN')}</span>
@@ -2792,41 +2978,32 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     </div>
                   </div>
 
-                  {/* PayU Actions */}
-                  <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    {payuOnboardData?.action && (
-                      <button
-                        type="button"
-                        onClick={handleRedirectPayUOnboarding}
-                        className="w-full py-3 px-4 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Lock className="w-4 h-4" />
-                        <span>Redirect to PayU Money Hosted Checkout</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    )}
-
+                  {/* Single Pay Now Button (Directly opens PayU Money Gateway) */}
+                  <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <button
                       type="button"
-                      onClick={() => handleCompleteOnboarding('success')}
+                      onClick={handleRedirectPayUOnboarding}
                       disabled={isProcessingPayment}
-                      className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#008ba3] via-[#00a2c7] to-cyan-500 hover:from-[#00768c] hover:to-[#008ba3] text-white font-black text-sm tracking-wide shadow-xl shadow-cyan-600/30 flex items-center justify-center gap-2.5 cursor-pointer transition transform active:scale-[0.99] disabled:opacity-60"
                     >
                       {isProcessingPayment ? (
                         <>
-                          <RotateCcw className="w-4 h-4 animate-spin" />
-                          <span>Provisioning Tenant Database in MySQL...</span>
+                          <RotateCcw className="w-5 h-5 animate-spin" />
+                          <span>Connecting to PayU Money Gateway...</span>
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Instant PayU Approval & Activate Store (Fast Sandbox)</span>
+                          <Lock className="w-5 h-5 stroke-[2.5]" />
+                          <span>
+                            Pay Now INR {(payuOnboardData?.amount ? Number(payuOnboardData.amount) : Number(getPrice(selectedOnboardPlan).offerPrice)).toFixed(2)}
+                          </span>
+                          <ArrowRight className="w-5 h-5 stroke-[2.5] ml-1" />
                         </>
                       )}
                     </button>
 
-                    <div className="flex justify-between items-center pt-2">
-                      <button onClick={() => setOnboardStep(2)} className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-white">
+                    <div className="flex justify-between items-center pt-1">
+                      <button onClick={() => setOnboardStep(2)} className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-white cursor-pointer">
                         ← Back to Store Details
                       </button>
                       <span className="text-[10px] text-slate-400">Isolated MySQL Database auto-provisioned</span>
@@ -2841,27 +3018,49 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <h4 className="text-lg font-black text-slate-900 dark:text-white">
-                    Welcome to Shoppy ERP!
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    Your store code <strong>{provisionedStore.shop_code}</strong> has been provisioned with dedicated isolated database <code>{provisionedStore.database_name}</code>.
-                  </p>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                      Payment Verified & Store Live!
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Dedicated tenant database created. You are now logged in automatically.
+                    </p>
+                  </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-xs text-left space-y-1.5">
-                    <p><strong>Store Name:</strong> {provisionedStore.name}</p>
-                    <p><strong>Storefront URL:</strong> <a href={`/${provisionedStore.shop_code}`} target="_blank" rel="noreferrer" className="text-[#00a2c7] underline font-bold">http://localhost:8000/{provisionedStore.shop_code}</a></p>
+                  {/* Store Credentials Card */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 text-xs text-left space-y-2 border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <span className="text-slate-500 font-semibold">Store Code:</span>
+                      <span className="font-mono font-black text-sm text-[#00a2c7] bg-cyan-50 dark:bg-cyan-950/60 px-2.5 py-0.5 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                        {provisionedStore.shop_code}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Store Name:</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{provisionedStore.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Database Instance:</span>
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{provisionedStore.database_name}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 shrink-0 text-amber-600" />
+                    <span>Auto-redirecting to Store Settings in a moment...</span>
                   </div>
 
                   <div className="pt-2">
-                    <a
-                      href={`/${provisionedStore.shop_code}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-3 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-black text-xs block text-center shadow-md transition"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOnboardingOpen(false);
+                        navigate('/shop-admin/settings?setup=1');
+                      }}
+                      className="w-full py-3 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-black text-xs block text-center shadow-md shadow-cyan-600/30 transition cursor-pointer"
                     >
-                      Launch Your Live Storefront Now
-                    </a>
+                      Open Store Settings Now (Setup GST & Brand) →
+                    </button>
                   </div>
                 </div>
               )}

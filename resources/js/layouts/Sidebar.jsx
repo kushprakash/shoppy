@@ -69,7 +69,7 @@ export default function Sidebar() {
       subItems: [
         { id: 'create-product', label: '+ Add New Product', path: '/shop-admin/products/create', permission: 'catalog.create_product' },
         { id: 'products', label: 'All Products List', path: '/shop-admin/products', permission: 'catalog.view_products' },
-        { id: 'catalog-setup', label: 'Categories & Shipping', path: '/shop-admin/catalog-setup', permission: 'catalog.categories_setup' },
+        { id: 'catalog-setup', label: 'Cat,Size,Color,Shipping', path: '/shop-admin/catalog-setup', permission: 'catalog.categories_setup' },
         { id: 'barcodes', label: 'Barcode Print Desk', path: '/shop-admin/barcodes', permission: 'catalog.barcode_desk' }
       ]
     },

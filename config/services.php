@@ -36,15 +36,16 @@ return [
     ],
 
     'payu' => [
-        'key' => env('PAYU_MERCHANT_KEY', env('PAYU_KEY', '3VzQpX')),
-        'salt' => env('PAYU_MERCHANT_SALT', env('PAYU_SALT', '5suoTv1yxsgU53Q5fr1Ucb2gapTG9yBa')),
-        'env' => env('PAYU_ENV', 'production'), // 'test' or 'production'
+        'key' => env('PAYU_MERCHANT_KEY', '3VzQpX'),
+        'salt' => env('PAYU_MERCHANT_SALT', '5suoTv1yxsgU53Q5fr1Ucb2gapTG9yBa'),
+        'env' => env('PAYU_ENV', 'production'),
     ],
 
-    'payu' => [
-        'key' => env('PAYU_MERCHANT_KEY', env('PAYU_KEY', 'gtKFFx')),
-        'salt' => env('PAYU_MERCHANT_SALT', env('PAYU_SALT', 'eCwWELxi')),
-        'env' => env('PAYU_ENV', 'test'), // 'test' or 'production'
+    'paytm' => [
+        'upi' => 'paytm.s1lcife@pty',
+        'key' => 'oMLHAD02125387471881',
+        'salt' => 'AAuN7izDWN5cb8A5scnUiNME+LkZqI2DWgkXlN1McoP6WZABa/KkFTiLvuPRP6/nWK8BPg/rPhb+u4QMrUEX10UsANTDbJaALcSM9b8Wk218X+55T/zOzb7xoiB+BcX8yYuYayELImXJHIgL/c7nkAnHrwUCmbM97nRbCVVRvU0ku3Tr',
+        'env' => 'production',
     ],
 
 ];

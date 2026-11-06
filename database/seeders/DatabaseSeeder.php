@@ -97,12 +97,18 @@ class DatabaseSeeder extends Seeder
                     'all_category_access' => true,
                     'is_active' => true,
                     'features' => json_encode([
-                        'GST Billing Software',
-                        'Ecommerce Store Features',
-                        'WhatsApp Features',
-                        'High-Speed POS Counter Billing (<50ms)',
-                        '5 Payment Gateways & 5 Courier Partners',
-                        'Real-time Stock & Inventory Sync'
+                        'High-Speed GST Billing Software (Thermal, A4 Auto C/F & B/F, Dot-Matrix 1-Page Medical Tear-off)',
+                        'Comprehensive Store Management (Multi-Branch Inventory, Stock Ledger, Cashier Shifts & Z-Report)',
+                        'Omnichannel Ecommerce Suite (Instant Online Web Storefront at domain/{storeCode} with Real-time Sync)',
+                        'Integrated Payment Gateway Suite (PhonePe, PayU, Razorpay, Cashfree, Easebuzz & Instant UPI QR)',
+                        'Integrated Courier & Logistics API (Shiprocket, NimbusPost, Delhivery, Auto AWB & Tracking)',
+                        'WhatsApp Cloud Messaging Suite (Automated Tax Invoices, Payment Reminders & Shift Reports)',
+                        '1D/2D Barcode Generator, Printable Price Tags & Shelf Labels',
+                        'Expense Manager, Cash Flow Register & Automated P&L Reports',
+                        'Staff Roles, Multi-User Cashier Profiles & Audit Permission Logs',
+                        'Zero Commission on Online Store Sales & Unlimited Products',
+                        'Dedicated MySQL Database Isolation per Tenant & 100% Data Privacy',
+                        '24/7 Priority WhatsApp, Phone & Remote Desk Support'
                     ]),
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -154,5 +160,8 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => now(),
             ]
         );
+
+        // 5. Official Indian GST States (for B2B & B2C Tax Billing)
+        (new GstStatesSeeder)->run('mysql');
     }
 }

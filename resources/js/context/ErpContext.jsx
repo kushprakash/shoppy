@@ -156,7 +156,22 @@ export const INITIAL_PAYROLL = [];
 export const INITIAL_EXPENSES = [];
 
 export function ErpProvider({ children }) {
-  const shopCode = localStorage.getItem('shoppy_active_store_code') || document.getElementById('root')?.dataset?.shopCode || '';
+  // Check URL query parameters and dataset for explicit store code
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const urlCode = urlParams ? (urlParams.get('code') || urlParams.get('shop_code')) : null;
+  const datasetCode = typeof document !== 'undefined' ? document.getElementById('root')?.dataset?.shopCode : null;
+
+  // If a new store code is passed in URL or dataset, synchronize and clear previous store cache
+  if (urlCode && urlCode !== localStorage.getItem('shoppy_active_store_code')) {
+    try {
+      localStorage.setItem('shoppy_active_store_code', urlCode);
+      localStorage.removeItem('shoppy_store_branding_data');
+      localStorage.removeItem('shoppy_store_branding');
+      localStorage.removeItem('shoppy_active_store');
+    } catch (e) {}
+  }
+
+  const shopCode = urlCode || datasetCode || localStorage.getItem('shoppy_active_store_code') || '';
 
   // 3-Tier Hierarchy Categories, Sizes, Colors & Shipping Rules
   const [topCategories, setTopCategories] = useState(() => {

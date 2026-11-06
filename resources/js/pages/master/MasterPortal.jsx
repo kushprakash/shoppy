@@ -28,6 +28,7 @@ import {
   Sun,
   Lock,
   LogOut,
+  Loader2,
   ChevronRight,
   ChevronLeft,
   ChevronDown,
@@ -56,11 +57,38 @@ import {
   Mail,
   Eye,
   Edit3,
+  Award,
   Image
 } from 'lucide-react';
 import subscriptionService from '../../services/subscriptionService';
+import SuperAdminAgentsTab from '../../components/agent/SuperAdminAgentsTab';
+import AgentPortalView from '../../components/agent/AgentPortalView';
 
 export default function MasterPortal() {
+  // Authentication Role: 'admin' | 'agent'
+  const [authRole, setAuthRole] = useState(() => {
+    try {
+      return localStorage.getItem('master_auth_role') || 'admin';
+    } catch (e) {
+      return 'admin';
+    }
+  });
+
+  const [agentUser, setAgentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('master_agent_profile');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Login view role switcher ('admin' | 'agent')
+  const [loginRole, setLoginRole] = useState('admin');
+  const [agentLoginId, setAgentLoginId] = useState('');
+  const [agentPassword, setAgentPassword] = useState('');
+  const [showAgentPassword, setShowAgentPassword] = useState(false);
+
   // Authentication state for Super Admin (Restored from token on page reload)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     try {
@@ -193,6 +221,7 @@ export default function MasterPortal() {
   // Edit Pricing & Off % Modal State
   const [isEditPriceModalOpen, setIsEditPriceModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
 
   // Create New Subscription Package Modal State
   const [isCreatePackageModalOpen, setIsCreatePackageModalOpen] = useState(false);
@@ -372,6 +401,7 @@ export default function MasterPortal() {
         try {
           sessionStorage.setItem('master_auth', 'true');
           localStorage.setItem('master_auth', 'true');
+          localStorage.setItem('master_auth_role', 'admin');
           if (data.token) {
             sessionStorage.setItem('master_token', data.token);
             localStorage.setItem('master_token', data.token);
@@ -381,6 +411,7 @@ export default function MasterPortal() {
           }
         } catch (err) {}
         setIsAuthenticated(true);
+        setAuthRole('admin');
         setLoginError(null);
         showToast(data.message || 'Super Admin access authenticated successfully.');
       } else {
@@ -397,7 +428,58 @@ export default function MasterPortal() {
     }
   };
 
-  // Super Admin Logout Handler
+  // Agent Partner Login Handler
+  const handleAgentLogin = async (e) => {
+    e.preventDefault();
+    setLoginError(null);
+    const codeNorm = (agentLoginId || '').trim();
+    const passNorm = (agentPassword || '').trim();
+
+    if (!codeNorm || !passNorm) {
+      setLoginError('Please enter both Agent Code/Phone and Password.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch('/api/agent/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ login_id: codeNorm, password: passNorm })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success && data.agent) {
+        try {
+          sessionStorage.setItem('master_auth', 'true');
+          localStorage.setItem('master_auth', 'true');
+          localStorage.setItem('master_auth_role', 'agent');
+          if (data.token) {
+            sessionStorage.setItem('master_token', data.token);
+            localStorage.setItem('master_token', data.token);
+          }
+          localStorage.setItem('master_agent_profile', JSON.stringify(data.agent));
+        } catch (err) {}
+        setIsAuthenticated(true);
+        setAuthRole('agent');
+        setAgentUser(data.agent);
+        setLoginError(null);
+        showToast(data.message || `Welcome back, ${data.agent.name}!`);
+      } else {
+        const msg = data.message || 'Invalid agent credentials. Access denied.';
+        setLoginError(msg);
+      }
+    } catch (err) {
+      setLoginError('Authentication server connection error. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Super Admin / Agent Logout Handler
   const handleLogout = async () => {
     const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
     try {
@@ -417,9 +499,13 @@ export default function MasterPortal() {
       sessionStorage.removeItem('master_token');
       localStorage.removeItem('master_token');
       localStorage.removeItem('master_user');
+      localStorage.removeItem('master_auth_role');
+      localStorage.removeItem('master_agent_profile');
     } catch (err) {}
     setIsAuthenticated(false);
-    showToast('Logged out of Super Admin Portal');
+    setAuthRole('admin');
+    setAgentUser(null);
+    showToast('Logged out successfully');
   };
 
   // Price calculation helper
@@ -427,14 +513,69 @@ export default function MasterPortal() {
     return subscriptionService.calculatePrice(plan, plan?.billingCycle || billingCycle, !!ownWhatsapp[plan.id]);
   };
 
+  // Safe opening of pricing editor
+  const handleOpenEditPrice = (plan) => {
+    if (!plan) return;
+    const safePlan = JSON.parse(JSON.stringify(plan));
+
+    const planCode = String(safePlan.code || safePlan.id || '').toLowerCase();
+    let activeCycle = safePlan.billingCycle;
+    if (!activeCycle) {
+      if (planCode.includes('monthly')) activeCycle = 'monthly';
+      else if (planCode.includes('quarterly')) activeCycle = 'quarterly';
+      else if (planCode.includes('half-yearly') || planCode.includes('half_yearly')) activeCycle = 'half_yearly';
+      else if (planCode.includes('yearly')) activeCycle = 'yearly';
+      else activeCycle = 'monthly';
+    }
+    safePlan.billingCycle = activeCycle;
+
+    if (!safePlan.cycles || typeof safePlan.cycles !== 'object') {
+      safePlan.cycles = {};
+    }
+
+    const cycleDefaults = {
+      monthly: { regular: 1200, offer: 1000, offPercent: 17, label: '/ month', ribbonText: 'STARTER', months: 1 },
+      quarterly: { regular: 3000, offer: 2500, offPercent: 17, label: '/ 3 months', ribbonText: 'SAVE ₹500', months: 3 },
+      half_yearly: { regular: 6000, offer: 4500, offPercent: 25, label: '/ 6 months', ribbonText: 'SAVE ₹1,500', months: 6 },
+      yearly: { regular: 12000, offer: 8000, offPercent: 33, label: '/ year', ribbonText: 'BEST VALUE', months: 12 }
+    };
+
+    ['monthly', 'quarterly', 'half_yearly', 'yearly'].forEach((c) => {
+      const existing = safePlan.cycles[c];
+      const isCurrentPlanCycle = (c === activeCycle);
+      const offerVal = (existing && existing.offer !== undefined && existing.offer !== null) 
+        ? Number(existing.offer) 
+        : (isCurrentPlanCycle && safePlan.basePrice ? Number(safePlan.basePrice) : cycleDefaults[c].offer);
+      const regVal = (existing && existing.regular !== undefined && existing.regular !== null)
+        ? Number(existing.regular)
+        : Math.round(offerVal * 1.25);
+      const offPct = regVal > offerVal ? Math.round(((regVal - offerVal) / regVal) * 100) : 0;
+
+      safePlan.cycles[c] = {
+        offer: offerVal,
+        regular: regVal,
+        offPercent: offPct,
+        label: existing?.label || cycleDefaults[c].label,
+        ribbonText: existing?.ribbonText || (offPct > 0 ? `SAVE ${offPct}%` : 'POPULAR'),
+        months: existing?.months || cycleDefaults[c].months
+      };
+    });
+
+    safePlan.basePrice = Number(safePlan.cycles[activeCycle]?.offer ?? safePlan.basePrice ?? 1000);
+    setEditingPlan(safePlan);
+    setIsEditPriceModalOpen(true);
+  };
+
   // Add Feature to Plan
-  const handleAddFeature = (e) => {
+  const handleAddFeature = async (e) => {
     e.preventDefault();
     if (!newFeatureText.trim() || !targetPlanId) return;
 
+    let targetPlan = null;
     const updated = plans.map((p) => {
-      if (p.id === targetPlanId) {
-        return { ...p, features: [...p.features, newFeatureText.trim()] };
+      if (p.id === targetPlanId || p.code === targetPlanId) {
+        targetPlan = { ...p, features: [...(p.features || []), newFeatureText.trim()] };
+        return targetPlan;
       }
       return p;
     });
@@ -444,13 +585,21 @@ export default function MasterPortal() {
     showToast('Feature added and synced to Landing Page!');
     setNewFeatureText('');
     setIsAddFeatureModalOpen(false);
+
+    if (targetPlan) {
+      await subscriptionService.updatePlan(targetPlan.code || targetPlan.id, targetPlan);
+      await subscriptionService.syncFromBackend();
+      setPlans(subscriptionService.getPlans());
+    }
   };
 
   // Delete Feature from Plan
-  const handleDeleteFeature = (planId, featureIdx) => {
+  const handleDeleteFeature = async (planId, featureIdx) => {
+    let targetPlan = null;
     const updated = plans.map((p) => {
-      if (p.id === planId) {
-        return { ...p, features: p.features.filter((_, i) => i !== featureIdx) };
+      if (p.id === planId || p.code === planId) {
+        targetPlan = { ...p, features: (p.features || []).filter((_, i) => i !== featureIdx) };
+        return targetPlan;
       }
       return p;
     });
@@ -458,18 +607,53 @@ export default function MasterPortal() {
     setPlans(updated);
     subscriptionService.savePlans(updated);
     showToast('Feature removed from plan');
+
+    if (targetPlan) {
+      await subscriptionService.updatePlan(targetPlan.code || targetPlan.id, targetPlan);
+      await subscriptionService.syncFromBackend();
+      setPlans(subscriptionService.getPlans());
+    }
   };
 
-  // Save Pricing edits
-  const handleSavePriceEdit = (e) => {
+  // Save Pricing edits & persist to MySQL database
+  const handleSavePriceEdit = async (e) => {
     e.preventDefault();
     if (!editingPlan) return;
 
-    const updated = plans.map((p) => (p.id === editingPlan.id ? editingPlan : p));
-    setPlans(updated);
-    subscriptionService.savePlans(updated);
-    showToast(`Pricing updated for ${editingPlan.name}! Synced with public site.`);
-    setIsEditPriceModalOpen(false);
+    try {
+      setIsSavingPrice(true);
+      const activeCycle = editingPlan.billingCycle || 'monthly';
+      const effectiveOffer = editingPlan.cycles?.[activeCycle]?.offer ?? editingPlan.basePrice ?? 1000;
+
+      const payload = {
+        ...editingPlan,
+        basePrice: Number(effectiveOffer),
+        monthly_price: Number(editingPlan.cycles?.monthly?.offer ?? (activeCycle === 'monthly' ? effectiveOffer : 1000)),
+        annual_price: Number(editingPlan.cycles?.yearly?.offer ?? (activeCycle === 'yearly' ? effectiveOffer : 8000)),
+        cycles: editingPlan.cycles,
+        features: editingPlan.features || []
+      };
+
+      // 1. Send PUT request to MySQL backend
+      const planCode = editingPlan.code || editingPlan.id;
+      const res = await subscriptionService.updatePlan(planCode, payload);
+
+      if (res && res.success === false) {
+        showToast(res.message || 'Failed to save to MySQL database', 'error');
+      } else {
+        showToast(`Pricing updated for ${editingPlan.name}! Saved permanently to MySQL database.`);
+      }
+
+      // 2. Fetch fresh plans from MySQL and update state
+      await subscriptionService.syncFromBackend();
+      setPlans(subscriptionService.getPlans());
+      setIsEditPriceModalOpen(false);
+    } catch (err) {
+      console.error('Error saving plan pricing:', err);
+      showToast('Error saving plan: ' + (err.message || 'Server error'), 'error');
+    } finally {
+      setIsSavingPrice(false);
+    }
   };
 
   // Create New Subscription Package Handler
@@ -751,13 +935,25 @@ export default function MasterPortal() {
         return `> Super Admin > Public Leads & Contact Inquiries (${leads.length})`;
       case 'blogs':
         return `> Super Admin > Blog & Articles Manager (${blogs.length})`;
+      case 'agents':
+        return '> Super Admin > Partner Agents Network & Dynamic Commissions';
       default:
         return '> Overview > Super Admin Master Portal';
     }
   };
 
+  // If authenticated as Partner Agent, show the Dedicated Agent Workspace
+  if (isAuthenticated && authRole === 'agent' && agentUser) {
+    return (
+      <AgentPortalView
+        agent={agentUser}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   // =========================================================================
-  // 1. STRICT SUPER ADMIN LOGIN SCREEN (If not authenticated)
+  // 1. STRICT SUPER ADMIN & AGENT PARTNER LOGIN SCREEN
   // =========================================================================
   if (!isAuthenticated) {
     return (
@@ -765,10 +961,50 @@ export default function MasterPortal() {
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#008ba3] via-[#00a8cc] to-[#10b981] flex items-center justify-center text-white mx-auto shadow-xl shadow-cyan-500/25">
-              <ShieldCheck className="w-9 h-9" />
+              {loginRole === 'agent' ? <Award className="w-9 h-9" /> : <ShieldCheck className="w-9 h-9" />}
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Shoppy Super Admin</h1>
-            <p className="text-xs text-slate-400">Master SaaS Platform & Multi-Tenant Control Portal</p>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              {loginRole === 'agent' ? 'Partner Agent Portal' : 'Shoppy Super Admin'}
+            </h1>
+            <p className="text-xs text-slate-400">
+              {loginRole === 'agent'
+                ? 'Channel Partner Commission, Stores & Wallet Management'
+                : 'Master SaaS Platform & Multi-Tenant Control Portal'}
+            </p>
+          </div>
+
+          {/* Role Switcher Tab: Super Admin vs Partner Agent */}
+          <div className="grid grid-cols-2 p-1 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => {
+                setLoginRole('admin');
+                setLoginError(null);
+              }}
+              className={`py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                loginRole === 'admin'
+                  ? 'bg-[#00a2c7] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Super Admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginRole('agent');
+                setLoginError(null);
+              }}
+              className={`py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                loginRole === 'agent'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Partner Agent</span>
+            </button>
           </div>
 
           {loginError ? (
@@ -779,63 +1015,128 @@ export default function MasterPortal() {
           ) : (
             <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2.5">
               <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Restricted Super Admin Area • Authorized Personnel Only</span>
+              <span>
+                {loginRole === 'agent'
+                  ? 'Official Channel Partners • Real-time Wallet Commissions'
+                  : 'Restricted Super Admin Area • Authorized Personnel Only'}
+              </span>
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Master Admin Email</label>
-              <input
-                type="email"
-                required
-                value={adminEmail}
-                onChange={(e) => {
-                  setAdminEmail(e.target.value);
-                  if (loginError) setLoginError(null);
-                }}
-                placeholder="Enter administrator email"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Master Key / Password</label>
-              <div className="relative">
+          {/* Super Admin Login Form */}
+          {loginRole === 'admin' && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Master Admin Email</label>
                 <input
-                  type={showAdminPassword ? 'text' : 'password'}
+                  type="email"
                   required
-                  value={adminPassword}
+                  value={adminEmail}
                   onChange={(e) => {
-                    setAdminPassword(e.target.value);
+                    setAdminEmail(e.target.value);
                     if (loginError) setLoginError(null);
                   }}
-                  placeholder="Enter master password"
-                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  placeholder="admin@shoppy.io"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowAdminPassword(!showAdminPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
-                >
-                  {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#008ba3] to-[#10b981] hover:from-[#00a8cc] hover:to-[#059669] text-white font-bold text-xs shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Lock className="w-4 h-4" />
-              <span>{isLoggingIn ? 'Authenticating...' : 'Login to Super Admin Portal'}</span>
-            </button>
-          </form>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Master Key / Password</label>
+                <div className="relative">
+                  <input
+                    type={showAdminPassword ? 'text' : 'password'}
+                    required
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      if (loginError) setLoginError(null);
+                    }}
+                    placeholder="Enter master password"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  >
+                    {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#008ba3] to-[#10b981] hover:from-[#00a8cc] hover:to-[#059669] text-white font-bold text-xs shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Lock className="w-4 h-4" />
+                <span>{isLoggingIn ? 'Authenticating...' : 'Login to Super Admin Portal'}</span>
+              </button>
+            </form>
+          )}
+
+          {/* Partner Agent Login Form */}
+          {loginRole === 'agent' && (
+            <form onSubmit={handleAgentLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Agent Referral Code / Mobile Number
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={agentLoginId}
+                  onChange={(e) => {
+                    setAgentLoginId(e.target.value.toUpperCase());
+                    if (loginError) setLoginError(null);
+                  }}
+                  placeholder="e.g. AGT-DEMO-101 or 9876543210"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-bold font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Agent Password</label>
+                <div className="relative">
+                  <input
+                    type={showAgentPassword ? 'text' : 'password'}
+                    required
+                    value={agentPassword}
+                    onChange={(e) => {
+                      setAgentPassword(e.target.value);
+                      if (loginError) setLoginError(null);
+                    }}
+                    placeholder="Default demo password: agent123"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAgentPassword(!showAgentPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  >
+                    {showAgentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Demo Partner: <code>AGT-DEMO-101</code> / password: <code>agent123</code>
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Award className="w-4 h-4" />
+                <span>{isLoggingIn ? 'Verifying Partner Credentials...' : 'Login to Agent Partner Portal'}</span>
+              </button>
+            </form>
+          )}
 
           <div className="pt-2 text-center">
             <a href="/" className="text-xs text-slate-500 hover:text-cyan-400 transition font-semibold">
-              ← Return to Public SaaS Website
+              &larr; Return to Public SaaS Website
             </a>
           </div>
         </div>
@@ -1363,6 +1664,63 @@ export default function MasterPortal() {
                 </div>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 group-hover:text-white">
                   {blogs.length}
+                </span>
+              </div>
+            )}
+
+            {/* Partner Agents & Network */}
+            {activeTab === 'agents' ? (
+              <div className="relative my-0.5 w-full">
+                <div className="absolute -top-4 right-0 w-4 h-4 overflow-hidden pointer-events-none z-20">
+                  <svg className="w-4 h-4 block" viewBox="0 0 16 16" fill="none">
+                    <path d="M 0,16 Q 16,16 16,0 L 16,16 Z" fill={isDarkMode ? '#020617' : '#f4f7fa'} />
+                  </svg>
+                </div>
+                <div
+                  onClick={() => {
+                    setActiveTab('agents');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`cursor-pointer relative z-10 ml-1.5 mr-0 pl-1.5 pr-4 py-2 rounded-l-full flex items-center justify-between transition select-none ${
+                    isDarkMode ? 'bg-slate-950 text-cyan-400' : 'bg-[#f4f7fa] text-cyan-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[#00a2c7] text-white flex items-center justify-center shadow-xs shadow-cyan-500/30 shrink-0">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <span className="text-[13.5px] font-bold tracking-tight text-cyan-600 dark:text-cyan-400">
+                      Partner Agents
+                    </span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-600 dark:text-cyan-400">
+                    NETWORK
+                  </span>
+                </div>
+                <div className="absolute -bottom-4 right-0 w-4 h-4 overflow-hidden pointer-events-none z-20">
+                  <svg className="w-4 h-4 block" viewBox="0 0 16 16" fill="none">
+                    <path d="M 0,0 Q 16,0 16,16 L 16,0 Z" fill={isDarkMode ? '#020617' : '#f4f7fa'} />
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => {
+                  setActiveTab('agents');
+                  setMobileSidebarOpen(false);
+                }}
+                className="cursor-pointer mx-1.5 px-3 py-2 rounded-lg flex items-center justify-between hover:bg-[#283b50] hover:text-white transition select-none group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[#8fa3bf] group-hover:text-white transition-colors">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <span className="text-[13.5px] font-medium tracking-tight text-[#8fa3bf] group-hover:text-white">
+                    Partner Agents
+                  </span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  COMMISSION
                 </span>
               </div>
             )}
@@ -2155,10 +2513,7 @@ export default function MasterPortal() {
                           </button>
 
                           <button
-                            onClick={() => {
-                              setEditingPlan(JSON.parse(JSON.stringify(plan)));
-                              setIsEditPriceModalOpen(true);
-                            }}
+                            onClick={() => handleOpenEditPrice(plan)}
                             className="py-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px] flex items-center justify-center gap-1 transition cursor-pointer"
                             title="Edit Pricing & Discounts"
                           >
@@ -3129,6 +3484,13 @@ export default function MasterPortal() {
               </div>
             </div>
           )}
+
+          {/* =================================================================== */}
+          {/* VIEW I: PARTNER AGENTS NETWORK & COMMISSIONS                        */}
+          {/* =================================================================== */}
+          {activeTab === 'agents' && (
+            <SuperAdminAgentsTab />
+          )}
         </main>
       </div>
 
@@ -3324,13 +3686,38 @@ export default function MasterPortal() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Package Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPlan.name || ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Display Short Code
                   </label>
                   <input
                     type="text"
-                    value={editingPlan.shortName}
+                    value={editingPlan.shortName || ''}
                     onChange={(e) => setEditingPlan({ ...editingPlan, shortName: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Badge Tag (e.g. Save ₹500 • 17% OFF)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPlan.badge || ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, badge: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
                   />
                 </div>
                 <div>
@@ -3338,7 +3725,7 @@ export default function MasterPortal() {
                     Category Filter
                   </label>
                   <select
-                    value={editingPlan.category}
+                    value={editingPlan.category || 'business'}
                     onChange={(e) => setEditingPlan({ ...editingPlan, category: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
                   >
@@ -3349,16 +3736,40 @@ export default function MasterPortal() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Card Subtext / Billing Note
+                </label>
+                <input
+                  type="text"
+                  value={editingPlan.subtext || ''}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, subtext: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium"
+                />
+              </div>
+
               {/* Billing Cycles Prices */}
               <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider block">
-                  Cycle Rates & Discount Structure
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider block">
+                    Cycle Rates & Discount Structure
+                  </span>
+                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold uppercase">
+                    Package Duration: {editingPlan.billingCycle || 'monthly'}
+                  </span>
+                </div>
 
                 {['monthly', 'quarterly', 'half_yearly', 'yearly'].map((cycle) => {
-                  const data = editingPlan.cycles[cycle];
+                  const data = editingPlan.cycles?.[cycle] || {
+                    offer: 1000,
+                    regular: 1200,
+                    offPercent: 0,
+                    label: '/ month',
+                    ribbonText: 'POPULAR'
+                  };
+                  const isActive = editingPlan.billingCycle === cycle;
                   const cycleLabels = {
-                    monthly: 'Monthly',
+                    monthly: 'Monthly (1 Month)',
                     quarterly: 'Quarterly (3 Months)',
                     half_yearly: 'Half Yearly (6 Months)',
                     yearly: 'Yearly (12 Months)'
@@ -3367,34 +3778,48 @@ export default function MasterPortal() {
                   return (
                     <div
                       key={cycle}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 grid grid-cols-3 gap-2 items-center"
+                      className={`p-3 rounded-xl border grid grid-cols-3 gap-2 items-center transition ${
+                        isActive
+                          ? 'bg-cyan-50/70 dark:bg-cyan-950/30 border-cyan-300 dark:border-cyan-700/70 ring-1 ring-cyan-400/40'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/80'
+                      }`}
                     >
-                      <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
-                        {cycleLabels[cycle]}
+                      <div>
+                        <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <span>{cycleLabels[cycle]}</span>
+                          {isActive && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-cyan-600 text-white uppercase tracking-wider">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[9px] text-slate-400">{data.label || ''}</span>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-400">Offer Price (₹)</label>
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400">Offer Price (₹)</label>
                         <input
                           type="number"
-                          value={data.offer}
+                          value={data.offer ?? 0}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value) || 0;
-                            const reg = data.regular;
+                            const reg = data.regular ?? (val * 1.25);
                             const off = reg > val ? Math.round(((reg - val) / reg) * 100) : 0;
+                            const newCycles = {
+                              ...(editingPlan.cycles || {}),
+                              [cycle]: {
+                                ...data,
+                                offer: val,
+                                offPercent: off,
+                                ribbonText: off > 0 ? `SAVE ${off}%*` : 'POPULAR'
+                              }
+                            };
                             setEditingPlan({
                               ...editingPlan,
-                              cycles: {
-                                ...editingPlan.cycles,
-                                [cycle]: {
-                                  ...data,
-                                  offer: val,
-                                  offPercent: off,
-                                  ribbonText: off > 0 ? `SAVE ${off}%*` : 'POPULAR'
-                                }
-                              }
+                              basePrice: isActive ? val : (editingPlan.basePrice ?? val),
+                              cycles: newCycles
                             });
                           }}
-                          className="w-full px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-xs font-bold"
+                          className="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-900 dark:text-white"
                         />
                       </div>
                       <div>
@@ -3402,27 +3827,30 @@ export default function MasterPortal() {
                         <div className="flex items-center gap-1.5">
                           <input
                             type="number"
-                            value={data.regular}
+                            value={data.regular ?? 0}
                             onChange={(e) => {
                               const reg = parseFloat(e.target.value) || 0;
-                              const val = data.offer;
+                              const val = data.offer ?? 0;
                               const off = reg > val ? Math.round(((reg - val) / reg) * 100) : 0;
+                              const newCycles = {
+                                ...(editingPlan.cycles || {}),
+                                [cycle]: {
+                                  ...data,
+                                  regular: reg,
+                                  offPercent: off,
+                                  ribbonText: off > 0 ? `SAVE ${off}%*` : 'POPULAR'
+                                }
+                              };
                               setEditingPlan({
                                 ...editingPlan,
-                                cycles: {
-                                  ...editingPlan.cycles,
-                                  [cycle]: {
-                                    ...data,
-                                    regular: reg,
-                                    offPercent: off,
-                                    ribbonText: off > 0 ? `SAVE ${off}%*` : 'POPULAR'
-                                  }
-                                }
+                                cycles: newCycles
                               });
                             }}
-                            className="w-full px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-xs text-slate-500"
+                            className="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-xs text-slate-500 font-medium"
                           />
-                          <span className="text-[10px] font-black text-emerald-600 shrink-0">{data.offPercent}%</span>
+                          <span className="text-[10px] font-black text-emerald-600 shrink-0 min-w-[28px] text-right">
+                            {data.offPercent ?? 0}%
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -3433,16 +3861,25 @@ export default function MasterPortal() {
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
+                  disabled={isSavingPrice}
                   onClick={() => setIsEditPriceModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs shadow-xs cursor-pointer"
+                  disabled={isSavingPrice}
+                  className="px-5 py-2 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-50"
                 >
-                  Apply & Save Changes
+                  {isSavingPrice ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving to MySQL...</span>
+                    </>
+                  ) : (
+                    <span>Save to MySQL Database</span>
+                  )}
                 </button>
               </div>
             </form>

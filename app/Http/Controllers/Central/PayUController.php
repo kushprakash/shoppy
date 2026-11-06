@@ -29,11 +29,12 @@ class PayUController extends Controller
         $planName = $plan ? $plan->name : $fallback['name'];
         $basePrice = $fallback['price'];
         $durationDays = $fallback['duration'];
+        $effectiveCycle = $fallback['cycle'] ?? $billingCycle;
 
         if ($plan && !empty($plan->cycles)) {
             $cycles = is_string($plan->cycles) ? json_decode($plan->cycles, true) : $plan->cycles;
-            if (isset($cycles[$billingCycle]['offer'])) {
-                $basePrice = (float)$cycles[$billingCycle]['offer'];
+            if (isset($cycles[$effectiveCycle]['offer'])) {
+                $basePrice = (float)$cycles[$effectiveCycle]['offer'];
             }
         }
 
@@ -82,10 +83,10 @@ class PayUController extends Controller
         $planInfo = $this->getPlanDetails($planCode, $cycle, $ownWhatsapp);
         $totalAmount = $planInfo['total_amount'];
 
-        // Merchant Keys
-        $key = config('services.payu.key', 'gtKFFx');
-        $salt = config('services.payu.salt', 'eCwWELxi');
-        $env = config('services.payu.env', 'test');
+        // Merchant Keys (Production Live)
+        $key = config('services.payu.key', '3VzQpX');
+        $salt = config('services.payu.salt', '5suoTv1yxsgU53Q5fr1Ucb2gapTG9yBa');
+        $env = config('services.payu.env', 'production');
         $actionUrl = ($env === 'production') ? 'https://secure.payu.in/_payment' : 'https://test.payu.in/_payment';
 
         $txnid = 'PAYU_' . time() . '_' . strtoupper(Str::random(6));
@@ -105,7 +106,7 @@ class PayUController extends Controller
 
         // User Defined Fields (UDFs)
         $udf1 = $type; // 'onboard' or 'renew'
-        $udf2 = $validated['shop_code'] ?? '';
+        $udf2 = ($type === 'renew') ? ($validated['shop_code'] ?? '') : ($request->input('referral_code') ?: ($request->input('agent_code') ?: ''));
         $udf3 = $planCode;
         $udf4 = $cycle;
         $udf5 = $ownWhatsapp ? '1' : '0';
@@ -116,6 +117,28 @@ class PayUController extends Controller
 
         $surl = url('/api/payu/callback/success');
         $furl = url('/api/payu/callback/failure');
+
+        // Prepare Onboarding metadata to store with payment transaction
+        $metadata = null;
+        if ($type === 'onboard') {
+            $metadata = [
+                'name' => $request->input('name') ?: ($request->input('storeName') ?: 'New Retail Store'),
+                'owner_name' => $request->input('owner_name') ?: ($request->input('ownerName') ?: 'Store Owner'),
+                'owner_phone' => $phone,
+                'owner_email' => $email,
+                'state_code' => $request->input('state_code') ?: ($request->input('state') ?: '10'),
+                'city' => $request->input('city') ?: 'BIHAR',
+                'category' => $request->input('category'),
+                'sub_category' => $request->input('sub_category'),
+                'referral_code' => $request->input('referral_code') ?: ($request->input('agent_code') ?: null),
+                'plan_id' => $planCode,
+                'billing_cycle' => $cycle,
+                'own_whatsapp' => $ownWhatsapp,
+            ];
+            try {
+                \Illuminate\Support\Facades\Cache::put("payu_onboard_{$txnid}", $metadata, now()->addHours(6));
+            } catch (\Throwable $e) {}
+        }
 
         // Log pending payment in MySQL subscription_payments
         try {
@@ -133,6 +156,7 @@ class PayUController extends Controller
                 'gateway' => 'payu',
                 'transaction_id' => $txnid,
                 'status' => 'pending',
+                'metadata' => $metadata ? json_encode($metadata) : null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -214,24 +238,49 @@ class PayUController extends Controller
         // 1. STORE SIGN UP / ONBOARDING FLOW
         // =====================================================================
         if ($type === 'onboard') {
-            $storeData = $validated['store_data'] ?? [];
+            // Retrieve metadata saved during initiate if not directly in request
+            $metadata = null;
+            try {
+                $metadata = \Illuminate\Support\Facades\Cache::get("payu_onboard_{$txnid}");
+            } catch (\Throwable $e) {}
+
+            if (!$metadata) {
+                $payRow = DB::connection('mysql')->table('subscription_payments')->where('transaction_id', $txnid)->first();
+                if ($payRow && !empty($payRow->metadata)) {
+                    $metadata = json_decode($payRow->metadata, true);
+                }
+            }
+
+            $storeData = $validated['store_data'] ?? ($metadata ?? []);
             $storeName = $storeData['name'] ?? ($storeData['storeName'] ?? 'New Retail Store');
             $ownerName = $storeData['ownerName'] ?? ($storeData['owner_name'] ?? 'Store Owner');
             $ownerPhone = $storeData['ownerPhone'] ?? ($storeData['owner_phone'] ?? '9546042639');
-            $city = $storeData['city'] ?? 'Muzaffarpur, Bihar';
-            $planId = $storeData['planId'] ?? ($storeData['plan_id'] ?? 'yearly-package');
-            $cycle = $storeData['billingCycle'] ?? ($storeData['billing_cycle'] ?? 'yearly');
-            $ownWhatsapp = !empty($storeData['ownWhatsapp']) || !empty($storeData['own_whatsapp']);
+            $stateCode = $storeData['stateCode'] ?? ($storeData['state_code'] ?? ($storeData['state'] ?? '10'));
+            $referralCode = $storeData['referralCode'] ?? ($storeData['referral_code'] ?? ($storeData['agentCode'] ?? ($request->input('udf2') ?: null)));
+            $planId = $storeData['planId'] ?? ($storeData['plan_id'] ?? ($request->input('udf3') ?: 'yearly-package'));
+            $cycle = $storeData['billingCycle'] ?? ($storeData['billing_cycle'] ?? ($request->input('udf4') ?: 'yearly'));
+            $ownWhatsapp = !empty($storeData['ownWhatsapp']) || !empty($storeData['own_whatsapp']) || ($request->input('udf5') === '1');
 
             $planInfo = $this->getPlanDetails($planId, $cycle, $ownWhatsapp);
 
-            $code = 'STORE' . rand(100000, 999999);
-            $slug = Str::slug($storeName) . '-' . rand(100, 999);
+            // Format strictly: SP + YmdHis (e.g. SP20261106015100)
+            $code = 'SP' . date('YmdHis');
+            while (DB::connection('mysql')->table('shops')->where('shop_code', $code)->exists()) {
+                sleep(1);
+                $code = 'SP' . date('YmdHis');
+            }
+            $slug = Str::slug($storeName) . '-' . strtolower(substr($code, -6));
             $dbName = 'tenant_' . strtolower($code);
             $validUntil = now()->addDays($planInfo['duration_days'])->format('Y-m-d');
 
+            // Find State Name from gst_states table
+            $stateRecord = DB::connection('mysql')->table('gst_states')->where('state_code', $stateCode)->first();
+            $stateName = $stateRecord ? $stateRecord->state_name : 'BIHAR';
+
             $settings = [
-                'city' => $city,
+                'state_code' => $stateCode,
+                'state_name' => $stateName,
+                'city' => $stateName,
                 'plan_id' => $planId,
                 'plan_name' => $planInfo['plan_name'],
                 'billing_cycle' => $cycle,
@@ -242,15 +291,17 @@ class PayUController extends Controller
                 'terminal_password' => 'admin123',
                 'payment_gateway' => 'payu_money',
                 'last_transaction_id' => $txnid,
+                'referral_code' => $referralCode,
+                'initial_setup_completed' => false,
             ];
 
-            // Insert Shop into central database
+            // Insert Shop into central database ONLY UPON VERIFIED PAYMENT
             $shopId = DB::connection('mysql')->table('shops')->insertGetId([
                 'name' => $storeName,
                 'shop_code' => $code,
                 'slug' => $slug,
                 'owner_name' => $ownerName,
-                'owner_email' => strtolower(Str::slug($ownerName)) . '@merchant.shoppy.io',
+                'owner_email' => strtolower(Str::slug($ownerName)) . '@' . strtolower($code) . '.shoppy.io',
                 'owner_phone' => $ownerPhone,
                 'database_name' => $dbName,
                 'status' => 'active',
@@ -259,12 +310,90 @@ class PayUController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Update subscription_payments record
+            // Link Agent Referral & Commission if valid referral_code provided
+            if (!empty($referralCode)) {
+                $agent = DB::connection('mysql')->table('agents')->where('referral_code', strtoupper(trim($referralCode)))->first();
+                if ($agent) {
+                    try {
+                        DB::connection('mysql')->table('agent_referrals')->insert([
+                            'agent_id' => $agent->id,
+                            'shop_id' => $shopId,
+                            'referral_code' => $agent->referral_code,
+                            'referred_at' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                        $rate = (float)($agent->commission_rate_percent ?: 10.00);
+                        $saleAmount = (float)$planInfo['total_amount'];
+                        $percentCommission = $saleAmount * ($rate / 100);
+                        $bonus = (float)($agent->fixed_signup_bonus ?: 0);
+                        $gross = $percentCommission + $bonus;
+                        $tds = $gross * 0.05;
+                        $net = $gross - $tds;
+
+                        DB::connection('mysql')->table('agent_commissions')->insert([
+                            'agent_id' => $agent->id,
+                            'shop_id' => $shopId,
+                            'subscription_payment_id' => null,
+                            'commission_type' => 'signup',
+                            'commission_amount' => $gross,
+                            'tds_rate' => 5.00,
+                            'tds_amount' => $tds,
+                            'net_payable' => $net,
+                            'status' => 'approved',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::error('Agent referral linking error: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            // 1. Create Active Store Subscription in shop_subscriptions table
+            $planRecord = DB::connection('mysql')->table('subscription_plans')
+                ->where('code', $planId)
+                ->orWhere('id', is_numeric($planId) ? (int)$planId : 0)
+                ->first();
+            $planDbId = $planRecord ? $planRecord->id : 1;
+
+            $subscriptionId = DB::connection('mysql')->table('shop_subscriptions')->insertGetId([
+                'shop_id' => $shopId,
+                'plan_id' => $planDbId,
+                'licensed_categories' => json_encode(['all']),
+                'starts_at' => now(),
+                'expires_at' => $validUntil,
+                'grace_ends_at' => now()->addDays($planInfo['duration_days'] + 7)->format('Y-m-d H:i:s'),
+                'status' => 'active',
+                'auto_renew' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // 2. Link payment to subscription & store Passbook metadata
+            $invoiceNo = 'INV-' . strtoupper($code) . '-0001';
+            $passbookMetadata = array_merge($metadata ?? [], [
+                'type' => 'onboard',
+                'invoice_no' => $invoiceNo,
+                'plan_name' => $planInfo['plan_name'],
+                'plan_code' => $planId,
+                'duration_days' => $planInfo['duration_days'],
+                'billing_cycle' => $cycle,
+                'valid_until' => $validUntil,
+                'amount_paid' => $planInfo['total_amount'],
+                'payment_date' => now()->toIso8601String(),
+                'payment_gateway' => 'PayU Money (Live)',
+            ]);
+
+            // Update subscription_payments record with subscription link and Passbook ledger data
             DB::connection('mysql')->table('subscription_payments')
                 ->where('transaction_id', $txnid)
                 ->update([
                     'shop_id' => $shopId,
+                    'shop_subscription_id' => $subscriptionId,
                     'status' => 'success',
+                    'metadata' => json_encode($passbookMetadata),
                     'updated_at' => now()
                 ]);
 
@@ -283,12 +412,15 @@ class PayUController extends Controller
                     '--force' => true,
                 ]);
 
+                // Seed Official GST States into tenant database
+                (new \Database\Seeders\GstStatesSeeder)->run('tenant');
+
                 // Seed Initial Branch
                 $branchId = DB::connection('tenant')->table('branches')->insertGetId([
                     'name' => 'Main Store',
                     'code' => 'BR-01',
                     'phone' => $ownerPhone,
-                    'address' => $city,
+                    'address' => $stateName,
                     'is_active' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -305,6 +437,22 @@ class PayUController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                // Seed Initial Settings & Subscription info into tenant database
+                DB::connection('tenant')->table('settings')->insertOrIgnore([
+                    ['key' => 'store_name', 'value' => $storeName, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'owner_name', 'value' => $ownerName, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'contact_phone', 'value' => $ownerPhone, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'state_code', 'value' => $stateCode, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'state_name', 'value' => $stateName, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'theme_color', 'value' => '#008ba3', 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'valid_until', 'value' => $validUntil, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'plan_name', 'value' => $planInfo['plan_name'], 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'plan_id', 'value' => $planId, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'billing_cycle', 'value' => $cycle, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'subscription_id', 'value' => (string)$subscriptionId, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'last_transaction_id', 'value' => $txnid, 'created_at' => now(), 'updated_at' => now()],
+                ]);
             } catch (\Throwable $e) {
                 Log::error('Tenant DB provisioning error: ' . $e->getMessage());
             }
@@ -319,6 +467,8 @@ class PayUController extends Controller
                     'name' => $storeName,
                     'owner_name' => $ownerName,
                     'owner_phone' => $ownerPhone,
+                    'state_code' => $stateCode,
+                    'state_name' => $stateName,
                     'database_name' => $dbName,
                     'plan_name' => $planInfo['plan_name'],
                     'plan_id' => $planId,
@@ -327,7 +477,9 @@ class PayUController extends Controller
                     'terminal_password' => 'admin123',
                     'status' => 'active',
                     'transaction_id' => $txnid,
-                ]
+                ],
+                'auto_login' => true,
+                'redirect_url' => '/shop-admin/settings?setup=1',
             ]);
         }
 
@@ -383,14 +535,105 @@ class PayUController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            // Update subscription_payments
+            // 1. Insert new Active Subscription Record into shop_subscriptions
+            $planRecord = DB::connection('mysql')->table('subscription_plans')
+                ->where('code', $planId)
+                ->orWhere('id', is_numeric($planId) ? (int)$planId : 0)
+                ->first();
+            $planDbId = $planRecord ? $planRecord->id : 1;
+
+            $renewalSubId = DB::connection('mysql')->table('shop_subscriptions')->insertGetId([
+                'shop_id' => $shop->id,
+                'plan_id' => $planDbId,
+                'licensed_categories' => json_encode(['all']),
+                'starts_at' => $baseDate->format('Y-m-d H:i:s'),
+                'expires_at' => $newValidUntil,
+                'grace_ends_at' => \Carbon\Carbon::parse($newValidUntil)->addDays(7)->format('Y-m-d H:i:s'),
+                'status' => 'active',
+                'auto_renew' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // 2. Insert/Update Passbook Entry in subscription_payments
+            $renewalInvoiceNo = 'INV-' . strtoupper($shop->shop_code) . '-' . time();
+            $renewalPassbookMetadata = [
+                'type' => 'renewal',
+                'invoice_no' => $renewalInvoiceNo,
+                'shop_code' => $shop->shop_code,
+                'store_name' => $shop->name,
+                'plan_name' => $planInfo['plan_name'],
+                'plan_code' => $planId,
+                'duration_days' => $planInfo['duration_days'],
+                'billing_cycle' => $cycle,
+                'valid_until' => $newValidUntil,
+                'amount_paid' => $planInfo['total_amount'],
+                'payment_date' => now()->toIso8601String(),
+                'payment_gateway' => 'PayU Money (Live)',
+            ];
+
             DB::connection('mysql')->table('subscription_payments')
-                ->where('transaction_id', $txnid)
-                ->update([
-                    'shop_id' => $shop->id,
-                    'status' => 'success',
-                    'updated_at' => now(),
-                ]);
+                ->updateOrInsert(
+                    ['transaction_id' => $txnid],
+                    [
+                        'shop_id' => $shop->id,
+                        'shop_subscription_id' => $renewalSubId,
+                        'amount' => number_format((float)$planInfo['total_amount'], 2, '.', ''),
+                        'payment_method' => 'payu_money',
+                        'gateway' => 'payu',
+                        'status' => 'success',
+                        'metadata' => json_encode($renewalPassbookMetadata),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
+
+            // 3. Update tenant database settings if tenant database exists
+            try {
+                if (!empty($shop->database_name)) {
+                    \Illuminate\Support\Facades\Config::set('database.connections.tenant.database', $shop->database_name);
+                    DB::purge('tenant');
+                    DB::connection('tenant')->table('settings')->updateOrInsert(
+                        ['key' => 'valid_until'],
+                        ['value' => $newValidUntil, 'updated_at' => now()]
+                    );
+                    DB::connection('tenant')->table('settings')->updateOrInsert(
+                        ['key' => 'plan_name'],
+                        ['value' => $planInfo['plan_name'], 'updated_at' => now()]
+                    );
+                }
+            } catch (\Throwable $e) {}
+
+            // Calculate and auto-credit Agent Renewal Commission if shop was referred by an agent
+            try {
+                $referral = DB::connection('mysql')->table('agent_referrals')->where('shop_id', $shop->id)->first();
+                if ($referral) {
+                    $agent = DB::connection('mysql')->table('agents')->where('id', $referral->agent_id)->first();
+                    if ($agent && ($agent->status === 'approved' || $agent->status === 'active')) {
+                        $rate = (float)($agent->commission_rate_percent ?: 10.00);
+                        $saleAmount = (float)$planInfo['total_amount'];
+                        $gross = $saleAmount * ($rate / 100);
+                        $tds = $gross * 0.05;
+                        $net = $gross - $tds;
+
+                        DB::connection('mysql')->table('agent_commissions')->insert([
+                            'agent_id' => $agent->id,
+                            'shop_id' => $shop->id,
+                            'subscription_payment_id' => null,
+                            'commission_type' => 'renewal',
+                            'commission_amount' => $gross,
+                            'tds_rate' => 5.00,
+                            'tds_amount' => $tds,
+                            'net_payable' => $net,
+                            'status' => 'approved',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('Agent renewal commission credit error: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,
@@ -430,18 +673,131 @@ class PayUController extends Controller
                 'txnid' => $txnid,
                 'status' => 'success',
                 'type' => $type,
-                'shop_code' => $shopCode,
+                'shop_code' => ($type === 'renew') ? $shopCode : '',
                 'plan_id' => $request->input('udf3', 'yearly-package'),
                 'billing_cycle' => $request->input('udf4', 'yearly'),
                 'own_whatsapp' => $request->input('udf5') === '1',
             ]);
 
-            $this->verifyAndComplete($req);
+            $response = $this->verifyAndComplete($req);
+            $respData = $response->getData(true);
+            $finalStoreCode = $respData['store']['shop_code'] ?? $shopCode;
 
-            return redirect('/?payu_status=success&txnid=' . urlencode($txnid) . '&type=' . urlencode($type) . '&shop=' . urlencode($shopCode));
+            if ($type === 'onboard') {
+                if ($finalStoreCode) {
+                    session(['active_store_code' => $finalStoreCode]);
+                    cookie()->queue(cookie('shoppy_active_store_code', $finalStoreCode, 60 * 24));
+                    cookie()->queue(cookie('shoppy_active_store', $finalStoreCode, 60 * 24));
+                }
+                return redirect('/shop-admin/settings?setup=1&code=' . urlencode($finalStoreCode) . '&provisioning=1&txnid=' . urlencode($txnid));
+            }
+
+            if ($type === 'renew') {
+                if ($finalStoreCode) {
+                    session(['active_store_code' => $finalStoreCode]);
+                    cookie()->queue(cookie('shoppy_active_store_code', $finalStoreCode, 60 * 24));
+                    cookie()->queue(cookie('shoppy_active_store', $finalStoreCode, 60 * 24));
+                }
+                return redirect('/shop-admin?renewal_status=success&code=' . urlencode($finalStoreCode) . '&txnid=' . urlencode($txnid));
+            }
+
+            return redirect('/?payu_status=success&txnid=' . urlencode($txnid) . '&type=' . urlencode($type) . '&shop=' . urlencode($finalStoreCode));
         }
 
         return redirect('/?payu_status=failed&txnid=' . urlencode($txnid));
+    }
+
+    /**
+     * Get Store Subscription Status & Payment Passbook Ledger
+     */
+    public function getPassbook(Request $request): JsonResponse
+    {
+        $shopCode = $request->query('code')
+            ?? $request->query('shop_code')
+            ?? $request->header('X-Shop-Code')
+            ?? session('active_store_code')
+            ?? $request->cookie('shoppy_active_store_code');
+
+        $shop = null;
+        if ($shopCode) {
+            $shop = DB::connection('mysql')->table('shops')->where('shop_code', strtoupper(trim($shopCode)))->first();
+        }
+        if (!$shop) {
+            $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+        }
+
+        if (!$shop) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        $settings = json_decode($shop->settings ?? '{}', true) ?: [];
+        $validUntil = $settings['valid_until'] ?? null;
+        $planName = $settings['plan_name'] ?? 'Yearly Package';
+        $cycle = $settings['billing_cycle'] ?? 'yearly';
+
+        $daysRemaining = 0;
+        $isExpired = false;
+        $isExpiringSoon = false;
+        if ($validUntil) {
+            $expiry = \Carbon\Carbon::parse($validUntil)->startOfDay();
+            $today = now()->startOfDay();
+            $daysRemaining = (int)$today->diffInDays($expiry, false);
+            $isExpired = ($daysRemaining < 0);
+            $isExpiringSoon = ($daysRemaining >= 0 && $daysRemaining <= 5);
+        }
+
+        // Fetch all payment ledger rows for this shop (Passbook)
+        $payments = DB::connection('mysql')->table('subscription_payments')
+            ->where('shop_id', $shop->id)
+            ->where('status', 'success')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->map(function ($p) {
+                $meta = json_decode($p->metadata ?? '{}', true) ?: [];
+                return [
+                    'id' => $p->id,
+                    'transaction_id' => $p->transaction_id,
+                    'amount' => (float)$p->amount,
+                    'formatted_amount' => '₹' . number_format((float)$p->amount, 2),
+                    'payment_method' => 'PayU Money',
+                    'gateway' => 'PayU Gateway (Instant UPI / Cards)',
+                    'status' => 'success',
+                    'date' => \Carbon\Carbon::parse($p->created_at)->format('d M Y, h:i A'),
+                    'invoice_no' => $meta['invoice_no'] ?? ('INV-' . $p->id),
+                    'plan_name' => $meta['plan_name'] ?? 'Retail ERP Package',
+                    'billing_cycle' => $meta['billing_cycle'] ?? 'yearly',
+                    'duration_days' => $meta['duration_days'] ?? 365,
+                    'valid_until' => $meta['valid_until'] ?? null,
+                    'type' => $meta['type'] ?? 'payment',
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'shop' => [
+                'id' => $shop->id,
+                'name' => $shop->name,
+                'shop_code' => $shop->shop_code,
+                'status' => $shop->status,
+                'plan_name' => $planName,
+                'billing_cycle' => $cycle,
+                'valid_until' => $validUntil,
+                'days_remaining' => $daysRemaining,
+                'is_expired' => $isExpired,
+                'is_expiring_soon' => $isExpiringSoon,
+            ],
+            'passbook' => $payments,
+            'total_paid' => $payments->sum('amount'),
+            'total_transactions' => count($payments),
+        ]);
+    }
+
+    /**
+     * Get Subscription Expiry Status API
+     */
+    public function getSubscriptionStatus(Request $request): JsonResponse
+    {
+        return $this->getPassbook($request);
     }
 }
 

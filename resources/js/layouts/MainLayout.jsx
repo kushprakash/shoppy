@@ -56,6 +56,53 @@ export default function MainLayout() {
   const [expiryStatus, setExpiryStatus] = useState(() => subscriptionService.getStoreExpiryStatus(activeCode));
   const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
 
+  // Check for renewal success callback in URL (?renewal_status=success&code=SP...&txnid=PAYU_...)
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get('renewal_status') === 'success') {
+        const txn = sp.get('txnid') || '';
+        const storeCode = sp.get('code') || activeCode;
+        if (storeCode) {
+          localStorage.setItem('shoppy_active_store_code', storeCode);
+        }
+        showToast(`🎉 Subscription renewed successfully via PayU! Txn: ${txn || 'Verified'}`);
+        // Fetch fresh passbook and status from API
+        fetch(`/api/payu/status?code=${encodeURIComponent(storeCode)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.shop) {
+              const freshStatus = {
+                storeName: data.shop.name,
+                validUntil: data.shop.valid_until,
+                daysRemaining: data.shop.days_remaining,
+                isExpired: data.shop.is_expired,
+                isExpiringSoon: data.shop.is_expiring_soon,
+                showAlert: data.shop.is_expired || data.shop.is_expiring_soon,
+              };
+              setExpiryStatus(freshStatus);
+              // Also update subscriptionService state
+              const state = subscriptionService.getState();
+              state.stores = (state.stores || []).map((s) => {
+                if (s.shop_code.toUpperCase() === storeCode.toUpperCase()) {
+                  return { ...s, valid_until: data.shop.valid_until, status: 'active' };
+                }
+                return s;
+              });
+              subscriptionService.saveState(state);
+            }
+          })
+          .catch(() => {});
+
+        // Clean up URL without reloading
+        const url = new URL(window.location.href);
+        url.searchParams.delete('renewal_status');
+        url.searchParams.delete('txnid');
+        window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''));
+      }
+    } catch (e) {}
+  }, []);
+
   useEffect(() => {
     const status = subscriptionService.getStoreExpiryStatus(activeCode);
     setExpiryStatus(status);

@@ -2,17 +2,117 @@
 // Manages Packages, Categories, Subcategories, Stores, and Due Payments
 // Synchronizes state across Super Admin (/master) and Public Landing Page (/)
 
-const STORAGE_KEY = 'shoppy_master_saas_data_v8_live';
+const STORAGE_KEY = 'shoppy_master_saas_data_v15_packages';
 
-export const INITIAL_PLANS = [];
+export const COMMON_ALL_FEATURES = [
+  'High-Speed GST Billing Software (Thermal, A4 Auto C/F & B/F, Dot-Matrix 1-Page Medical Tear-off)',
+  'Comprehensive Store Management (Multi-Branch Inventory, Stock Ledger, Cashier Shifts & Z-Report)',
+  'Omnichannel Ecommerce Suite (Instant Online Web Storefront at domain/{storeCode} with Real-time Sync)',
+  'Integrated Payment Gateway Suite (PhonePe, PayU, Razorpay, Cashfree, Easebuzz & Instant UPI QR)',
+  'Integrated Courier & Logistics API (Shiprocket, NimbusPost, Delhivery, Auto AWB & Tracking)',
+  'WhatsApp Cloud Messaging Suite (Automated Tax Invoices, Payment Reminders & Shift Reports)',
+  '1D/2D Barcode Generator, Printable Price Tags & Shelf Labels',
+  'Expense Manager, Cash Flow Register & Automated P&L Reports',
+  'Staff Roles, Multi-User Cashier Profiles & Audit Permission Logs',
+  'Zero Commission on Online Store Sales & Unlimited Products',
+  'Dedicated MySQL Database Isolation per Tenant & 100% Data Privacy',
+  '24/7 Priority WhatsApp, Phone & Remote Desk Support'
+];
+
+export const DEFAULT_PLANS = [
+  {
+    id: 'monthly-package',
+    code: 'monthly-package',
+    name: 'Monthly Package',
+    shortName: 'MONTHLY PLAN',
+    category: 'business',
+    badge: 'Starter • Pay As You Go',
+    ribbonBg: 'bg-[#008ba3]',
+    buttonText: 'SIGN UP NOW',
+    buttonBg: 'bg-[#008ba3] text-white',
+    hasWhatsappOption: true,
+    hasEcommerce: true,
+    subtext: 'Billed monthly (₹1,000/mo) • All Features Included',
+    billingCycle: 'monthly',
+    basePrice: 1000,
+    durationDays: 30,
+    cycles: {
+      monthly: { regular: 1000, offer: 1000, offPercent: 0, label: '/ month', ribbonText: 'STARTER', months: 1 }
+    },
+    features: COMMON_ALL_FEATURES
+  },
+  {
+    id: 'quarterly-package',
+    code: 'quarterly-package',
+    name: 'Quarterly Package',
+    shortName: 'QUARTERLY PLAN',
+    category: 'business',
+    badge: 'Save ₹500 • 17% OFF',
+    ribbonBg: 'bg-[#6b21a8]',
+    buttonText: 'SIGN UP NOW',
+    buttonBg: 'bg-[#6b21a8] text-white',
+    hasWhatsappOption: true,
+    hasEcommerce: true,
+    subtext: 'Billed every 3 months (₹2,500) • Save ₹500 on billing',
+    billingCycle: 'quarterly',
+    basePrice: 2500,
+    durationDays: 90,
+    cycles: {
+      quarterly: { regular: 3000, offer: 2500, offPercent: 17, label: '/ 3 months', ribbonText: 'SAVE ₹500', months: 3 }
+    },
+    features: COMMON_ALL_FEATURES
+  },
+  {
+    id: 'half-yearly-package',
+    code: 'half-yearly-package',
+    name: 'Half-Yearly Package',
+    shortName: 'HALF-YEARLY PLAN',
+    category: 'business',
+    badge: 'Save ₹1,500 • 25% OFF',
+    ribbonBg: 'bg-[#00a2c7]',
+    buttonText: 'SIGN UP NOW',
+    buttonBg: 'bg-[#00a2c7] text-white',
+    hasWhatsappOption: true,
+    hasEcommerce: true,
+    subtext: 'Billed every 6 months (₹4,500) • Save ₹1,500 on billing',
+    billingCycle: 'half_yearly',
+    basePrice: 4500,
+    durationDays: 180,
+    cycles: {
+      half_yearly: { regular: 6000, offer: 4500, offPercent: 25, label: '/ 6 months', ribbonText: 'SAVE ₹1,500', months: 6 }
+    },
+    features: COMMON_ALL_FEATURES
+  },
+  {
+    id: 'yearly-package',
+    code: 'yearly-package',
+    name: 'Yearly Package',
+    shortName: 'YEARLY ENTERPRISE',
+    category: 'business',
+    badge: 'Best Value • Save ₹4,000 • 33% OFF',
+    ribbonBg: 'bg-[#059669]',
+    buttonText: 'SIGN UP NOW',
+    buttonBg: 'bg-[#059669] text-white',
+    hasWhatsappOption: true,
+    hasEcommerce: true,
+    subtext: 'Billed annually (₹8,000/yr) • Maximum Savings of ₹4,000',
+    billingCycle: 'yearly',
+    basePrice: 8000,
+    durationDays: 365,
+    cycles: {
+      yearly: { regular: 12000, offer: 8000, offPercent: 33, label: '/ year', ribbonText: 'BEST VALUE • SAVE ₹4,000', months: 12 }
+    },
+    features: COMMON_ALL_FEATURES
+  }
+];
+
+export const INITIAL_PLANS = DEFAULT_PLANS;
 export const INITIAL_CATEGORIES = [];
 export const INITIAL_SUBCATEGORIES = [];
 export const INITIAL_STORES = [];
 
 const DEFAULT_CATEGORIES = [];
 const DEFAULT_SUBCATEGORIES = [];
-const COMMON_ALL_FEATURES = [];
-const DEFAULT_PLANS = [];
 const DEFAULT_STORES = [];
 
 class SubscriptionService {
@@ -23,6 +123,19 @@ class SubscriptionService {
 
   init() {
     try {
+      // Purge all legacy localStorage keys to prevent old packages from showing
+      const legacyKeys = [
+        'shoppy_master_saas_data_v10_live',
+        'shoppy_master_saas_data_v9_live',
+        'shoppy_master_saas_data_v8',
+        'shoppy_master_saas_data_v7',
+        'shoppy_master_saas_data_v6',
+        'shoppy_master_plans'
+      ];
+      legacyKeys.forEach((k) => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+
       const existing = localStorage.getItem(STORAGE_KEY);
       if (!existing) {
         this.saveState({
@@ -40,6 +153,17 @@ class SubscriptionService {
           },
           blogs: []
         });
+      } else {
+        // Strictly verify that only the 4 official packages exist
+        const parsed = JSON.parse(existing);
+        const validCodes = ['monthly-package', 'quarterly-package', 'half-yearly-package', 'yearly-package'];
+        const isCorrupt = !Array.isArray(parsed.plans) ||
+          parsed.plans.length !== 4 ||
+          parsed.plans.some(p => !validCodes.includes(p.code || p.id) || (p.name && p.name.includes('Enterprise Plan')));
+        if (isCorrupt) {
+          parsed.plans = DEFAULT_PLANS;
+          this.saveState(parsed);
+        }
       }
     } catch (e) {
       // LocalStorage fallback
@@ -194,17 +318,40 @@ class SubscriptionService {
 
   // Update Plan rates in MySQL
   async updatePlan(planCode, updatedPlan) {
+    const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['X-Master-Token'] = token;
+    }
+
+    // Optimistically update local state immediately
     const state = this.getState();
-    state.plans = state.plans.map((p) => (p.code === planCode || p.id === planCode) ? { ...p, ...updatedPlan } : p);
+    state.plans = (state.plans || []).map((p) => 
+      (p.code === planCode || p.id === planCode || (p.db_id && String(p.db_id) === String(planCode))) 
+        ? { ...p, ...updatedPlan } 
+        : p
+    );
     this.saveState(state);
 
     try {
-      fetch(`/api/master/plans/${planCode}`, {
+      const res = await fetch(`/api/master/plans/${encodeURIComponent(planCode)}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers,
         body: JSON.stringify(updatedPlan)
-      }).then(() => this.syncFromBackend());
-    } catch (e) {}
+      });
+      const data = await res.json();
+
+      // Sync from backend to confirm database persistence
+      await this.syncFromBackend();
+      return data;
+    } catch (e) {
+      console.error('SubscriptionService updatePlan error:', e);
+      return { success: false, error: e.message };
+    }
   }
 
   getCategories() {
@@ -345,48 +492,80 @@ class SubscriptionService {
         regular: 1000,
         offPercent: 0,
         label: '/ month',
-        whatsappAddon: 0,
-        ribbonText: 'STANDARD'
+        whatsappAddon: 500,
+        ribbonText: 'STARTER'
       };
     }
 
-    // Determine target cycle from plan or param
-    const effectiveCycle = cycle || plan.billingCycle || 'monthly';
+    const planCode = String(plan.code || plan.id || '').toLowerCase();
+    let effectiveCycle = plan.billingCycle;
+    if (!effectiveCycle) {
+      if (planCode.includes('monthly')) effectiveCycle = 'monthly';
+      else if (planCode.includes('quarterly')) effectiveCycle = 'quarterly';
+      else if (planCode.includes('half-yearly') || planCode.includes('half_yearly')) effectiveCycle = 'half_yearly';
+      else if (planCode.includes('yearly')) effectiveCycle = 'yearly';
+      else effectiveCycle = cycle || 'monthly';
+    }
 
-    let baseOffer = plan.basePrice || 1000;
+    let baseOffer = 1000;
     let months = 1;
     let label = '/ month';
 
-    if (effectiveCycle === 'monthly' || plan.id === 'monthly-package') {
+    if (effectiveCycle === 'monthly' || planCode.includes('monthly')) {
       baseOffer = 1000;
       months = 1;
       label = '/ month';
-    } else if (effectiveCycle === 'quarterly' || plan.id === 'quarterly-package') {
+    } else if (effectiveCycle === 'quarterly' || planCode.includes('quarterly')) {
       baseOffer = 2500;
       months = 3;
       label = '/ 3 months';
-    } else if (effectiveCycle === 'half_yearly' || plan.id === 'half-yearly-package') {
+    } else if (effectiveCycle === 'half_yearly' || planCode.includes('half-yearly') || planCode.includes('half_yearly')) {
       baseOffer = 4500;
       months = 6;
       label = '/ 6 months';
-    } else if (effectiveCycle === 'yearly' || plan.id === 'yearly-package') {
+    } else if (effectiveCycle === 'yearly' || planCode.includes('yearly')) {
       baseOffer = 8000;
       months = 12;
       label = '/ year';
     }
 
-    // 1 Checkbox for WhatsApp Message: +500 per month if ticked
-    const whatsappAddon = useWhatsapp ? (500 * months) : 0;
+    // Dynamic offer price check from cycles object or basePrice
+    try {
+      const cyclesObj = (plan.cycles && typeof plan.cycles === 'object')
+        ? plan.cycles
+        : (typeof plan.cycles === 'string' ? JSON.parse(plan.cycles || '{}') : {});
+      const cycleData = cyclesObj[effectiveCycle];
+      if (cycleData && cycleData.offer !== undefined && cycleData.offer !== null && Number(cycleData.offer) >= 0) {
+        baseOffer = Number(cycleData.offer);
+      } else if (plan.basePrice !== undefined && plan.basePrice !== null && Number(plan.basePrice) >= 0) {
+        baseOffer = Number(plan.basePrice);
+      }
+    } catch (e) {
+      // Fallback to defaults
+    }
+
+    // WhatsApp Message Add-on: ₹500 per month
+    const monthlyWhatsappRate = 500;
+    const whatsappAddon = useWhatsapp ? (monthlyWhatsappRate * months) : 0;
     const finalOffer = baseOffer + whatsappAddon;
 
-    // Regular reference price based on monthly rate of ₹1,000 + ₹500/mo if whatsapp
-    const regularBase = 1000 * months;
-    const regularPrice = regularBase + (useWhatsapp ? (500 * months) : 0);
+    // Regular reference price based on monthly rate of ₹1,000/mo + whatsapp
+    let defaultRegular = months * 1000;
+    let cyclesObj = null;
+    try {
+      cyclesObj = (plan.cycles && typeof plan.cycles === 'object') ? plan.cycles : (typeof plan.cycles === 'string' ? JSON.parse(plan.cycles || '{}') : null);
+    } catch (e) {}
+    const cycleData = cyclesObj ? cyclesObj[effectiveCycle] : null;
+    const regularBase = (cycleData && cycleData.regular !== undefined && Number(cycleData.regular) > 0)
+      ? Number(cycleData.regular)
+      : defaultRegular;
+    const regularPrice = regularBase + (useWhatsapp ? (monthlyWhatsappRate * months) : 0);
     const offPercent = regularPrice > finalOffer ? Math.round(((regularPrice - finalOffer) / regularPrice) * 100) : 0;
 
     let ribbonText = 'POPULAR';
-    if (months === 3) ribbonText = 'SAVE ₹500';
-    if (months === 6) ribbonText = 'SAVE ₹1,500';
+    if (months === 1) ribbonText = 'STARTER';
+    if (months === 3) ribbonText = 'SAVE ₹500 • 17% OFF';
+    if (months === 6) ribbonText = 'SAVE ₹1,500 • 25% OFF';
     if (months === 12) ribbonText = 'BEST VALUE • SAVE ₹4,000';
 
     return {
@@ -411,7 +590,23 @@ class SubscriptionService {
       store = codeOrStore;
     } else if (typeof codeOrStore === 'string' && codeOrStore.trim()) {
       const clean = codeOrStore.trim().toUpperCase();
-      store = (this.getStores() || []).find((s) => s.shop_code.toUpperCase() === clean);
+      store = (this.getStores() || []).find((s) => s.shop_code && s.shop_code.toUpperCase() === clean);
+    }
+
+    if (!store) {
+      try {
+        const storedStr = localStorage.getItem('shoppy_store_branding_data') || localStorage.getItem('shoppy_active_store');
+        if (storedStr) {
+          const parsed = JSON.parse(storedStr);
+          if (parsed && (parsed.valid_until || parsed.validUntil)) {
+            store = {
+              shop_code: parsed.shop_code || parsed.shopCode || codeOrStore,
+              name: parsed.store_name || parsed.name || 'Retail Store',
+              valid_until: parsed.valid_until || parsed.validUntil
+            };
+          }
+        }
+      } catch (e) {}
     }
 
     if (!store || !store.valid_until) return null;
@@ -434,6 +629,21 @@ class SubscriptionService {
       isExpired: diffDays < 0,
       showAlert: diffDays <= 5
     };
+  }
+
+  // Fetch Live Subscription Passbook & Ledger from MySQL
+  async getLiveSubscriptionPassbook(shopCode) {
+    try {
+      const code = shopCode || localStorage.getItem('shoppy_active_store_code') || '';
+      const res = await fetch(`/api/payu/passbook?code=${encodeURIComponent(code)}`);
+      if (res.ok) {
+        const json = await res.json();
+        return json;
+      }
+    } catch (e) {
+      console.warn('Live subscription passbook fetch error:', e);
+    }
+    return { success: false, passbook: [] };
   }
 
   // Onboard new store from Landing Page or Master

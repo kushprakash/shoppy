@@ -22,6 +22,37 @@ class MasterPortalApiController extends Controller
             ->orderBy('id', 'asc')
             ->get()
             ->map(function ($plan) {
+                $cycles = json_decode($plan->cycles, true) ?: [];
+                $cycleCode = 'yearly';
+                $durationDays = 365;
+
+                if (str_contains($plan->code, 'monthly')) {
+                    $cycleCode = 'monthly';
+                    $durationDays = 30;
+                } elseif (str_contains($plan->code, 'quarterly')) {
+                    $cycleCode = 'quarterly';
+                    $durationDays = 90;
+                } elseif (str_contains($plan->code, 'half-yearly') || str_contains($plan->code, 'half_yearly')) {
+                    $cycleCode = 'half_yearly';
+                    $durationDays = 180;
+                }
+
+                // Dynamic base price based on cycles offer or plan prices
+                $basePrice = 8000;
+                if (isset($cycles[$cycleCode]['offer'])) {
+                    $basePrice = (float)$cycles[$cycleCode]['offer'];
+                } elseif ($cycleCode === 'monthly' && $plan->monthly_price) {
+                    $basePrice = (float)$plan->monthly_price;
+                } elseif ($cycleCode === 'yearly' && $plan->annual_price) {
+                    $basePrice = (float)$plan->annual_price;
+                } elseif ($cycleCode === 'monthly') {
+                    $basePrice = 1000;
+                } elseif ($cycleCode === 'quarterly') {
+                    $basePrice = 2500;
+                } elseif ($cycleCode === 'half_yearly') {
+                    $basePrice = 4500;
+                }
+
                 return [
                     'id' => $plan->code,
                     'db_id' => $plan->id,
@@ -36,7 +67,10 @@ class MasterPortalApiController extends Controller
                     'hasWhatsappOption' => (bool) $plan->has_whatsapp,
                     'hasEcommerce' => (bool) $plan->has_ecommerce,
                     'subtext' => $plan->subtext ?: 'Complete ERP & E-Commerce',
-                    'cycles' => json_decode($plan->cycles, true) ?: [],
+                    'billingCycle' => $cycleCode,
+                    'basePrice' => $basePrice,
+                    'durationDays' => $durationDays,
+                    'cycles' => $cycles,
                     'features' => json_decode($plan->features, true) ?: [],
                     'is_active' => (bool) $plan->is_active,
                 ];
@@ -107,32 +141,96 @@ class MasterPortalApiController extends Controller
      */
     public function updatePlan(Request $request, $code): JsonResponse
     {
-        $plan = DB::connection('mysql')->table('subscription_plans')->where('code', $code)->first();
+        $plan = DB::connection('mysql')->table('subscription_plans')
+            ->where('code', $code)
+            ->orWhere(function ($q) use ($code) {
+                if (is_numeric($code)) {
+                    $q->where('id', (int)$code);
+                }
+            })
+            ->first();
+
         if (!$plan) {
-            return response()->json(['success' => false, 'message' => 'Plan not found'], 404);
+            return response()->json(['success' => false, 'message' => "Plan '{$code}' not found in database"], 404);
         }
 
-        $cycles = $request->input('cycles', json_decode($plan->cycles, true));
-        $features = $request->input('features', json_decode($plan->features, true));
+        $rawCycles = $request->input('cycles');
+        if (is_string($rawCycles)) {
+            $rawCycles = json_decode($rawCycles, true);
+        }
+        $cycles = !empty($rawCycles) ? $rawCycles : (json_decode($plan->cycles, true) ?: []);
+
+        // Sync cycle rates if basePrice passed
+        $basePrice = $request->input('basePrice');
+        if ($basePrice !== null && is_numeric($basePrice)) {
+            $cycleKey = 'monthly';
+            if (str_contains($plan->code, 'quarterly')) $cycleKey = 'quarterly';
+            elseif (str_contains($plan->code, 'half-yearly') || str_contains($plan->code, 'half_yearly')) $cycleKey = 'half_yearly';
+            elseif (str_contains($plan->code, 'yearly')) $cycleKey = 'yearly';
+
+            if (!isset($cycles[$cycleKey])) {
+                $cycles[$cycleKey] = [];
+            }
+            $cycles[$cycleKey]['offer'] = (float)$basePrice;
+        }
+
+        $rawFeatures = $request->input('features');
+        if (is_string($rawFeatures)) {
+            $rawFeatures = json_decode($rawFeatures, true);
+        }
+        $features = ($rawFeatures !== null) ? $rawFeatures : (json_decode($plan->features, true) ?: []);
+
+        $hasWhatsapp = $plan->has_whatsapp;
+        if ($request->has('hasWhatsappOption')) {
+            $hasWhatsapp = (bool)$request->input('hasWhatsappOption');
+        } elseif ($request->has('has_whatsapp')) {
+            $hasWhatsapp = (bool)$request->input('has_whatsapp');
+        }
+
+        $hasEcommerce = $plan->has_ecommerce;
+        if ($request->has('hasEcommerce')) {
+            $hasEcommerce = (bool)$request->input('hasEcommerce');
+        } elseif ($request->has('has_ecommerce')) {
+            $hasEcommerce = (bool)$request->input('has_ecommerce');
+        }
+
+        $monthlyPrice = isset($cycles['monthly']['offer']) ? (float)$cycles['monthly']['offer'] : $plan->monthly_price;
+        $annualPrice = isset($cycles['yearly']['offer']) ? (float)$cycles['yearly']['offer'] : $plan->annual_price;
+
+        if ($plan->code === 'quarterly-package' && isset($cycles['quarterly']['offer'])) {
+            $monthlyPrice = (float)$cycles['quarterly']['offer'];
+        } elseif ($plan->code === 'half-yearly-package' && isset($cycles['half_yearly']['offer'])) {
+            $monthlyPrice = (float)$cycles['half_yearly']['offer'];
+        }
 
         $updateData = [
             'name' => $request->input('name', $plan->name),
-            'short_name' => $request->input('shortName', $plan->short_name),
+            'short_name' => $request->input('shortName', $request->input('short_name', $plan->short_name)),
             'badge' => $request->input('badge', $plan->badge),
             'category' => $request->input('category', $plan->category),
-            'ribbon_bg' => $request->input('ribbonBg', $plan->ribbon_bg),
+            'ribbon_bg' => $request->input('ribbonBg', $request->input('ribbon_bg', $plan->ribbon_bg)),
+            'button_text' => $request->input('buttonText', $request->input('button_text', $plan->button_text)),
+            'subtext' => $request->input('subtext', $plan->subtext),
+            'has_whatsapp' => $hasWhatsapp,
+            'has_ecommerce' => $hasEcommerce,
             'cycles' => json_encode($cycles),
             'features' => json_encode($features),
-            'monthly_price' => $cycles['monthly']['offer'] ?? $plan->monthly_price,
-            'annual_price' => $cycles['yearly']['offer'] ?? $plan->annual_price,
+            'monthly_price' => $monthlyPrice,
+            'annual_price' => $annualPrice,
             'updated_at' => now(),
         ];
 
-        DB::connection('mysql')->table('subscription_plans')->where('code', $code)->update($updateData);
+        DB::connection('mysql')->table('subscription_plans')->where('id', $plan->id)->update($updateData);
 
         return response()->json([
             'success' => true,
-            'message' => 'Plan rates and features updated in database!',
+            'message' => "Plan '{$updateData['name']}' updated successfully in database!",
+            'plan_id' => $plan->id,
+            'code' => $plan->code,
+            'data' => array_merge((array)$plan, $updateData, [
+                'cycles' => $cycles,
+                'features' => $features
+            ])
         ]);
     }
 
@@ -202,8 +300,12 @@ class MasterPortalApiController extends Controller
             'own_whatsapp' => 'nullable|boolean',
         ]);
 
-        $code = 'STORE' . rand(100000, 999999);
-        $slug = Str::slug($validated['name']) . '-' . rand(100, 999);
+        $code = 'SP' . date('YmdHis');
+        while (DB::connection('mysql')->table('shops')->where('shop_code', $code)->exists()) {
+            sleep(1);
+            $code = 'SP' . date('YmdHis');
+        }
+        $slug = Str::slug($validated['name']) . '-' . strtolower(substr($code, -6));
         $dbName = 'tenant_' . strtolower($code);
 
         // Fetch plan details
@@ -253,6 +355,9 @@ class MasterPortalApiController extends Controller
                 '--path' => 'database/migrations/tenant',
                 '--force' => true,
             ]);
+
+            // Seed Official GST States into tenant database
+            (new \Database\Seeders\GstStatesSeeder)->run('tenant');
 
             // Seed initial Branch & POS Cash Register
             $branchId = DB::connection('tenant')->table('branches')->insertGetId([
@@ -620,13 +725,76 @@ class MasterPortalApiController extends Controller
         $settingsResponse = $this->getWebsiteSettings()->getData(true);
         $blogsResponse = $this->getBlogs()->getData(true);
 
+        $states = [];
+        try {
+            $states = DB::connection('mysql')->table('gst_states')
+                ->where('status', 1)
+                ->orderBy('state_code', 'asc')
+                ->get(['state_code', 'state_name']);
+        } catch (\Throwable $e) {}
+
         return response()->json([
             'success' => true,
             'plans' => $plansResponse['data'] ?? [],
             'settings' => $settingsResponse['data'] ?? [],
             'blogs' => $blogsResponse['data'] ?? [],
+            'gst_states' => $states,
             'powered_by' => 'Enexa IT Solutions Private Limited',
             'official_site' => 'https://www.enexa.in',
+        ]);
+    }
+
+    /**
+     * Get All Active GST States for Invoicing and Dropdowns
+     */
+    public function getGstStates(): JsonResponse
+    {
+        $states = DB::connection('mysql')->table('gst_states')
+            ->where('status', 1)
+            ->orderBy('state_code', 'asc')
+            ->get(['state_code', 'state_name']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $states,
+        ]);
+    }
+
+    /**
+     * Verify Referral / Agent Code
+     */
+    public function verifyAgent(Request $request): JsonResponse
+    {
+        $code = strtoupper(trim((string)$request->input('code', '')));
+        if (!$code) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a referral / agent code.'
+            ], 422);
+        }
+
+        $agent = DB::connection('mysql')->table('agents')
+            ->where('referral_code', $code)
+            ->where(function ($q) {
+                $q->where('status', 'approved')->orWhere('status', 'active');
+            })
+            ->first();
+
+        if (!$agent) {
+            return response()->json([
+                'success' => false,
+                'message' => "Invalid or unverified Agent Code '{$code}'."
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Agent code verified! Partner: {$agent->name}",
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'referral_code' => $agent->referral_code,
+            ]
         ]);
     }
 
@@ -839,6 +1007,555 @@ class MasterPortalApiController extends Controller
                 'owner_name' => $shop->owner_name,
                 'owner_email' => $shop->owner_email,
             ],
+        ]);
+    }
+
+    /**
+     * Agent Partner Authentication
+     */
+    public function agentLogin(Request $request): JsonResponse
+    {
+        $loginId = strtoupper(trim((string)$request->input('login_id', '')));
+        $password = (string)$request->input('password', '');
+
+        if (!$loginId || !$password) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Agent Code / Mobile and Password are required.'
+            ], 422);
+        }
+
+        $agent = DB::connection('mysql')->table('agents')
+            ->where(function ($q) use ($loginId) {
+                $q->where('referral_code', $loginId)
+                  ->orWhere('phone', $loginId)
+                  ->orWhere('email', strtolower($loginId));
+            })
+            ->first();
+
+        if (!$agent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Agent record not found with this Agent Code or Mobile.'
+            ], 404);
+        }
+
+        if ($agent->status !== 'approved' && $agent->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => "Your Agent account is currently {$agent->status}. Please contact Super Admin."
+            ], 403);
+        }
+
+        // Validate password (bcrypt, plain, or initial fallback)
+        $passwordValid = false;
+        if (!empty($agent->password)) {
+            $passwordValid = Hash::check($password, $agent->password) || $password === $agent->password;
+        } else {
+            $passwordValid = ($password === 'agent123' || $password === $agent->phone);
+        }
+
+        if (!$passwordValid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect agent password.'
+            ], 401);
+        }
+
+        $token = 'agent_' . bin2hex(random_bytes(24));
+        session(['agent_logged_in_id' => $agent->id]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Welcome back, {$agent->name}!",
+            'token' => $token,
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'agent_code' => $agent->referral_code,
+                'phone' => $agent->phone,
+                'email' => $agent->email,
+                'address' => $agent->address ?: 'Authorized Channel Partner',
+                'city' => $agent->city ?: 'Jaipur',
+                'state' => $agent->state ?: '08 - RAJASTHAN',
+                'id_card_number' => $agent->id_card_number ?: ('ICARD-' . $agent->referral_code),
+                'photo' => $agent->photo ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                'status' => $agent->status,
+                'commission_rate_percent' => (float)$agent->commission_rate_percent,
+                'fixed_signup_bonus' => (float)$agent->fixed_signup_bonus,
+            ]
+        ]);
+    }
+
+    /**
+     * Agent Partner Workspace Dashboard Data
+     * Shows referred stores, expiry alerts, pending dues, earnings & wallet balance
+     */
+    public function getAgentDashboard(Request $request): JsonResponse
+    {
+        $agentId = $request->input('agent_id') ?: session('agent_logged_in_id');
+        $code = strtoupper(trim((string)$request->input('code', '')));
+
+        $agentQuery = DB::connection('mysql')->table('agents');
+        if ($agentId) {
+            $agentQuery->where('id', $agentId);
+        } elseif ($code) {
+            $agentQuery->where('referral_code', $code);
+        } else {
+            // Default to first approved agent if neither supplied
+            $agentQuery->where('status', 'approved')->orderBy('id', 'asc');
+        }
+        $agent = $agentQuery->first();
+
+        if (!$agent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Agent not found.'
+            ], 404);
+        }
+
+        // 1. Fetch all referred stores
+        $referrals = DB::connection('mysql')->table('agent_referrals')
+            ->where('agent_id', $agent->id)
+            ->pluck('shop_id');
+
+        $shops = DB::connection('mysql')->table('shops')
+            ->whereIn('id', $referrals)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $now = now();
+        $referredStores = [];
+        $expiredCount = 0;
+        $expiringSoonCount = 0;
+        $activeCount = 0;
+        $pendingDuesCount = 0;
+        $totalDuesAmount = 0;
+
+        foreach ($shops as $shop) {
+            $settings = json_decode($shop->settings, true) ?: [];
+            $validUntilStr = $settings['valid_until'] ?? null;
+            $dueAmount = (float)($settings['due_amount'] ?? 0);
+
+            $isExpired = false;
+            $isExpiringSoon = false;
+            $daysRemaining = 0;
+
+            if ($validUntilStr) {
+                $validDate = \Carbon\Carbon::parse($validUntilStr)->endOfDay();
+                $diffDays = (int)$now->diffInDays($validDate, false);
+                $daysRemaining = $diffDays;
+
+                if ($now->greaterThan($validDate)) {
+                    $isExpired = true;
+                    $expiredCount++;
+                } elseif ($diffDays <= 30) {
+                    $isExpiringSoon = true;
+                    $expiringSoonCount++;
+                } else {
+                    $activeCount++;
+                }
+            } else {
+                $activeCount++;
+            }
+
+            if ($dueAmount > 0) {
+                $pendingDuesCount++;
+                $totalDuesAmount += $dueAmount;
+            }
+
+            $paymentStatus = 'active';
+            if ($isExpired) {
+                $paymentStatus = 'expired';
+            } elseif ($dueAmount > 0) {
+                $paymentStatus = 'due_pending';
+            } elseif ($isExpiringSoon) {
+                $paymentStatus = 'renewal_due';
+            }
+
+            $referredStores[] = [
+                'id' => $shop->id,
+                'shop_code' => $shop->shop_code,
+                'name' => $shop->name,
+                'owner_name' => $shop->owner_name,
+                'owner_phone' => $shop->owner_phone,
+                'owner_email' => $shop->owner_email,
+                'address' => $settings['address'] ?? ($settings['city'] ?? 'Registered Business Address'),
+                'city' => $settings['city'] ?? 'Jaipur, Rajasthan',
+                'plan_id' => $settings['plan_id'] ?? 'gst-billing',
+                'plan_name' => $settings['plan_name'] ?? 'GST Billing Software',
+                'billing_cycle' => $settings['billing_cycle'] ?? 'yearly',
+                'valid_until' => $validUntilStr ?: $now->addYear()->format('Y-m-d'),
+                'days_remaining' => $daysRemaining,
+                'is_expired' => $isExpired,
+                'is_expiring_soon' => $isExpiringSoon,
+                'due_amount' => $dueAmount,
+                'payment_status' => $paymentStatus,
+                'created_at' => substr($shop->created_at, 0, 10),
+            ];
+        }
+
+        // 2. Fetch Earnings & Wallet ledger
+        $commissions = DB::connection('mysql')->table('agent_commissions')
+            ->leftJoin('shops', 'agent_commissions.shop_id', '=', 'shops.id')
+            ->where('agent_commissions.agent_id', $agent->id)
+            ->select(
+                'agent_commissions.*',
+                'shops.name as shop_name',
+                'shops.shop_code'
+            )
+            ->orderBy('agent_commissions.id', 'desc')
+            ->get();
+
+        $totalApprovedEarnings = (float)$commissions->where('status', 'approved')->sum('net_payable');
+        $totalPendingEarnings = (float)$commissions->where('status', 'pending')->sum('net_payable');
+
+        $totalPayoutsProcessed = (float)DB::connection('mysql')->table('agent_payouts')
+            ->where('agent_id', $agent->id)
+            ->where('status', 'processed')
+            ->sum('amount');
+
+        $availableWalletBalance = max(0, $totalApprovedEarnings - $totalPayoutsProcessed);
+
+        return response()->json([
+            'success' => true,
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'agent_code' => $agent->referral_code,
+                'phone' => $agent->phone,
+                'email' => $agent->email,
+                'address' => $agent->address ?: 'Plot 42, Commercial Hub',
+                'city' => $agent->city ?: 'Jaipur',
+                'state' => $agent->state ?: '08 - RAJASTHAN',
+                'id_card_number' => $agent->id_card_number ?: ('ICARD-' . $agent->referral_code),
+                'photo' => $agent->photo ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                'status' => $agent->status,
+                'commission_rate_percent' => (float)$agent->commission_rate_percent,
+                'fixed_signup_bonus' => (float)$agent->fixed_signup_bonus,
+            ],
+            'metrics' => [
+                'total_referred_stores' => count($referredStores),
+                'active_stores' => $activeCount,
+                'expiring_soon_stores' => $expiringSoonCount,
+                'expired_stores' => $expiredCount,
+                'pending_dues_stores' => $pendingDuesCount,
+                'total_dues_amount' => $totalDuesAmount,
+                'total_approved_earnings' => $totalApprovedEarnings,
+                'total_pending_earnings' => $totalPendingEarnings,
+                'total_payouts_processed' => $totalPayoutsProcessed,
+                'available_wallet_balance' => $availableWalletBalance,
+            ],
+            'stores' => $referredStores,
+            'commissions' => $commissions->map(function ($c) {
+                return [
+                    'id' => $c->id,
+                    'shop_name' => $c->shop_name ?: 'Platform Reward / Milestone',
+                    'shop_code' => $c->shop_code ?: 'N/A',
+                    'commission_type' => $c->commission_type,
+                    'gross_amount' => (float)$c->commission_amount,
+                    'tds_amount' => (float)$c->tds_amount,
+                    'net_payable' => (float)$c->net_payable,
+                    'status' => $c->status,
+                    'created_at' => substr($c->created_at, 0, 10),
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Super Admin - Get All Agents Network Statistics & Performance
+     */
+    public function getSuperAdminAgents(Request $request): JsonResponse
+    {
+        $agents = DB::connection('mysql')->table('agents')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $now = now();
+        $agentsList = [];
+        $platformTotalCommissions = 0;
+        $platformPendingCommissions = 0;
+        $platformTotalReferredStores = 0;
+
+        foreach ($agents as $agent) {
+            $referralShopIds = DB::connection('mysql')->table('agent_referrals')
+                ->where('agent_id', $agent->id)
+                ->pluck('shop_id');
+
+            $totalStores = count($referralShopIds);
+            $platformTotalReferredStores += $totalStores;
+
+            $shops = DB::connection('mysql')->table('shops')
+                ->whereIn('id', $referralShopIds)
+                ->get();
+
+            $activeStores = 0;
+            $expiringSoon = 0;
+            $expiredStores = 0;
+            $totalSalesDriven = 0;
+
+            foreach ($shops as $shop) {
+                $settings = json_decode($shop->settings, true) ?: [];
+                $validUntil = $settings['valid_until'] ?? null;
+                $planCode = $settings['plan_id'] ?? 'yearly-package';
+
+                // Approximate base revenue from plan
+                $planRev = str_contains($planCode, 'monthly') ? 1000 : (str_contains($planCode, 'quarterly') ? 2500 : (str_contains($planCode, 'half') ? 4500 : 8000));
+                $totalSalesDriven += $planRev;
+
+                if ($validUntil) {
+                    $validDate = \Carbon\Carbon::parse($validUntil)->endOfDay();
+                    if ($now->greaterThan($validDate)) {
+                        $expiredStores++;
+                    } elseif ($now->diffInDays($validDate, false) <= 30) {
+                        $expiringSoon++;
+                    } else {
+                        $activeStores++;
+                    }
+                } else {
+                    $activeStores++;
+                }
+            }
+
+            // Commissions earned by this agent
+            $totalEarned = (float)DB::connection('mysql')->table('agent_commissions')
+                ->where('agent_id', $agent->id)
+                ->where('status', 'approved')
+                ->sum('net_payable');
+
+            $pendingComm = (float)DB::connection('mysql')->table('agent_commissions')
+                ->where('agent_id', $agent->id)
+                ->where('status', 'pending')
+                ->sum('net_payable');
+
+            $platformTotalCommissions += $totalEarned;
+            $platformPendingCommissions += $pendingComm;
+
+            $agentsList[] = [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'agent_code' => $agent->referral_code,
+                'phone' => $agent->phone,
+                'email' => $agent->email,
+                'city' => $agent->city ?: 'Jaipur',
+                'state' => $agent->state ?: '08 - RAJASTHAN',
+                'id_card_number' => $agent->id_card_number ?: ('ICARD-' . $agent->referral_code),
+                'photo' => $agent->photo ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                'status' => $agent->status,
+                'commission_rate_percent' => (float)$agent->commission_rate_percent,
+                'fixed_signup_bonus' => (float)$agent->fixed_signup_bonus,
+                'total_referred_stores' => $totalStores,
+                'active_stores' => $activeStores,
+                'expiring_soon_stores' => $expiringSoon,
+                'expired_stores' => $expiredStores,
+                'total_sales_driven' => $totalSalesDriven,
+                'total_earned' => $totalEarned,
+                'pending_commissions' => $pendingComm,
+                'approved_at' => $agent->approved_at ? substr($agent->approved_at, 0, 10) : null,
+                'created_at' => substr($agent->created_at, 0, 10),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'statistics' => [
+                'total_agents' => count($agents),
+                'active_agents' => count(array_filter($agentsList, fn($a) => $a['status'] === 'approved' || $a['status'] === 'active')),
+                'total_referred_stores' => $platformTotalReferredStores,
+                'total_commissions_distributed' => $platformTotalCommissions,
+                'total_pending_commissions' => $platformPendingCommissions,
+                'average_commission_rate' => count($agents) > 0 ? round(array_sum(array_column($agentsList, 'commission_rate_percent')) / count($agents), 1) : 10.0,
+            ],
+            'agents' => $agentsList,
+        ]);
+    }
+
+    /**
+     * Super Admin - Create New Agent with Auto-Generated Agent Code
+     */
+    public function createAgent(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:32|unique:mysql.agents,phone',
+            'email' => 'required|email|max:255|unique:mysql.agents,email',
+            'city' => 'nullable|string|max:128',
+            'state' => 'nullable|string|max:128',
+            'address' => 'nullable|string|max:255',
+            'pan_number' => 'nullable|string|max:32',
+            'bank_name' => 'nullable|string|max:128',
+            'bank_account_no' => 'nullable|string|max:64',
+            'bank_ifsc' => 'nullable|string|max:32',
+            'upi_id' => 'nullable|string|max:128',
+            'commission_rate_percent' => 'nullable|numeric|min:0|max:100',
+            'fixed_signup_bonus' => 'nullable|numeric|min:0',
+            'password' => 'nullable|string|min:4',
+            'referral_code' => 'nullable|string|max:64',
+        ]);
+
+        // Auto-generate Unique Agent Code if not manually provided
+        $code = strtoupper(trim((string)($validated['referral_code'] ?? '')));
+        if (!$code) {
+            $today = date('Ymd');
+            $count = DB::connection('mysql')->table('agents')->whereDate('created_at', today())->count() + 1;
+            $code = 'AGT' . $today . str_pad($count, 2, '0', STR_PAD_LEFT);
+            while (DB::connection('mysql')->table('agents')->where('referral_code', $code)->exists()) {
+                $code = 'AGT' . $today . rand(10, 99);
+            }
+        } else {
+            if (DB::connection('mysql')->table('agents')->where('referral_code', $code)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Agent Code '{$code}' already exists. Please choose another or leave empty for auto-generation."
+                ], 422);
+            }
+        }
+
+        $passwordRaw = $validated['password'] ?? 'agent123';
+        $hashedPassword = Hash::make($passwordRaw);
+        $idCardNumber = 'ICARD-' . $code;
+
+        $agentId = DB::connection('mysql')->table('agents')->insertGetId([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'email' => strtolower($validated['email']),
+            'password' => $hashedPassword,
+            'address' => $validated['address'] ?? 'Authorized Channel Partner Office',
+            'city' => $validated['city'] ?? 'Jaipur',
+            'state' => $validated['state'] ?? '08 - RAJASTHAN',
+            'id_card_number' => $idCardNumber,
+            'photo' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+            'pan_number' => $validated['pan_number'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'bank_account_no' => $validated['bank_account_no'] ?? null,
+            'bank_ifsc' => $validated['bank_ifsc'] ?? null,
+            'upi_id' => $validated['upi_id'] ?? null,
+            'referral_code' => $code,
+            'status' => 'approved',
+            'commission_rate_percent' => $validated['commission_rate_percent'] !== null ? (float)$validated['commission_rate_percent'] : 10.00,
+            'fixed_signup_bonus' => $validated['fixed_signup_bonus'] !== null ? (float)$validated['fixed_signup_bonus'] : 500.00,
+            'approved_at' => now(),
+            'notes' => 'Created by Super Admin via Master Portal',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Agent {$validated['name']} registered successfully! Agent Code: {$code}",
+            'agent' => [
+                'id' => $agentId,
+                'name' => $validated['name'],
+                'agent_code' => $code,
+                'phone' => $validated['phone'],
+                'email' => $validated['email'],
+                'id_card_number' => $idCardNumber,
+                'status' => 'approved',
+                'commission_rate_percent' => $validated['commission_rate_percent'] ?? 10.00,
+            ]
+        ]);
+    }
+
+    /**
+     * Super Admin - Update Agent Dynamic Commission Rate, Bonus or Status
+     */
+    public function updateAgent(Request $request, $id): JsonResponse
+    {
+        $agent = DB::connection('mysql')->table('agents')->where('id', $id)->first();
+        if (!$agent) {
+            return response()->json(['success' => false, 'message' => 'Agent not found.'], 404);
+        }
+
+        $updates = ['updated_at' => now()];
+
+        if ($request->has('commission_rate_percent')) {
+            $updates['commission_rate_percent'] = (float)$request->input('commission_rate_percent');
+        }
+        if ($request->has('fixed_signup_bonus')) {
+            $updates['fixed_signup_bonus'] = (float)$request->input('fixed_signup_bonus');
+        }
+        if ($request->has('status')) {
+            $updates['status'] = $request->input('status');
+            if ($updates['status'] === 'approved' && !$agent->approved_at) {
+                $updates['approved_at'] = now();
+            }
+        }
+        if ($request->has('name')) {
+            $updates['name'] = $request->input('name');
+        }
+        if ($request->has('phone')) {
+            $updates['phone'] = $request->input('phone');
+        }
+        if ($request->has('email')) {
+            $updates['email'] = strtolower($request->input('email'));
+        }
+        if ($request->has('city')) {
+            $updates['city'] = $request->input('city');
+        }
+        if ($request->has('state')) {
+            $updates['state'] = $request->input('state');
+        }
+        if ($request->has('password') && strlen(trim((string)$request->input('password'))) >= 4) {
+            $updates['password'] = Hash::make(trim((string)$request->input('password')));
+        }
+
+        DB::connection('mysql')->table('agents')->where('id', $id)->update($updates);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Agent {$agent->name} (Code: {$agent->referral_code}) details and commission rates updated successfully!"
+        ]);
+    }
+
+    /**
+     * Super Admin - Add Direct Reward / Performance Bonus to Agent Wallet
+     */
+    public function addAgentReward(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'agent_id' => 'required|integer',
+            'reward_amount' => 'required|numeric|min:1',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        $agent = DB::connection('mysql')->table('agents')->where('id', $validated['agent_id'])->first();
+        if (!$agent) {
+            return response()->json(['success' => false, 'message' => 'Agent not found.'], 404);
+        }
+
+        $gross = (float)$validated['reward_amount'];
+        $tds = $gross * 0.05; // 5% TDS
+        $net = $gross - $tds;
+
+        // Find any referred shop or use first available shop or 1
+        $firstShopId = DB::connection('mysql')->table('agent_referrals')
+            ->where('agent_id', $agent->id)
+            ->value('shop_id') ?: (DB::connection('mysql')->table('shops')->value('id') ?: 1);
+
+        DB::connection('mysql')->table('agent_commissions')->insert([
+            'agent_id' => $agent->id,
+            'shop_id' => $firstShopId,
+            'subscription_payment_id' => null,
+            'commission_type' => 'reward',
+            'commission_amount' => $gross,
+            'tds_rate' => 5.00,
+            'tds_amount' => $tds,
+            'net_payable' => $net,
+            'status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Performance Reward of ₹" . number_format($gross, 2) . " (Net: ₹" . number_format($net, 2) . ") credited to {$agent->name}'s wallet!",
+            'reward' => [
+                'agent_code' => $agent->referral_code,
+                'gross_amount' => $gross,
+                'net_payable' => $net,
+                'reason' => $validated['reason'],
+            ]
         ]);
     }
 }

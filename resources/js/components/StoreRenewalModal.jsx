@@ -63,7 +63,7 @@ export default function StoreRenewalModal({
 
   if (!isOpen) return null;
 
-  // Step 1 -> Step 2: Initiate PayU Money Payment Request
+  // Step 1: Initiate PayU Money Payment Request and immediately redirect to gateway
   const handleInitiatePayU = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -77,12 +77,12 @@ export default function StoreRenewalModal({
       own_whatsapp: addWhatsapp
     });
 
-    setIsProcessing(false);
-
-    if (res && res.success) {
+    if (res && res.success && res.action && res.params) {
       setPayuData(res);
-      setStep('payu_checkout');
+      // Directly submit form and redirect to PayU hosted checkout
+      subscriptionService.submitPayUForm(res.action, res.params);
     } else {
+      setIsProcessing(false);
       setErrorMessage(res?.message || 'Could not connect to PayU Money payment gateway.');
     }
   };
@@ -327,40 +327,15 @@ export default function StoreRenewalModal({
             </div>
 
             {/* Actions: Primary PayU Hosted Redirect + Instant Sandbox Test Button */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-3">
               <button
                 type="button"
                 onClick={handleRedirectToPayU}
-                className="w-full py-3.5 px-6 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] active:bg-[#007489] text-white font-extrabold text-xs shadow-lg shadow-cyan-600/25 transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#008ba3] via-[#00a2c7] to-cyan-500 hover:from-[#00768c] hover:to-[#008ba3] text-white font-black text-sm tracking-wide shadow-xl shadow-cyan-600/30 flex items-center justify-center gap-2.5 cursor-pointer transition transform active:scale-[0.99]"
               >
-                <Lock className="w-4 h-4" />
-                <span>Redirect to PayU Money Hosted Checkout (₹{Number(payuData.amount).toLocaleString('en-IN')})</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                <span className="flex-shrink mx-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">or Test Simulator</span>
-                <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleCompletePayUVerification('success')}
-                disabled={isProcessing}
-                className="w-full py-3 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {isProcessing ? (
-                  <>
-                    <RotateCcw className="w-4 h-4 animate-spin text-emerald-600" />
-                    <span>Verifying PayU Transaction & Updating MySQL...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Instant PayU Approval & Renew Store (Fast Sandbox)</span>
-                  </>
-                )}
+                <Lock className="w-5 h-5 stroke-[2.5]" />
+                <span>Pay Now INR {Number(payuData.amount).toFixed(2)}</span>
+                <ArrowRight className="w-5 h-5 stroke-[2.5] ml-1" />
               </button>
             </div>
           </div>
@@ -499,7 +474,7 @@ export default function StoreRenewalModal({
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#00a8cc] to-[#008ba3] hover:from-[#0096b7] hover:to-[#007b91] text-white font-bold text-xs shadow-lg shadow-cyan-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#008ba3] via-[#00a2c7] to-cyan-500 hover:from-[#00768c] hover:to-[#008ba3] text-white font-black text-xs shadow-lg shadow-cyan-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isProcessing ? (
                     <>
@@ -508,8 +483,9 @@ export default function StoreRenewalModal({
                     </>
                   ) : (
                     <>
-                      <Zap className="w-4 h-4" />
-                      <span>Pay with PayU Money</span>
+                      <Lock className="w-4 h-4 stroke-[2.5]" />
+                      <span>Pay Now INR {Number(priceCalculation.offerPrice).toFixed(2)}</span>
+                      <ArrowRight className="w-4 h-4 stroke-[2.5] ml-0.5" />
                     </>
                   )}
                 </button>

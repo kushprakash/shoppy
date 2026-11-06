@@ -55,8 +55,10 @@ class IdentifyTenant
         // 1. Explicit Header / Request Hint / Cookie / Session (Highest priority for API/POS/Mobile clients)
         $shopCode = $request->header('X-Shop-Code')
             ?? $request->header('X-Store-Code')
+            ?? $request->cookie('shoppy_active_store_code')
             ?? $request->cookie('shoppy_active_store')
             ?? session('active_store_code')
+            ?? $request->query('code')
             ?? $request->query('shop_code')
             ?? $request->query('store_code');
 

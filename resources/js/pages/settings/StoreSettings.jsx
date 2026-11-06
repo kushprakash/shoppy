@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useErp } from '../../context/ErpContext';
+import StoreRenewalModal from '../../components/StoreRenewalModal';
 import {
   Building2,
   FileText,
@@ -23,6 +25,7 @@ import {
   EyeOff,
   ExternalLink,
   Image,
+  ImageOff,
   Upload,
   Copy,
   Check,
@@ -36,14 +39,27 @@ import {
   Link2,
   X,
   ZoomIn,
-  Sliders
+  Sliders,
+  CreditCard,
+  Database,
+  Calendar,
+  Clock,
+  Receipt,
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function StoreSettings() {
   const { showToast, storeSettings, updateStoreSettings } = useErp();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isInitialSetup = searchParams.get('setup') === '1' || localStorage.getItem('shoppy_initial_setup') === 'true';
+
+  // Dynamic GST States from Database
+  const [gstStates, setGstStates] = useState([]);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState('branding');
+  const [activeTab, setActiveTab] = useState(isInitialSetup ? 'gst' : 'branding');
 
   // Loading & Saving States
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +89,74 @@ export default function StoreSettings() {
   const [testPhoneNumber, setTestPhoneNumber] = useState('9829012345');
   const [isTestingSms, setIsTestingSms] = useState(false);
   const [smsTestResult, setSmsTestResult] = useState(null);
+
+  // Automatic Cloud Provisioning Animation State (runs on ?provisioning=1)
+  const [showProvisioning, setShowProvisioning] = useState(() => searchParams.get('provisioning') === '1');
+  const [provisionStep, setProvisionStep] = useState(0);
+  const [provisionProgress, setProvisionProgress] = useState(15);
+  const txnIdParam = searchParams.get('txnid') || 'PAYU_LIVE_SECURE';
+
+  // Subscription Passbook & Renewal Modal State
+  const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
+  const [passbookData, setPassbookData] = useState(null);
+  const [isLoadingPassbook, setIsLoadingPassbook] = useState(false);
+
+  // Handle Smooth Provisioning Step Animation
+  useEffect(() => {
+    if (!showProvisioning) return;
+
+    const steps = [
+      { progress: 25, step: 1 },
+      { progress: 45, step: 2 },
+      { progress: 65, step: 3 },
+      { progress: 85, step: 4 },
+      { progress: 95, step: 5 },
+      { progress: 100, step: 6 },
+    ];
+
+    let current = 0;
+    const interval = setInterval(() => {
+      if (current < steps.length) {
+        setProvisionProgress(steps[current].progress);
+        setProvisionStep(steps[current].step);
+        current++;
+      } else {
+        clearInterval(interval);
+        setTimeout(() => {
+          setShowProvisioning(false);
+          showToast('Tenant MySQL Database provisioned & activated successfully!');
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('provisioning');
+            window.history.replaceState({}, '', url.toString());
+          } catch (e) {}
+        }, 800);
+      }
+    }, 550);
+
+    return () => clearInterval(interval);
+  }, [showProvisioning]);
+
+  // Fetch Passbook data when subscription tab is opened
+  const fetchPassbook = () => {
+    const code = searchParams.get('code') || searchParams.get('shop_code') || localStorage.getItem('shoppy_active_store_code') || '';
+    setIsLoadingPassbook(true);
+    fetch(`/api/payu/passbook?code=${encodeURIComponent(code)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setPassbookData(data);
+        }
+      })
+      .catch((e) => console.warn('Passbook fetch error:', e))
+      .finally(() => setIsLoadingPassbook(false));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'subscription') {
+      fetchPassbook();
+    }
+  }, [activeTab]);
 
   // File Upload Handler (Instant local preview + server persistence)
   const handleFileUpload = async (e, fieldName, assetType) => {
@@ -126,13 +210,29 @@ export default function StoreSettings() {
     }
   };
 
+  // Helper to filter out dead external sample URLs
+  const isCleanUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    const trimmed = url.trim();
+    if (!trimmed) return false;
+    if (trimmed.includes('images.unsplash.com') || trimmed.includes('api.iconify.design')) return false;
+    return true;
+  };
+
+  // Image load error tracking to prevent infinite error loops and blinking
+  const [imageErrors, setImageErrors] = useState({
+    logo: false,
+    footer_logo: false,
+    favicon: false,
+  });
+
   // Form State initialized with defaults & fallback to local context
   const [formData, setFormData] = useState({
     // 1. Branding & Identity
     store_name: storeSettings.store_name || storeSettings.storeName || 'Ramesh Fashion Store',
-    logo: storeSettings.logo || 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=200&auto=format&fit=crop&q=80',
-    footer_logo: storeSettings.footer_logo || 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=200&auto=format&fit=crop&q=80',
-    favicon: storeSettings.favicon || 'https://api.iconify.design/lucide:shopping-bag.svg?color=%2300a2c7',
+    logo: isCleanUrl(storeSettings.logo) ? storeSettings.logo : '',
+    footer_logo: isCleanUrl(storeSettings.footer_logo) ? storeSettings.footer_logo : '',
+    favicon: isCleanUrl(storeSettings.favicon) ? storeSettings.favicon : '',
     theme_color: storeSettings.theme_color || '#00a2c7',
     secondary_color: storeSettings.secondary_color || '#06b6d4',
 
@@ -206,7 +306,13 @@ export default function StoreSettings() {
     let isMounted = true;
     setIsLoading(true);
 
-    fetch('/api/tenant/settings/branding')
+    const activeCode = searchParams.get('code') || searchParams.get('shop_code') || localStorage.getItem('shoppy_active_store_code') || '';
+    const headers = { 'Accept': 'application/json' };
+    if (activeCode) {
+      headers['X-Shop-Code'] = activeCode;
+    }
+
+    fetch(`/api/tenant/settings/branding?code=${encodeURIComponent(activeCode)}&shop_code=${encodeURIComponent(activeCode)}`, { headers })
       .then((res) => res.json())
       .then((json) => {
         if (json.success && json.data && isMounted) {
@@ -224,9 +330,9 @@ export default function StoreSettings() {
             pan_number: d.pan_number || prev.pan_number,
             e_invoicing_enabled: d.e_invoicing_enabled ?? prev.e_invoicing_enabled,
             rcm_applicable: d.rcm_applicable ?? prev.rcm_applicable,
-            logo: d.logo || prev.logo,
-            footer_logo: d.footer_logo || prev.footer_logo,
-            favicon: d.favicon || prev.favicon,
+            logo: isCleanUrl(d.logo) ? d.logo : (isCleanUrl(prev.logo) ? prev.logo : ''),
+            footer_logo: isCleanUrl(d.footer_logo) ? d.footer_logo : (isCleanUrl(prev.footer_logo) ? prev.footer_logo : ''),
+            favicon: isCleanUrl(d.favicon) ? d.favicon : (isCleanUrl(prev.favicon) ? prev.favicon : ''),
             footer_about_us: d.footer_about_us || prev.footer_about_us,
             footer_copyright: d.footer_copyright || prev.footer_copyright,
             contact_address: d.contact_address || prev.contact_address,
@@ -263,8 +369,23 @@ export default function StoreSettings() {
     };
   }, []);
 
+  // Fetch official Indian GST States from database
+  useEffect(() => {
+    fetch('/api/tenant/gst-states')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.data)) {
+          setGstStates(data.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Handle Input Changes
   const handleChange = (field, value) => {
+    if (field === 'logo' || field === 'footer_logo' || field === 'favicon') {
+      setImageErrors((prev) => ({ ...prev, [field]: false }));
+    }
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
       // If GSTIN changed, auto compute PAN (Characters 3 to 12)
@@ -348,8 +469,16 @@ export default function StoreSettings() {
         } catch {}
 
         setSaveSuccess(true);
-        showToast('Store Branding, GST, Footer, SEO Meta, SMS & SMTP settings saved successfully!');
-        setTimeout(() => setSaveSuccess(false), 4000);
+        if (isInitialSetup) {
+          try { localStorage.removeItem('shoppy_initial_setup'); } catch {}
+          showToast('🎉 Store Settings saved! Launching your Dashboard...', 'success');
+          setTimeout(() => {
+            navigate('/shop-admin/dashboard');
+          }, 1200);
+        } else {
+          showToast('Store Branding, GST, Footer, SEO Meta, SMS & SMTP settings saved successfully!');
+          setTimeout(() => setSaveSuccess(false), 4000);
+        }
       } else {
         showToast(result.message || 'Failed to save settings. Please check fields.');
       }
@@ -376,8 +505,16 @@ export default function StoreSettings() {
         localStorage.setItem('shoppy_a4_paging_mode', formData.hardware.a4_paging_mode || 'fixed');
       } catch {}
       setSaveSuccess(true);
-      showToast('Settings saved locally! (Backend synchronized)');
-      setTimeout(() => setSaveSuccess(false), 4000);
+      if (isInitialSetup) {
+        try { localStorage.removeItem('shoppy_initial_setup'); } catch {}
+        showToast('🎉 Store Settings saved! Launching your Dashboard...', 'success');
+        setTimeout(() => {
+          navigate('/shop-admin/dashboard');
+        }, 1200);
+      } else {
+        showToast('Settings saved locally! (Backend synchronized)');
+        setTimeout(() => setSaveSuccess(false), 4000);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -470,10 +607,129 @@ export default function StoreSettings() {
     { id: 'sms', label: 'SMS Gateway', icon: MessageSquare, count: 'DLT + API' },
     { id: 'smtp', label: 'SMTP Email Server', icon: Mail, count: 'TLS / Port 587' },
     { id: 'hardware', label: 'Hardware Bridge', icon: Printer, count: 'POS Printer & Scale' },
+    { id: 'subscription', label: 'Subscription & Passbook', icon: CreditCard, count: 'Passbook & Renewal' },
   ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 font-sans">
+      {/* =================================================================== */}
+      {/* PROVISIONING ANIMATION OVERLAY (Live Cloud Database Activation)     */}
+      {/* =================================================================== */}
+      {showProvisioning && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl w-full p-8 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200">
+            {/* Pulsing Icon */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping"></div>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#008ba3] to-cyan-400 text-white flex items-center justify-center shadow-xl shadow-cyan-500/30">
+                <Database className="w-10 h-10 animate-pulse" />
+              </div>
+            </div>
+
+            <div>
+              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-100 dark:bg-cyan-950/60 text-[#008ba3] border border-cyan-200 dark:border-cyan-800">
+                Automatic Tenant Provisioning
+              </span>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white mt-2">
+                Activating Your Store Database...
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Allocating dedicated MySQL schemas, linking subscription license & securing PayU transaction.
+              </p>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span>Provisioning Progress</span>
+                <span className="text-[#008ba3]">{provisionProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+                <div
+                  className="bg-gradient-to-r from-[#008ba3] via-cyan-400 to-emerald-400 h-full rounded-full transition-all duration-500 ease-out shadow-sm"
+                  style={{ width: `${provisionProgress}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Step-by-Step Status Checklist */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-3 text-left">
+              {[
+                { label: 'PayU Money Payment Confirmed & Hash Verified', sub: `Txn Ref: ${txnIdParam}` },
+                { label: 'Recording Payment in Central Ledger Passbook', sub: 'Passbook transaction ledger updated' },
+                { label: 'Creating Store Subscription & Enterprise License', sub: 'License Status: ACTIVE' },
+                { label: 'Provisioning Dedicated Tenant MySQL Database', sub: 'Isolated database: tenant_sp...' },
+                { label: 'Seeding 38 Indian GST States & POS Master Catalogs', sub: 'Full GST state ledger mapped' },
+                { label: 'Linking Store to Subscription & Launching Settings', sub: 'Initial store setup ready' },
+              ].map((stepItem, idx) => {
+                const isDone = provisionStep > idx;
+                const isCurrent = provisionStep === idx;
+                return (
+                  <div key={idx} className="flex items-start gap-3 transition">
+                    <div className="mt-0.5 shrink-0">
+                      {isDone ? (
+                        <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                      ) : isCurrent ? (
+                        <div className="w-5 h-5 rounded-full bg-cyan-500 text-white flex items-center justify-center text-xs">
+                          <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600"></div>
+                      )}
+                    </div>
+                    <div className="text-xs">
+                      <p className={`font-bold ${isDone ? 'text-emerald-600 dark:text-emerald-400' : isCurrent ? 'text-cyan-600 dark:text-cyan-400 font-extrabold' : 'text-slate-400'}`}>
+                        {stepItem.label}
+                      </p>
+                      <p className="text-[10px] text-slate-400">{stepItem.sub}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Onboarding Welcome & Setup Instructions Banner */}
+      {isInitialSetup && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-[#00a2c7]/15 via-emerald-500/10 to-transparent border-2 border-[#00a2c7]/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md animate-in fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#00a2c7] text-white flex items-center justify-center font-black shadow-lg shadow-cyan-600/30 shrink-0">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-sm text-slate-900 dark:text-white">🎉 Welcome to Shoppy ERP — Initial Store Setup</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500 text-white tracking-wide">REQUIRED</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
+                Your store database is live! Please confirm your GST State, legal trading name, and brand identity. <strong>Once you click "Save All Settings", you will be redirected straight to your live Dashboard.</strong>
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            className="px-6 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white text-xs font-black shadow-lg shadow-cyan-600/30 flex items-center justify-center gap-2 cursor-pointer shrink-0 transition"
+          >
+            {isSaving ? (
+              <>
+                <RotateCw className="w-4 h-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Settings & Open Dashboard →</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* =================================================================== */}
       {/* 1. TOP HEADER & STICKY ACTION BAR                                   */}
       {/* =================================================================== */}
@@ -638,22 +894,22 @@ export default function StoreSettings() {
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-3.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                   {/* Thumbnail Box with Checkerboard Background */}
                   <div
-                    onClick={() => formData.logo && setViewingImage({ title: 'Store Header Logo', url: formData.logo, field: 'logo' })}
-                    className="relative group w-32 h-14 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center p-1.5 cursor-pointer bg-[linear-gradient(45deg,#f1f5f9_25%,transparent_25%),linear-gradient(-45deg,#f1f5f9_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f1f5f9_75%),linear-gradient(-45deg,transparent_75%,#f1f5f9_75%)] dark:bg-[linear-gradient(45deg,#1e293b_25%,transparent_25%),linear-gradient(-45deg,#1e293b_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1e293b_75%),linear-gradient(-45deg,transparent_75%,#1e293b_75%)] bg-[size:10px_10px] shrink-0"
-                    title="Click to view full size"
+                    onClick={() => (formData.logo && !imageErrors.logo) && setViewingImage({ title: 'Store Header Logo', url: formData.logo, field: 'logo' })}
+                    className="relative group w-32 h-14 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center p-1.5 cursor-pointer bg-slate-100 dark:bg-slate-800 shrink-0"
+                    title={formData.logo && !imageErrors.logo ? "Click to view full size" : "No image uploaded"}
                   >
                     {uploadingField === 'logo' ? (
                       <div className="flex flex-col items-center justify-center gap-0.5 text-[10px] text-cyan-600 dark:text-cyan-400 font-bold">
                         <RotateCw className="w-3.5 h-3.5 animate-spin" />
                         <span>Uploading...</span>
                       </div>
-                    ) : formData.logo ? (
+                    ) : (formData.logo && !imageErrors.logo) ? (
                       <>
                         <img
                           src={formData.logo}
                           alt="Store Logo"
                           className="w-full h-full object-contain"
-                          onError={(e) => { e.target.src = 'https://api.iconify.design/lucide:image.svg?color=%23999999'; }}
+                          onError={() => setImageErrors((prev) => ({ ...prev, logo: true }))}
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white gap-1 text-[10px] font-bold">
                           <Eye className="w-3.5 h-3.5" />
@@ -661,9 +917,11 @@ export default function StoreSettings() {
                         </div>
                       </>
                     ) : (
-                      <div className="text-slate-400 text-[10px] flex items-center gap-1 font-semibold">
-                        <Image className="w-3.5 h-3.5" />
-                        <span>No Logo</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 select-none">
+                        <div className="w-7 h-7 rounded-lg bg-slate-200/80 dark:bg-slate-700/60 flex items-center justify-center text-slate-400 dark:text-slate-400">
+                          <ImageOff className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-bold tracking-tight">No Image</span>
                       </div>
                     )}
                   </div>
@@ -681,7 +939,7 @@ export default function StoreSettings() {
                       />
                     </label>
 
-                    {formData.logo && (
+                    {Boolean(formData.logo && !imageErrors.logo) && (
                       <button
                         type="button"
                         onClick={() => setViewingImage({ title: 'Store Header Logo', url: formData.logo, field: 'logo' })}
@@ -692,7 +950,7 @@ export default function StoreSettings() {
                       </button>
                     )}
 
-                    {formData.logo && (
+                    {Boolean(formData.logo && !imageErrors.logo) && (
                       <button
                         type="button"
                         onClick={() => handleChange('logo', '')}
@@ -740,22 +998,22 @@ export default function StoreSettings() {
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-3.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                   {/* Thumbnail Box on Dark Background */}
                   <div
-                    onClick={() => formData.footer_logo && setViewingImage({ title: 'Footer Logo (Dark)', url: formData.footer_logo, field: 'footer_logo' })}
+                    onClick={() => (formData.footer_logo && !imageErrors.footer_logo) && setViewingImage({ title: 'Footer Logo (Dark)', url: formData.footer_logo, field: 'footer_logo' })}
                     className="relative group w-32 h-14 rounded-xl border border-slate-700 bg-slate-950 overflow-hidden flex items-center justify-center p-1.5 cursor-pointer shrink-0"
-                    title="Click to view full size"
+                    title={formData.footer_logo && !imageErrors.footer_logo ? "Click to view full size" : "No image uploaded"}
                   >
                     {uploadingField === 'footer_logo' ? (
                       <div className="flex flex-col items-center justify-center gap-0.5 text-[10px] text-cyan-400 font-bold">
                         <RotateCw className="w-3.5 h-3.5 animate-spin" />
                         <span>Uploading...</span>
                       </div>
-                    ) : formData.footer_logo ? (
+                    ) : (formData.footer_logo && !imageErrors.footer_logo) ? (
                       <>
                         <img
                           src={formData.footer_logo}
                           alt="Footer Logo"
                           className="w-full h-full object-contain"
-                          onError={(e) => { e.target.src = 'https://api.iconify.design/lucide:image.svg?color=%23999999'; }}
+                          onError={() => setImageErrors((prev) => ({ ...prev, footer_logo: true }))}
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white gap-1 text-[10px] font-bold">
                           <Eye className="w-3.5 h-3.5" />
@@ -763,9 +1021,11 @@ export default function StoreSettings() {
                         </div>
                       </>
                     ) : (
-                      <div className="text-slate-500 text-[10px] flex items-center gap-1 font-semibold">
-                        <Image className="w-3.5 h-3.5" />
-                        <span>No Logo</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-500 select-none">
+                        <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+                          <ImageOff className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-bold tracking-tight">No Image</span>
                       </div>
                     )}
                   </div>
@@ -783,7 +1043,7 @@ export default function StoreSettings() {
                       />
                     </label>
 
-                    {formData.footer_logo && (
+                    {Boolean(formData.footer_logo && !imageErrors.footer_logo) && (
                       <button
                         type="button"
                         onClick={() => setViewingImage({ title: 'Footer Logo (Dark)', url: formData.footer_logo, field: 'footer_logo' })}
@@ -794,7 +1054,7 @@ export default function StoreSettings() {
                       </button>
                     )}
 
-                    {formData.footer_logo && (
+                    {Boolean(formData.footer_logo && !imageErrors.footer_logo) && (
                       <button
                         type="button"
                         onClick={() => handleChange('footer_logo', '')}
@@ -842,26 +1102,29 @@ export default function StoreSettings() {
                 <div className="flex flex-wrap sm:flex-nowrap items-center gap-3.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                   {/* Square Favicon Preview Box */}
                   <div
-                    onClick={() => formData.favicon && setViewingImage({ title: 'Browser Favicon', url: formData.favicon, field: 'favicon' })}
-                    className="relative group w-14 h-14 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center p-2 cursor-pointer bg-white dark:bg-slate-800 shrink-0 shadow-xs"
-                    title="Click to view full size"
+                    onClick={() => (formData.favicon && !imageErrors.favicon) && setViewingImage({ title: 'Browser Favicon', url: formData.favicon, field: 'favicon' })}
+                    className="relative group w-14 h-14 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center p-2 cursor-pointer bg-slate-50 dark:bg-slate-800 shrink-0 shadow-xs"
+                    title={formData.favicon && !imageErrors.favicon ? "Click to view full size" : "No icon uploaded"}
                   >
                     {uploadingField === 'favicon' ? (
                       <RotateCw className="w-4 h-4 text-cyan-600 animate-spin" />
-                    ) : formData.favicon ? (
+                    ) : (formData.favicon && !imageErrors.favicon) ? (
                       <>
                         <img
                           src={formData.favicon}
                           alt="Favicon"
                           className="w-7 h-7 object-contain"
-                          onError={(e) => { e.target.src = 'https://api.iconify.design/lucide:globe.svg?color=%2300a2c7'; }}
+                          onError={() => setImageErrors((prev) => ({ ...prev, favicon: true }))}
                         />
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
                           <Eye className="w-3.5 h-3.5" />
                         </div>
                       </>
                     ) : (
-                      <Globe className="w-4 h-4 text-slate-400" />
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 select-none">
+                        <Globe className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        <span className="text-[8px] font-bold tracking-tight leading-none">No Icon</span>
+                      </div>
                     )}
                   </div>
 
@@ -878,7 +1141,7 @@ export default function StoreSettings() {
                       />
                     </label>
 
-                    {formData.favicon && (
+                    {Boolean(formData.favicon && !imageErrors.favicon) && (
                       <button
                         type="button"
                         onClick={() => setViewingImage({ title: 'Browser Favicon', url: formData.favicon, field: 'favicon' })}
@@ -889,7 +1152,7 @@ export default function StoreSettings() {
                       </button>
                     )}
 
-                    {formData.favicon && (
+                    {Boolean(formData.favicon && !imageErrors.favicon) && (
                       <button
                         type="button"
                         onClick={() => handleChange('favicon', '')}
@@ -1122,16 +1385,27 @@ export default function StoreSettings() {
                   onChange={(e) => handleChange('gst_state', e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none"
                 >
-                  <option value="08 - Rajasthan">08 - Rajasthan</option>
-                  <option value="07 - Delhi">07 - Delhi</option>
-                  <option value="27 - Maharashtra">27 - Maharashtra</option>
-                  <option value="29 - Karnataka">29 - Karnataka</option>
-                  <option value="24 - Gujarat">24 - Gujarat</option>
-                  <option value="09 - Uttar Pradesh">09 - Uttar Pradesh</option>
-                  <option value="19 - West Bengal">19 - West Bengal</option>
-                  <option value="33 - Tamil Nadu">33 - Tamil Nadu</option>
-                  <option value="36 - Telangana">36 - Telangana</option>
-                  <option value="23 - Madhya Pradesh">23 - Madhya Pradesh</option>
+                  {gstStates && gstStates.length > 0 ? (
+                    gstStates.map((st) => (
+                      <option key={st.state_code} value={`${st.state_code} - ${st.state_name}`}>
+                        {st.state_code} - {st.state_name}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="08 - Rajasthan">08 - RAJASTHAN</option>
+                      <option value="07 - Delhi">07 - DELHI</option>
+                      <option value="10 - Bihar">10 - BIHAR</option>
+                      <option value="27 - Maharashtra">27 - MAHARASHTRA</option>
+                      <option value="29 - Karnataka">29 - KARNATAKA</option>
+                      <option value="24 - Gujarat">24 - GUJARAT</option>
+                      <option value="09 - Uttar Pradesh">09 - UTTAR PRADESH</option>
+                      <option value="19 - West Bengal">19 - WEST BENGAL</option>
+                      <option value="33 - Tamil Nadu">33 - TAMIL NADU</option>
+                      <option value="36 - Telangana">36 - TELANGANA</option>
+                      <option value="23 - Madhya Pradesh">23 - MADHYA PRADESH</option>
+                    </>
+                  )}
                 </select>
                 <span className="text-[11px] text-slate-400 mt-1 block">Determines CGST + SGST vs IGST for inter-state sales</span>
               </div>
@@ -1963,6 +2237,210 @@ export default function StoreSettings() {
           </div>
         </div>
       )}
+
+      {/* =================================================================== */}
+      {/* TAB 8: SUBSCRIPTION LICENSE & PAYMENT PASSBOOK                      */}
+      {/* =================================================================== */}
+      {activeTab === 'subscription' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* 1. Active License Overview Card */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-700 relative overflow-hidden">
+            <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none"></div>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    Official Enterprise License
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    Store Code: <b className="text-white uppercase font-mono">{passbookData?.shop?.shop_code || searchParams.get('code') || localStorage.getItem('shoppy_active_store_code') || 'ACTIVE'}</b>
+                  </span>
+                </div>
+
+                <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+                  <span>{passbookData?.shop?.plan_name || 'Retail ERP Active Package'}</span>
+                  <span className="text-sm font-semibold text-cyan-400 px-2 py-0.5 rounded-lg bg-cyan-950/60 border border-cyan-800 uppercase">
+                    {passbookData?.shop?.billing_cycle || 'active'}
+                  </span>
+                </h2>
+
+                <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                  Dedicated MySQL Tenant Database Isolated • Full Access to POS Counter, Thermal Printing, GST Tax Invoicing & Online Store.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                    <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-slate-300">Valid Until:</span>
+                    <b className="text-white font-mono">{passbookData?.shop?.valid_until || '2027-11-06'}</b>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                    <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-slate-300">Days Remaining:</span>
+                    <b className={`font-mono font-bold ${
+                      (passbookData?.shop?.days_remaining ?? 365) <= 0
+                        ? 'text-red-400'
+                        : (passbookData?.shop?.days_remaining ?? 365) <= 15
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                    }`}>
+                      {passbookData?.shop?.days_remaining ?? 365} Days
+                    </b>
+                  </div>
+
+                  {((passbookData?.shop?.days_remaining ?? 365) <= 0) && (
+                    <span className="px-3 py-1.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-black uppercase">
+                      Expired • Renewal Required
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Renewal Action Button */}
+              <div className="shrink-0 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setIsRenewalModalOpen(true)}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#008ba3] via-[#00a2c7] to-cyan-500 hover:from-[#00768c] hover:to-[#008ba3] text-white font-black text-xs shadow-xl shadow-cyan-600/30 flex items-center justify-center gap-2 transition transform active:scale-95 cursor-pointer"
+                >
+                  <Zap className="w-4 h-4 fill-current" />
+                  <span>Renew Subscription (Choose Package)</span>
+                </button>
+                <span className="block text-center text-[10px] text-slate-400">
+                  Instant PayU Money Checkout & Validity Extension
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Passbook Ledger Section */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Payment Passbook & Transaction Ledger</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                      LIVE PASSBOOK
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Har bar ka payment record with transaction reference, invoice number, and validity dates.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={fetchPassbook}
+                  disabled={isLoadingPassbook}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 ${isLoadingPassbook ? 'animate-spin text-cyan-600' : ''}`} />
+                  <span>Refresh Passbook</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Passbook Table */}
+            {isLoadingPassbook ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                <RotateCw className="w-6 h-6 animate-spin text-[#008ba3]" />
+                <span className="text-xs font-semibold">Loading your payment passbook...</span>
+              </div>
+            ) : (!passbookData?.passbook || passbookData.passbook.length === 0) ? (
+              <div className="py-12 text-center text-slate-400 space-y-2">
+                <CreditCard className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
+                <p className="text-xs font-medium">No previous renewal payments yet. Your current initial payment is active.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Date & Time</th>
+                      <th className="py-3 px-4">Invoice / Ref</th>
+                      <th className="py-3 px-4">Plan Package</th>
+                      <th className="py-3 px-4">Validity Extended</th>
+                      <th className="py-3 px-4">Amount Paid</th>
+                      <th className="py-3 px-4">Payment Mode</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                    {passbookData.passbook.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                          {entry.date}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-slate-900 dark:text-white block font-mono">
+                            {entry.invoice_no}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {entry.transaction_id}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                          {entry.plan_name}
+                          <span className="block text-[10px] text-slate-400 uppercase font-mono">
+                            {entry.billing_cycle}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                          {entry.valid_until ? entry.valid_until : `+${entry.duration_days} Days`}
+                        </td>
+                        <td className="py-3 px-4 font-black text-slate-900 dark:text-white text-sm">
+                          {entry.formatted_amount}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {entry.payment_method}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                            <span>SUCCESS</span>
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                            title="Print Tax Invoice / Receipt"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Store Subscription Renewal Modal */}
+      <StoreRenewalModal
+        isOpen={isRenewalModalOpen}
+        onClose={() => setIsRenewalModalOpen(false)}
+        shopCode={searchParams.get('code') || searchParams.get('shop_code') || localStorage.getItem('shoppy_active_store_code') || ''}
+        onRenewSuccess={() => {
+          fetchPassbook();
+          showToast('Store validity extended successfully!');
+        }}
+      />
 
       {/* =================================================================== */}
       {/* MODAL 1: TEST SMTP MODAL                                            */}

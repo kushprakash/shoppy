@@ -14,7 +14,8 @@ export default function NewSaleBilling() {
     createSaleBill, 
     selectedInvoice, 
     setSelectedInvoice, 
-    showToast 
+    showToast,
+    storeSettings
   } = useErp();
 
   // Search & Barcode
@@ -31,6 +32,8 @@ export default function NewSaleBilling() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerCity, setCustomerCity] = useState('');
+  const [posState, setPosState] = useState('');
+  const [gstStates, setGstStates] = useState([]);
   const [existingCustomer, setExistingCustomer] = useState(null);
 
   // Cart & Line Items
@@ -41,6 +44,18 @@ export default function NewSaleBilling() {
   const [paymentRef, setPaymentRef] = useState(''); // Cheque number, UPI UTR, or Bank UTR
   const [amountPaid, setAmountPaid] = useState('');
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
+  // Load official Indian GST States from database
+  useEffect(() => {
+    fetch('/api/tenant/gst-states')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.data)) {
+          setGstStates(data.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Auto focus barcode input on mount
   useEffect(() => {
@@ -188,6 +203,8 @@ export default function NewSaleBilling() {
       customerName: customerName.trim() || 'Walk-in Customer',
       phone: customerPhone.trim() || '9988776655',
       city: customerCity.trim() || 'Jaipur, RJ',
+      state: posState || storeSettings?.gst_state || storeSettings?.state_name || '08 - Rajasthan',
+      placeOfSupply: posState || storeSettings?.gst_state || storeSettings?.state_name || '08 - Rajasthan',
       billType, // 'pakka' | 'kachha'
       channel: stationName,
       channelType: 'offline', // offline invoice flag
@@ -219,6 +236,7 @@ export default function NewSaleBilling() {
     setCustomerPhone('');
     setCustomerName('');
     setCustomerCity('');
+    setPosState('');
     setExistingCustomer(null);
     setPaymentRef('');
     setAmountPaid('');
@@ -537,6 +555,28 @@ export default function NewSaleBilling() {
                 className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-cyan-500"
               />
             </div>
+
+            {/* GST Place of Supply State Dropdown (Loaded from gst_states table) */}
+            {billType === 'pakka' && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                  Place of Supply (GST State) *
+                </label>
+                <select
+                  value={posState}
+                  onChange={(e) => setPosState(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="">Store State ({storeSettings?.gst_state || storeSettings?.state_name || 'Intra-State'})</option>
+                  {gstStates.map((st) => (
+                    <option key={st.state_code} value={`${st.state_code} - ${st.state_name}`}>
+                      {st.state_code} — {st.state_name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">Determines CGST+SGST vs IGST billing</span>
+              </div>
+            )}
 
             {/* Existing Customer Dues Alert */}
             {existingCustomer && (

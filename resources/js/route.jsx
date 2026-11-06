@@ -113,6 +113,7 @@ export default function AppRoutes() {
         <Route path="/shop-admin/payment-gateways" element={<PaymentGateways />} />
         <Route path="/shop-admin/courier-shipping" element={<CourierShipping />} />
         <Route path="/shop-admin/store-settings" element={<StoreSettings />} />
+        <Route path="/shop-admin/settings" element={<StoreSettings />} />
       </Route>
 
       {/* Catch-all fallback */}

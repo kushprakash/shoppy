@@ -48,10 +48,23 @@ Route::post('/store/login', [MasterPortalApiController::class, 'storeLogin']);
 
 // Public Dynamic Website APIs
 Route::get('/public/landing-data', [MasterPortalApiController::class, 'getPublicLandingData']);
+Route::get('/public/gst-states', [MasterPortalApiController::class, 'getGstStates']);
+Route::get('/public/verify-agent', [MasterPortalApiController::class, 'verifyAgent']);
+Route::get('/tenant/gst-states', [MasterPortalApiController::class, 'getGstStates']);
 Route::get('/blogs', [MasterPortalApiController::class, 'getBlogs']);
 Route::get('/captcha', [MasterPortalApiController::class, 'generateCaptcha']);
 Route::post('/contact', [MasterPortalApiController::class, 'submitContactInquiry']);
 Route::post('/contacts', [MasterPortalApiController::class, 'submitContactInquiry']);
+
+// Agent Partner Portal Authentication & Dashboard APIs
+Route::post('/agent/login', [MasterPortalApiController::class, 'agentLogin']);
+Route::get('/agent/dashboard', [MasterPortalApiController::class, 'getAgentDashboard']);
+
+// Master Super Admin Agent Network Management & Reward APIs
+Route::get('/master/agents', [MasterPortalApiController::class, 'getSuperAdminAgents']);
+Route::post('/master/agents/create', [MasterPortalApiController::class, 'createAgent']);
+Route::post('/master/agents/{id}/update', [MasterPortalApiController::class, 'updateAgent']);
+Route::post('/master/agents/add-reward', [MasterPortalApiController::class, 'addAgentReward']);
 
 Route::prefix('central')->group(function () {
     Route::get('/stats', [CentralAdminController::class, 'getStats']);
@@ -134,4 +147,12 @@ Route::prefix('payu')->group(function () {
     Route::post('/initiate', [\App\Http\Controllers\Central\PayUController::class, 'initiate']);
     Route::post('/verify', [\App\Http\Controllers\Central\PayUController::class, 'verifyAndComplete']);
     Route::match(['get', 'post'], '/callback/{result}', [\App\Http\Controllers\Central\PayUController::class, 'handleCallback']);
+    Route::get('/passbook', [\App\Http\Controllers\Central\PayUController::class, 'getPassbook']);
+    Route::get('/status', [\App\Http\Controllers\Central\PayUController::class, 'getSubscriptionStatus']);
+});
+
+// Tenant Subscription & Payment Passbook Routes
+Route::prefix('tenant/subscription')->group(function () {
+    Route::get('/passbook', [\App\Http\Controllers\Central\PayUController::class, 'getPassbook']);
+    Route::get('/status', [\App\Http\Controllers\Central\PayUController::class, 'getSubscriptionStatus']);
 });
