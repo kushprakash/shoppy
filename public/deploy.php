@@ -192,7 +192,7 @@ $commands = [
     'Composer Install (Download Vendor Packages)' => "{$composer_cmd} install --no-dev --optimize-autoloader --prefer-dist --no-interaction 2>&1",
     'Clear Laravel Optimize Caches' => "{$php_bin} artisan optimize:clear 2>&1",
     'Run Central Migrations' => "{$php_bin} artisan migrate --force --path=database/migrations/central 2>&1",
-    'Run Tenant Migrations' => "{$php_bin} artisan migrate --force --path=database/migrations/tenant 2>&1",
+    'Sync & Provision All Tenant Databases' => "{$php_bin} artisan tenant:sync-databases 2>&1",
     'Current Git Commit Status' => 'git log -1 --pretty=format:"Commit: %h | %an (%ci) | %s" 2>&1'
 ];
 

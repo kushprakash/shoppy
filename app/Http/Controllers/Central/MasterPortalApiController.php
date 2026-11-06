@@ -306,7 +306,7 @@ class MasterPortalApiController extends Controller
             $code = 'SP' . date('YmdHis');
         }
         $slug = Str::slug($validated['name']) . '-' . strtolower(substr($code, -6));
-        $dbName = 'tenant_' . strtolower($code);
+        $dbName = \App\Models\Central\Shop::buildTenantDatabaseName($validated['name'], $code);
 
         // Fetch plan details
         $plan = DB::connection('mysql')->table('subscription_plans')->where('code', $validated['plan_id'])->first();
@@ -343,7 +343,7 @@ class MasterPortalApiController extends Controller
 
         // Provision isolated MySQL tenant database, migrate schema & seed required roles and permissions
         try {
-            $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_]/', '', $dbName);
+            $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_\-]/', '', $dbName);
             DB::connection('mysql')->statement("CREATE DATABASE IF NOT EXISTS `{$sanitizedDbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
             \Illuminate\Support\Facades\Config::set('database.connections.tenant.database', $sanitizedDbName);

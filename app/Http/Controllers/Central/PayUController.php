@@ -270,7 +270,7 @@ class PayUController extends Controller
                 $code = 'SP' . date('YmdHis');
             }
             $slug = Str::slug($storeName) . '-' . strtolower(substr($code, -6));
-            $dbName = 'tenant_' . strtolower($code);
+            $dbName = \App\Models\Central\Shop::buildTenantDatabaseName($storeName, $code);
             $validUntil = now()->addDays($planInfo['duration_days'])->format('Y-m-d');
 
             // Find State Name from gst_states table
@@ -399,7 +399,7 @@ class PayUController extends Controller
 
             // Provision isolated tenant database
             try {
-                $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_]/', '', $dbName);
+                $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_\-]/', '', $dbName);
                 DB::connection('mysql')->statement("CREATE DATABASE IF NOT EXISTS `{$sanitizedDbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
                 \Illuminate\Support\Facades\Config::set('database.connections.tenant.database', $sanitizedDbName);

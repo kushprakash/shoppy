@@ -63,7 +63,7 @@ class TenantManager
     public function createTenantDatabase(string $databaseName): void
     {
         // Sanitize database name to prevent SQL injection
-        $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_]/', '', $databaseName);
+        $sanitizedDbName = preg_replace('/[^a-zA-Z0-9_\-]/', '', $databaseName);
 
         if (empty($sanitizedDbName)) {
             throw new RuntimeException("Invalid tenant database name: {$databaseName}");
@@ -102,7 +102,7 @@ class TenantManager
         return DB::connection('mysql')->transaction(function () use ($data) {
             $slug = Str::slug($data['slug'] ?? $data['name']);
             $shopCode = $data['shop_code'] ?? ('SHP-' . strtoupper(Str::random(6)));
-            $databaseName = 'tenant_' . str_replace('-', '_', $slug);
+            $databaseName = Shop::buildTenantDatabaseName($data['name'], $shopCode);
 
             // 1. Create Central Shop Record
             $shop = Shop::create([

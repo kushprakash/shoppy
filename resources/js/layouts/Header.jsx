@@ -164,7 +164,7 @@ export default function Header() {
               {shopCode}
             </span>
             <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              <ShieldCheck className="w-3 h-3" /> Dedicated DB: tenant_{shopCode?.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'store'}
+              <ShieldCheck className="w-3 h-3" /> Dedicated DB: {activeStore?.database_name || `DB-${shopCode}`}
             </span>
           </div>
         </div>

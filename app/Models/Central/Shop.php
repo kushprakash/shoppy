@@ -57,4 +57,34 @@ class Shop extends Model
     {
         return in_array($this->status, ['suspended', 'archived']);
     }
+
+    /**
+     * Compute standardized tenant database name prefixed with Central DB.
+     * e.g. Central DB: shoppy-live, Store: M/S ZAMZAM ENTERPRISES -> shoppy-live-MS-ZAMZAM-ENTERPRISES
+     */
+    public static function buildTenantDatabaseName(string $storeName, ?string $shopCode = null): string
+    {
+        $centralDb = config('database.connections.mysql.database', 'shoppy_live');
+
+        // Clean store name: remove slashes and backslashes
+        $clean = str_replace(['/', '\\'], '', $storeName);
+        // Convert non-alphanumeric (except hyphen and underscore) to hyphen
+        $slug = preg_replace('/[^a-zA-Z0-9_\-]+/', '-', $clean);
+        $slug = trim($slug, '-');
+        $slug = strtoupper($slug);
+
+        if (empty($slug)) {
+            $slug = $shopCode ? strtoupper($shopCode) : 'STORE';
+        }
+
+        // e.g. shoppy-live-MS-ZAMZAM-ENTERPRISES
+        $dbName = "{$centralDb}-{$slug}";
+
+        // Max identifier length in MySQL is 64 characters
+        if (strlen($dbName) > 60) {
+            $dbName = substr($dbName, 0, 60);
+        }
+
+        return $dbName;
+    }
 }

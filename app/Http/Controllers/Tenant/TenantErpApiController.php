@@ -18,7 +18,7 @@ class TenantErpApiController extends Controller
     protected function switchToTenant(string $databaseName): bool
     {
         try {
-            $sanitized = preg_replace('/[^a-zA-Z0-9_]/', '', $databaseName);
+            $sanitized = preg_replace('/[^a-zA-Z0-9_\-]/', '', $databaseName);
             if (empty($sanitized)) return false;
 
             Config::set('database.connections.tenant.database', $sanitized);
