@@ -153,17 +153,32 @@ if ($is_windows) {
     }
 }
 
-// 5. Auto-extract vendor.zip if uploaded in project root (useful if composer CLI is restricted)
+// 5. Auto-extract vendor.zip or app.zip if present in project root
 $vendor_zip = $project_path . DIRECTORY_SEPARATOR . 'vendor.zip';
 $vendor_autoload = $project_path . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
-$unzipped_vendor = false;
 if (file_exists($vendor_zip) && !file_exists($vendor_autoload)) {
     if (class_exists('ZipArchive')) {
         $zip = new ZipArchive;
         if ($zip->open($vendor_zip) === TRUE) {
             $zip->extractTo($project_path);
             $zip->close();
-            $unzipped_vendor = true;
+        }
+    }
+}
+
+// 6. Check Vite Manifest / Auto-extract build if manifest is missing
+$build_manifest = $project_path . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'manifest.json';
+if (!file_exists($build_manifest)) {
+    $zip_candidates = ['build.zip', 'app.zip'];
+    foreach ($zip_candidates as $zc) {
+        $zp = $project_path . DIRECTORY_SEPARATOR . $zc;
+        if (file_exists($zp) && class_exists('ZipArchive')) {
+            $zip = new ZipArchive;
+            if ($zip->open($zp) === TRUE) {
+                $zip->extractTo($project_path);
+                $zip->close();
+                if (file_exists($build_manifest)) break;
+            }
         }
     }
 }
@@ -245,6 +260,12 @@ if (!$has_error) {
         echo "<span class='info-pill' style='background: #064e3b; color: #6ee7b7; font-weight: 700;'>✓ Vendor Packages Installed</span>";
     } else {
         echo "<span class='info-pill' style='background: #7f1d1d; color: #fca5a5; font-weight: 700;'>✗ Vendor Missing (Upload vendor.zip or run composer)</span>";
+    }
+    $has_manifest = file_exists($project_path . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'build' . DIRECTORY_SEPARATOR . 'manifest.json');
+    if ($has_manifest) {
+        echo "<span class='info-pill' style='background: #064e3b; color: #6ee7b7; font-weight: 700;'>✓ Vite Manifest Present</span>";
+    } else {
+        echo "<span class='info-pill' style='background: #7f1d1d; color: #fca5a5; font-weight: 700;'>✗ Vite Manifest Missing</span>";
     }
     echo "</div>";
     echo "</div>";
