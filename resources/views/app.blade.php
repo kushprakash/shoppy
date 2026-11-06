@@ -7,6 +7,11 @@
 
     <title>{{ $title ?? 'Shoppy ERP — Enexa IT Solutions Private Limited' }}</title>
 
+    <!-- App Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1">
+
     <!-- Google Fonts: Outfit & Inter & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -232,7 +232,7 @@ export default function StoreSettings() {
     store_name: storeSettings.store_name || storeSettings.storeName || 'Ramesh Fashion Store',
     logo: isCleanUrl(storeSettings.logo) ? storeSettings.logo : '',
     footer_logo: isCleanUrl(storeSettings.footer_logo) ? storeSettings.footer_logo : '',
-    favicon: isCleanUrl(storeSettings.favicon) ? storeSettings.favicon : '',
+    favicon: isCleanUrl(storeSettings.favicon) ? storeSettings.favicon : '/favicon.png',
     theme_color: storeSettings.theme_color || '#00a2c7',
     secondary_color: storeSettings.secondary_color || '#06b6d4',
 
@@ -332,7 +332,7 @@ export default function StoreSettings() {
             rcm_applicable: d.rcm_applicable ?? prev.rcm_applicable,
             logo: isCleanUrl(d.logo) ? d.logo : (isCleanUrl(prev.logo) ? prev.logo : ''),
             footer_logo: isCleanUrl(d.footer_logo) ? d.footer_logo : (isCleanUrl(prev.footer_logo) ? prev.footer_logo : ''),
-            favicon: isCleanUrl(d.favicon) ? d.favicon : (isCleanUrl(prev.favicon) ? prev.favicon : ''),
+            favicon: isCleanUrl(d.favicon) ? d.favicon : (isCleanUrl(prev.favicon) ? prev.favicon : '/favicon.png'),
             footer_about_us: d.footer_about_us || prev.footer_about_us,
             footer_copyright: d.footer_copyright || prev.footer_copyright,
             contact_address: d.contact_address || prev.contact_address,

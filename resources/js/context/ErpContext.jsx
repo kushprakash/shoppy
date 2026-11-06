@@ -520,6 +520,20 @@ export function ErpProvider({ children }) {
 
   const storeName = storeSettings.store_name || storeSettings.storeName || 'Shoppy Store';
 
+  // Update browser favicon dynamically
+  useEffect(() => {
+    try {
+      const favUrl = storeSettings?.favicon || '/favicon.png';
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = favUrl;
+    } catch (e) {}
+  }, [storeSettings?.favicon]);
+
   // Modal States for I-Card, Profile and Password
   const [isICardOpen, setIsICardOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
