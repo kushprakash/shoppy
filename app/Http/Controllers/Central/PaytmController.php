@@ -520,7 +520,29 @@ class PaytmController extends Controller
                 Log::warning("Paytm verify: Welcome SMS error: " . $e->getMessage());
             }
 
-            // 7. Dispatch Welcome Email via Gmail SMTP
+            // 7. Dispatch Official GST Tax Invoice Email from ENEXA IT SOLUTIONS PRIVATE LIMITED (Sent BEFORE Welcome Mail)
+            try {
+                CommunicationService::sendGstInvoiceEmail(
+                    ownerName: $ownerName,
+                    ownerEmail: $ownerEmail,
+                    storeCode: $code,
+                    storeName: $storeName,
+                    totalAmount: (float)$planInfo['total_amount'],
+                    invoiceNumber: $invoiceNo,
+                    planName: $planInfo['plan_name'],
+                    billingCycle: $cycle,
+                    stateCode: $stateCode,
+                    stateName: $stateName,
+                    ownerPhone: $ownerPhone,
+                    transactionId: $orderId,
+                    validUntil: $validUntil
+                );
+                Log::info("Paytm verify: GST Tax Invoice email sent successfully to {$ownerEmail} for store {$code}");
+            } catch (\Throwable $e) {
+                Log::error("Paytm verify: GST Invoice Email error: " . $e->getMessage());
+            }
+
+            // 8. Dispatch Welcome / Login Credentials Email via Gmail SMTP
             try {
                 CommunicationService::sendWelcomeEmail(
                     ownerName: $ownerName,
@@ -532,8 +554,9 @@ class PaytmController extends Controller
                     planName: $planInfo['plan_name'],
                     mpin: '123456'
                 );
+                Log::info("Paytm verify: Welcome email sent successfully to {$ownerEmail} for store {$code}");
             } catch (\Throwable $e) {
-                Log::warning("Paytm verify: Welcome Email error: " . $e->getMessage());
+                Log::error("Paytm verify: Welcome Email error: " . $e->getMessage());
             }
 
             return response()->json([
@@ -618,6 +641,32 @@ class PaytmController extends Controller
                     'status' => 'success',
                     'updated_at' => now()
                 ]);
+
+            // Dispatch Official GST Tax Invoice Email on Renewal
+            try {
+                $renewInvoiceNo = 'INV-REN-' . date('Ymd') . '-' . strtoupper(substr($orderId, -6));
+                $renewEmail = $shop->owner_email ?? ($settings['contact_email'] ?? null);
+                if ($renewEmail) {
+                    CommunicationService::sendGstInvoiceEmail(
+                        ownerName: $shop->owner_name ?? 'Store Owner',
+                        ownerEmail: $renewEmail,
+                        storeCode: $shop->shop_code,
+                        storeName: $shop->name,
+                        totalAmount: (float)$planInfo['total_amount'],
+                        invoiceNumber: $renewInvoiceNo,
+                        planName: $planInfo['plan_name'],
+                        billingCycle: $cycle,
+                        stateCode: $settings['state_code'] ?? '10',
+                        stateName: $settings['state_name'] ?? 'BIHAR',
+                        ownerPhone: $shop->owner_phone ?? ($settings['contact_phone'] ?? '9546042639'),
+                        transactionId: $orderId,
+                        validUntil: $newValidUntil
+                    );
+                    Log::info("Paytm renewal: GST Tax Invoice email sent to {$renewEmail} for {$shop->shop_code}");
+                }
+            } catch (\Throwable $e) {
+                Log::error("Paytm renewal: GST Invoice Email error: " . $e->getMessage());
+            }
 
             return response()->json([
                 'success' => true,

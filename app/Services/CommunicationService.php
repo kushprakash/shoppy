@@ -129,7 +129,70 @@ class CommunicationService
     }
 
     /**
-     * Dispatch Welcome Email with rich HTML template using Gmail SMTP
+     * Dispatch Official GST Tax Invoice Email from ENEXA IT SOLUTIONS PRIVATE LIMITED
+     * with 18% GST breakdown (CGST+SGST or IGST) matching Indian GST Standard
+     */
+    public static function sendGstInvoiceEmail(
+        string $ownerName,
+        string $ownerEmail,
+        string $storeCode,
+        string $storeName,
+        float $totalAmount,
+        string $invoiceNumber,
+        string $planName = 'Monthly Package',
+        string $billingCycle = 'monthly',
+        ?string $stateCode = '10',
+        ?string $stateName = 'BIHAR',
+        ?string $ownerPhone = '9546042639',
+        ?string $transactionId = null,
+        ?string $validUntil = null
+    ): array {
+        try {
+            $cleanEmail = trim($ownerEmail);
+            if (empty($cleanEmail) || !filter_var($cleanEmail, FILTER_VALIDATE_EMAIL)) {
+                Log::warning("sendGstInvoiceEmail: Invalid or empty email '{$cleanEmail}' for store {$storeCode}");
+                return [
+                    'status' => 0,
+                    'message' => 'Invalid email address.'
+                ];
+            }
+
+            if (str_ends_with(strtolower($cleanEmail), '.shoppy.io')) {
+                Log::info("sendGstInvoiceEmail: Skipping dummy domain email '{$cleanEmail}' for store {$storeCode}");
+                return [
+                    'status' => 0,
+                    'message' => 'Skipping placeholder dummy email.'
+                ];
+            }
+
+            $mailable = new \App\Mail\GstInvoiceMail(
+                ownerName: $ownerName,
+                ownerEmail: $cleanEmail,
+                storeCode: $storeCode,
+                storeName: $storeName ?: $storeCode,
+                invoiceNumber: $invoiceNumber,
+                totalAmount: $totalAmount,
+                planName: $planName,
+                billingCycle: $billingCycle,
+                stateCode: $stateCode,
+                stateName: $stateName,
+                ownerPhone: $ownerPhone,
+                transactionId: $transactionId,
+                validUntil: $validUntil
+            );
+
+            return self::sendMailWithFallback($cleanEmail, $mailable, "GstInvoiceMail [{$invoiceNumber}]");
+        } catch (\Throwable $e) {
+            Log::error("sendGstInvoiceEmail error for {$ownerEmail}: " . $e->getMessage());
+            return [
+                'status' => 0,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Dispatch Welcome Email with rich HTML template using Gmail SMTP with multi-port fallback
      */
     public static function sendWelcomeEmail(
         string $ownerName,
@@ -142,41 +205,27 @@ class CommunicationService
         string $mpin = '123456'
     ): array {
         try {
-            if (empty($ownerEmail) || !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
-                Log::warning("sendWelcomeEmail: Invalid or empty email '{$ownerEmail}' for store {$storeCode}");
+            $cleanEmail = trim($ownerEmail);
+            if (empty($cleanEmail) || !filter_var($cleanEmail, FILTER_VALIDATE_EMAIL)) {
+                Log::warning("sendWelcomeEmail: Invalid or empty email '{$cleanEmail}' for store {$storeCode}");
                 return [
                     'status' => 0,
                     'message' => 'Invalid email address.'
                 ];
             }
 
-            // Configure dynamic dedicated SMTP mailer for Enexa Gmail
-            $host = config('services.enexa_mail.host', env('MAIL_HOST', 'smtp.gmail.com'));
-            $port = (int)config('services.enexa_mail.port', env('MAIL_PORT', 587));
-            $username = config('services.enexa_mail.username', env('MAIL_USERNAME', 'contact@enexa.in'));
-            $passwordVal = config('services.enexa_mail.password', env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'));
-            $encryption = config('services.enexa_mail.encryption', env('MAIL_ENCRYPTION', 'tls'));
-            $fromAddress = config('services.enexa_mail.from_address', env('MAIL_FROM_ADDRESS', 'contact@enexa.in'));
-            $fromName = config('services.enexa_mail.from_name', env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT'));
-
-            Config::set('mail.mailers.enexa_smtp', [
-                'transport' => 'smtp',
-                'host' => $host,
-                'port' => $port,
-                'encryption' => $encryption,
-                'username' => $username,
-                'password' => $passwordVal,
-                'timeout' => 20,
-            ]);
-
-            Config::set('mail.from', [
-                'address' => $fromAddress,
-                'name' => $fromName,
-            ]);
+            // Skip dummy auto-generated placeholder emails
+            if (str_ends_with(strtolower($cleanEmail), '.shoppy.io')) {
+                Log::info("sendWelcomeEmail: Skipping dummy domain email '{$cleanEmail}' for store {$storeCode}");
+                return [
+                    'status' => 0,
+                    'message' => 'Skipping placeholder dummy email.'
+                ];
+            }
 
             $mailable = new WelcomeStoreMail(
                 ownerName: $ownerName,
-                ownerEmail: $ownerEmail,
+                ownerEmail: $cleanEmail,
                 storeCode: $storeCode,
                 password: $password,
                 storeName: $storeName ?: $storeCode,
@@ -185,14 +234,7 @@ class CommunicationService
                 planName: $planName,
             );
 
-            Mail::mailer('enexa_smtp')->to($ownerEmail)->send($mailable);
-
-            Log::info("sendWelcomeEmail: Welcome email sent successfully to {$ownerEmail} for store {$storeCode}");
-
-            return [
-                'status' => 1,
-                'message' => "Welcome email sent to {$ownerEmail}"
-            ];
+            return self::sendMailWithFallback($cleanEmail, $mailable, "WelcomeStoreMail [{$storeCode}]");
         } catch (\Throwable $e) {
             Log::error("sendWelcomeEmail error for {$ownerEmail}: " . $e->getMessage());
             return [
@@ -216,7 +258,7 @@ class CommunicationService
     }
 
     /**
-     * Dispatch Password Reset OTP Email via Gmail SMTP
+     * Dispatch Password Reset OTP Email via Gmail SMTP with multi-port fallback
      */
     public static function sendOtpEmail(
         string $ownerName,
@@ -226,37 +268,22 @@ class CommunicationService
         string $storeName = ''
     ): array {
         try {
-            if (empty($ownerEmail) || !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
-                Log::warning("sendOtpEmail: Invalid or empty email '{$ownerEmail}'");
+            $cleanEmail = trim($ownerEmail);
+            if (empty($cleanEmail) || !filter_var($cleanEmail, FILTER_VALIDATE_EMAIL)) {
+                Log::warning("sendOtpEmail: Invalid or empty email '{$cleanEmail}'");
                 return [
                     'status' => 0,
                     'message' => 'Invalid email address.'
                 ];
             }
 
-            // Configure dynamic dedicated SMTP mailer for Enexa Gmail
-            $host = config('services.enexa_mail.host', env('MAIL_HOST', 'smtp.gmail.com'));
-            $port = (int)config('services.enexa_mail.port', env('MAIL_PORT', 587));
-            $username = config('services.enexa_mail.username', env('MAIL_USERNAME', 'contact@enexa.in'));
-            $passwordVal = config('services.enexa_mail.password', env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'));
-            $encryption = config('services.enexa_mail.encryption', env('MAIL_ENCRYPTION', 'tls'));
-            $fromAddress = config('services.enexa_mail.from_address', env('MAIL_FROM_ADDRESS', 'contact@enexa.in'));
-            $fromName = config('services.enexa_mail.from_name', env('MAIL_FROM_NAME', 'Shoppy ERP Security'));
-
-            Config::set('mail.mailers.enexa_smtp', [
-                'transport' => 'smtp',
-                'host' => $host,
-                'port' => $port,
-                'encryption' => $encryption,
-                'username' => $username,
-                'password' => $passwordVal,
-                'timeout' => 20,
-            ]);
-
-            Config::set('mail.from', [
-                'address' => $fromAddress,
-                'name' => $fromName,
-            ]);
+            if (str_ends_with(strtolower($cleanEmail), '.shoppy.io')) {
+                Log::info("sendOtpEmail: Skipping dummy domain email '{$cleanEmail}'");
+                return [
+                    'status' => 0,
+                    'message' => 'Skipping placeholder dummy email.'
+                ];
+            }
 
             $mailable = new \App\Mail\OtpVerificationMail(
                 ownerName: $ownerName,
@@ -265,14 +292,7 @@ class CommunicationService
                 storeName: $storeName,
             );
 
-            Mail::mailer('enexa_smtp')->to($ownerEmail)->send($mailable);
-
-            Log::info("sendOtpEmail: OTP email sent successfully to {$ownerEmail} for store {$storeCode}");
-
-            return [
-                'status' => 1,
-                'message' => "OTP email sent to {$ownerEmail}"
-            ];
+            return self::sendMailWithFallback($cleanEmail, $mailable, "OtpVerificationMail [{$storeCode}]");
         } catch (\Throwable $e) {
             Log::error("sendOtpEmail error for {$ownerEmail}: " . $e->getMessage());
             return [
@@ -280,6 +300,104 @@ class CommunicationService
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Robust mail dispatch with automatic Port 465 (SSL) -> Port 587 (TLS) -> default SMTP fallback
+     */
+    public static function sendMailWithFallback(string $toEmail, \Illuminate\Mail\Mailable $mailable, string $context = 'Mail'): array
+    {
+        $host = config('services.enexa_mail.host', env('MAIL_HOST', 'smtp.gmail.com'));
+        $username = config('services.enexa_mail.username', env('MAIL_USERNAME', 'contact@enexa.in'));
+        $passwordVal = config('services.enexa_mail.password', env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'));
+        $fromAddress = config('services.enexa_mail.from_address', env('MAIL_FROM_ADDRESS', 'contact@enexa.in'));
+        $fromName = config('services.enexa_mail.from_name', env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT'));
+
+        Config::set('mail.from', [
+            'address' => $fromAddress,
+            'name' => $fromName,
+        ]);
+
+        $mailers = [
+            'enexa_smtp_ssl' => [
+                'transport' => 'smtp',
+                'host' => $host,
+                'port' => 465,
+                'encryption' => 'ssl',
+                'username' => $username,
+                'password' => $passwordVal,
+                'timeout' => 25,
+                'local_domain' => 'shoppy.live',
+                'stream' => [
+                    'ssl' => [
+                        'allow_self_signed' => true,
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ],
+            ],
+            'enexa_smtp' => [
+                'transport' => 'smtp',
+                'host' => $host,
+                'port' => 587,
+                'encryption' => 'tls',
+                'username' => $username,
+                'password' => $passwordVal,
+                'timeout' => 25,
+                'local_domain' => 'shoppy.live',
+                'stream' => [
+                    'ssl' => [
+                        'allow_self_signed' => true,
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        $lastException = null;
+
+        foreach ($mailers as $mailerName => $config) {
+            try {
+                Config::set("mail.mailers.{$mailerName}", $config);
+                Mail::purge($mailerName);
+
+                Mail::mailer($mailerName)->to($toEmail)->send($mailable);
+
+                Log::info("{$context}: Email delivered successfully to {$toEmail} via {$mailerName} (Port {$config['port']})");
+
+                return [
+                    'status' => 1,
+                    'mailer' => $mailerName,
+                    'port' => $config['port'],
+                    'message' => "Email sent successfully to {$toEmail}"
+                ];
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                Log::warning("{$context}: Delivery via {$mailerName} (Port {$config['port']}) failed: " . $e->getMessage() . ". Retrying next transport...");
+            }
+        }
+
+        // Final attempt with default mailer
+        try {
+            Mail::purge('smtp');
+            Mail::mailer('smtp')->to($toEmail)->send($mailable);
+            Log::info("{$context}: Email delivered successfully to {$toEmail} via default smtp mailer");
+            return [
+                'status' => 1,
+                'mailer' => 'smtp',
+                'message' => "Email sent successfully to {$toEmail}"
+            ];
+        } catch (\Throwable $e) {
+            $lastException = $e;
+        }
+
+        Log::error("{$context}: All mail transports failed for recipient {$toEmail}. Error: " . ($lastException ? $lastException->getMessage() : 'Unknown error'));
+
+        return [
+            'status' => 0,
+            'message' => $lastException ? $lastException->getMessage() : 'Mail delivery failed on all transports.'
+        ];
     }
 }
 
