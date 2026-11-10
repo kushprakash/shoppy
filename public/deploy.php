@@ -14,6 +14,39 @@ $git_token = $_GET['git_token'] ?? $_POST['git_token'] ?? '';
 // Project root path (parent directory of public/)
 $project_path = dirname(__DIR__);
 
+// Read .env to get DB_USERNAME
+$env_file = $project_path . DIRECTORY_SEPARATOR . '.env';
+$env_content = file_exists($env_file) ? @file_get_contents($env_file) : '';
+$env_db_user = 'root';
+if (preg_match('/^DB_USERNAME=(.*)$/m', $env_content, $m_user)) {
+    $env_db_user = trim($m_user[1], " \t\n\r\0\x0B\"'");
+}
+
+// Check if user requested to auto-grant MySQL permissions via Root
+$grant_feedback = null;
+if (isset($_POST['apply_db_perms']) || isset($_GET['apply_db_perms'])) {
+    $mysql_root_pass = $_POST['mysql_root_pass'] ?? $_GET['mysql_root_pass'] ?? '';
+    try {
+        $root_pdo = new PDO("mysql:host=localhost", "root", $mysql_root_pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+        $root_pdo->exec("GRANT CREATE ON *.* TO '{$env_db_user}'@'localhost'");
+        $root_pdo->exec("GRANT ALL PRIVILEGES ON `tenant_%`.* TO '{$env_db_user}'@'localhost'");
+        $root_pdo->exec("GRANT CREATE ON *.* TO '{$env_db_user}'@'127.0.0.1'");
+        $root_pdo->exec("GRANT ALL PRIVILEGES ON `tenant_%`.* TO '{$env_db_user}'@'127.0.0.1'");
+        $root_pdo->exec("FLUSH PRIVILEGES");
+        $grant_feedback = [
+            'success' => true,
+            'message' => "Successfully granted CREATE and tenant_% privileges to user '{$env_db_user}'!"
+        ];
+    } catch (\Throwable $e) {
+        $grant_feedback = [
+            'success' => false,
+            'message' => "Could not connect to MySQL as root: " . $e->getMessage()
+        ];
+    }
+}
+
 // Common server PATH additions for cPanel / Linux / NVM Node
 if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
     putenv("PATH=" . getenv("PATH") . ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/" . get_current_user() . "/.nvm/versions/node/v20.0.0/bin:/home/" . get_current_user() . "/.nvm/versions/node/v18.0.0/bin");
@@ -192,7 +225,8 @@ $commands = [
     'Composer Install (Download Vendor Packages)' => "{$composer_cmd} install --no-dev --optimize-autoloader --prefer-dist --no-interaction 2>&1",
     'Clear Laravel Optimize Caches' => "{$php_bin} artisan optimize:clear 2>&1",
     'Run Central Migrations' => "{$php_bin} artisan migrate --force --path=database/migrations/central 2>&1",
-    'Sync & Provision All Tenant Databases' => "{$php_bin} artisan tenant:sync-databases 2>&1",
+    'Verify Tenant Database Permissions' => "{$php_bin} artisan tenant:check-db 2>&1",
+    'Sync & Auto-Provision Missing Tenant Databases' => "{$php_bin} artisan tenant:sync-databases 2>&1",
     'Current Git Commit Status' => 'git log -1 --pretty=format:"Commit: %h | %an (%ci) | %s" 2>&1'
 ];
 
@@ -279,6 +313,43 @@ if (!$has_error) {
     echo "</div>";
 }
 ?>
+
+    <!-- CloudPanel Multi-Tenant Database Helper -->
+    <div style="margin-top: 30px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px;">
+        <h3 style="font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <span>🛠️ CloudPanel Multi-Tenant Database Permissions Tool</span>
+        </h3>
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 16px;">
+            CloudPanel me naye stores ke alag databases (jaise <code>tenant_store...</code>) create karne ke liye database user <code><?php echo htmlspecialchars($env_db_user); ?></code> ke paas <strong>CREATE</strong> aur <strong>tenant_%</strong> permissions honi chahiye.
+        </p>
+
+        <?php if (!empty($grant_feedback)): ?>
+            <div style="padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; font-weight: 600; <?php echo $grant_feedback['success'] ? 'background: #064e3b; color: #6ee7b7; border: 1px solid #059669;' : 'background: #881337; color: #fca5a5; border: 1px solid #e11d48;'; ?>">
+                <?php echo $grant_feedback['success'] ? '✔ ' : '❌ '; ?><?php echo htmlspecialchars($grant_feedback['message']); ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" action="?grant_db_perms=1" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px;">
+            <input type="password" name="mysql_root_pass" placeholder="MySQL Root Password (leave blank if none)" style="background: #0f172a; border: 1px solid #475569; color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; min-width: 280px;">
+            <button type="submit" name="apply_db_perms" value="1" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 12px; padding: 10px 18px;">
+                ⚡ Auto-Grant Permissions via Web
+            </button>
+            <a href="?run=1" class="btn" style="background: #334155; font-size: 12px; padding: 10px 18px;">
+                🔄 Re-run Check & Sync Missing DBs
+            </a>
+        </form>
+
+        <details style="margin-top: 12px; font-size: 12px; color: #cbd5e1;">
+            <summary style="cursor: pointer; font-weight: 700; color: #38bdf8; padding: 6px 0;">Or view SQL commands to run in SSH terminal as root:</summary>
+            <div style="background: #020617; padding: 14px; border-radius: 10px; margin-top: 8px; font-family: monospace; font-size: 12px; color: #a5f3fc; line-height: 1.8;">
+                GRANT CREATE ON *.* TO '<?php echo htmlspecialchars($env_db_user); ?>'@'localhost';<br>
+                GRANT ALL PRIVILEGES ON `tenant_%`.* TO '<?php echo htmlspecialchars($env_db_user); ?>'@'localhost';<br>
+                GRANT CREATE ON *.* TO '<?php echo htmlspecialchars($env_db_user); ?>'@'127.0.0.1';<br>
+                GRANT ALL PRIVILEGES ON `tenant_%`.* TO '<?php echo htmlspecialchars($env_db_user); ?>'@'127.0.0.1';<br>
+                FLUSH PRIVILEGES;
+            </div>
+        </details>
+    </div>
 
 </div>
 </body>

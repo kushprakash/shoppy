@@ -133,3 +133,10 @@ Artisan::command('tenant:fix-missing-dbs', function () {
     $this->info("\nDone! Repaired {$createdCount} missing database(s).");
 })->purpose('Detect and create missing tenant databases for all registered shops');
 
+/**
+ * Backward compatibility alias: tenant:sync-databases
+ */
+Artisan::command('tenant:sync-databases', function () {
+    $this->call('tenant:fix-missing-dbs');
+})->purpose('Sync and create all missing tenant databases');
+
