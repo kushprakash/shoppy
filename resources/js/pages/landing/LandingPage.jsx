@@ -179,6 +179,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
     storeName: '',
     ownerName: '',
     ownerPhone: '',
+    ownerEmail: '',
     stateCode: '10',
     city: 'BIHAR',
     category: '',
@@ -603,8 +604,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Proceed from Step 2 to Step 3: Initiate PayU Money Payment for Onboarding
   const handleProceedToPayment = async () => {
-    if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone || !onboardForm.stateCode) {
-      showToast('Please fill all required store details (Shop Name, Owner Name, Mobile & State).');
+    if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone || !onboardForm.ownerEmail || !onboardForm.stateCode) {
+      showToast('Please fill all required store details (Shop Name, Owner Name, Mobile, Email & State).');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(onboardForm.ownerEmail.trim())) {
+      showToast('Please enter a valid Email Address.');
+      return;
+    }
+
+    if (onboardForm.ownerPhone.trim().length !== 10) {
+      showToast('Please enter a valid 10-digit Mobile Number.');
       return;
     }
 
@@ -619,6 +631,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
       name: onboardForm.storeName,
       owner_name: onboardForm.ownerName,
       owner_phone: onboardForm.ownerPhone,
+      owner_email: onboardForm.ownerEmail.trim(),
       state_code: onboardForm.stateCode,
       referral_code: onboardForm.referralCode || '',
       city: onboardForm.city || 'BIHAR',
@@ -657,6 +670,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
         storeName: onboardForm.storeName,
         ownerName: onboardForm.ownerName,
         ownerPhone: onboardForm.ownerPhone,
+        ownerEmail: onboardForm.ownerEmail.trim(),
         stateCode: onboardForm.stateCode,
         referralCode: onboardForm.referralCode,
         planId: selectedOnboardPlan.id,
@@ -2829,6 +2843,22 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     </div>
                   </div>
 
+                  {/* Owner Email ID */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Email Address (Login ID &amp; Credentials Delivery) *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. merchant@gmail.com"
+                      value={onboardForm.ownerEmail}
+                      onChange={(e) => setOnboardForm({ ...onboardForm, ownerEmail: e.target.value.trim() })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-none focus:border-[#00a2c7]"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-1 block">Your store access credentials, M-PIN &amp; invoice will be sent to this email.</span>
+                  </div>
+
                   {/* State List Dropdown */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -3040,9 +3070,26 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       <span className="font-bold text-slate-900 dark:text-white">{provisionedStore.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Database Instance:</span>
-                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{provisionedStore.database_name}</span>
+                      <span className="text-slate-500">Login ID / Email:</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{provisionedStore.owner_email || onboardForm.ownerEmail}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Registered Mobile:</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{provisionedStore.owner_phone || onboardForm.ownerPhone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Default Password &amp; M-PIN:</span>
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">admin123 / PIN: 123456</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Database Instance:</span>
+                      <span className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">{provisionedStore.database_name}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>Welcome Email &amp; SMS with login credentials and M-PIN have been dispatched!</span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">

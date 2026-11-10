@@ -48,4 +48,19 @@ return [
         'env' => 'production',
     ],
 
+    'buzzify' => [
+        'api_key' => env('BUZZIFY_API_KEY', 'Q5z3mfNGdXu6RtJI'),
+        'sender_id' => env('BUZZIFY_SENDER_ID', 'ENEXAI'),
+    ],
+
+    'enexa_mail' => [
+        'host' => env('MAIL_HOST', 'smtp.gmail.com'),
+        'port' => env('MAIL_PORT', 587),
+        'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
+        'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
+        'encryption' => env('MAIL_ENCRYPTION', 'tls'),
+        'from_address' => env('MAIL_FROM_ADDRESS', 'contact@enexa.in'),
+        'from_name' => env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT'),
+    ],
+
 ];

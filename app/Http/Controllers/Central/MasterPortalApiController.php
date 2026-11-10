@@ -294,6 +294,7 @@ class MasterPortalApiController extends Controller
             'name' => 'required|string|max:255',
             'owner_name' => 'required|string|max:255',
             'owner_phone' => 'required|string|max:32',
+            'owner_email' => 'nullable|email|max:255',
             'city' => 'nullable|string|max:128',
             'plan_id' => 'required|string|max:64',
             'billing_cycle' => 'nullable|string|max:32',
@@ -307,6 +308,9 @@ class MasterPortalApiController extends Controller
         }
         $slug = Str::slug($validated['name']) . '-' . strtolower(substr($code, -6));
         $dbName = \App\Models\Central\Shop::buildTenantDatabaseName($validated['name'], $code);
+        $ownerEmail = !empty($validated['owner_email'])
+            ? $validated['owner_email']
+            : (strtolower(Str::slug($validated['owner_name'])) . '@' . strtolower($code) . '.shoppy.io');
 
         // Fetch plan details
         $plan = DB::connection('mysql')->table('subscription_plans')->where('code', $validated['plan_id'])->first();
@@ -332,7 +336,7 @@ class MasterPortalApiController extends Controller
             'shop_code' => $code,
             'slug' => $slug,
             'owner_name' => $validated['owner_name'],
-            'owner_email' => strtolower(Str::slug($validated['owner_name'])) . '@merchant.shoppy.io',
+            'owner_email' => $ownerEmail,
             'owner_phone' => $validated['owner_phone'],
             'database_name' => $dbName,
             'status' => 'active',
@@ -400,9 +404,46 @@ class MasterPortalApiController extends Controller
                     ]
                 );
             }
+
+            // Seed Admin User into tenant users table
+            DB::connection('tenant')->table('users')->insertOrIgnore([
+                'name' => $validated['owner_name'],
+                'email' => $ownerEmail,
+                'phone' => $validated['owner_phone'],
+                'password' => bcrypt('admin123'),
+                'role' => 'admin',
+                'branch_id' => $branchId,
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         } catch (\Throwable $e) {
             // Log or continue gracefully
         }
+
+        // Send Welcome SMS & Email
+        try {
+            \App\Services\CommunicationService::sendWelcomeSms(
+                name: $validated['owner_name'],
+                mobile: $validated['owner_phone'],
+                storeCode: $code,
+                password: 'admin123',
+                mpin: '123456'
+            );
+        } catch (\Throwable $e) {}
+
+        try {
+            \App\Services\CommunicationService::sendWelcomeEmail(
+                ownerName: $validated['owner_name'],
+                ownerEmail: $ownerEmail,
+                storeCode: $code,
+                password: 'admin123',
+                storeName: $validated['name'],
+                validUntil: $validUntil,
+                planName: $planName,
+                mpin: '123456'
+            );
+        } catch (\Throwable $e) {}
 
         return response()->json([
             'success' => true,
@@ -411,6 +452,9 @@ class MasterPortalApiController extends Controller
                 'id' => $shopId,
                 'shop_code' => $code,
                 'name' => $validated['name'],
+                'owner_name' => $validated['owner_name'],
+                'owner_email' => $ownerEmail,
+                'owner_phone' => $validated['owner_phone'],
                 'database_name' => $dbName,
                 'has_ecommerce' => $hasEcommerce,
             ],
@@ -951,11 +995,16 @@ class MasterPortalApiController extends Controller
             'password' => 'required|string',
         ]);
 
-        $code = strtoupper(trim($validated['store_code']));
+        $loginIdentifier = trim($validated['store_code']);
+        $code = strtoupper($loginIdentifier);
         $password = $validated['password'];
 
         $shop = DB::connection('mysql')->table('shops')
-            ->where('shop_code', $code)
+            ->where(function ($q) use ($code, $loginIdentifier) {
+                $q->where('shop_code', $code)
+                  ->orWhere('owner_email', strtolower($loginIdentifier))
+                  ->orWhere('owner_phone', $loginIdentifier);
+            })
             ->first();
 
         if (!$shop) {

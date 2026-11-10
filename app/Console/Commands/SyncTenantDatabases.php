@@ -157,6 +157,7 @@ class SyncTenantDatabases extends Command
                     DB::connection('tenant')->table('users')->insert([
                         'name' => $shop->owner_name ?: $shop->name,
                         'email' => $adminEmail,
+                        'phone' => $shop->owner_phone,
                         'password' => Hash::make('admin123'),
                         'role' => 'admin',
                         'branch_id' => $branchId,

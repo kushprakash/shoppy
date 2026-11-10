@@ -68,6 +68,7 @@ class PayUController extends Controller
             'name' => 'required_if:type,onboard|nullable|string|max:255',
             'owner_name' => 'required_if:type,onboard|nullable|string|max:255',
             'owner_phone' => 'required_if:type,onboard|nullable|string|max:32',
+            'owner_email' => 'required_if:type,onboard|nullable|email|max:255',
             'city' => 'nullable|string|max:128',
             'category' => 'nullable|string|max:128',
             'sub_category' => 'nullable|string|max:128',
@@ -255,6 +256,10 @@ class PayUController extends Controller
             $storeName = $storeData['name'] ?? ($storeData['storeName'] ?? 'New Retail Store');
             $ownerName = $storeData['ownerName'] ?? ($storeData['owner_name'] ?? 'Store Owner');
             $ownerPhone = $storeData['ownerPhone'] ?? ($storeData['owner_phone'] ?? '9546042639');
+            $ownerEmail = $storeData['ownerEmail'] ?? ($storeData['owner_email'] ?? ($metadata['owner_email'] ?? ($request->input('email') ?: null)));
+            if (empty($ownerEmail) || !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+                $ownerEmail = strtolower(Str::slug($ownerName)) . '@' . strtolower($code) . '.shoppy.io';
+            }
             $stateCode = $storeData['stateCode'] ?? ($storeData['state_code'] ?? ($storeData['state'] ?? '10'));
             $referralCode = $storeData['referralCode'] ?? ($storeData['referral_code'] ?? ($storeData['agentCode'] ?? ($request->input('udf2') ?: null)));
             $planId = $storeData['planId'] ?? ($storeData['plan_id'] ?? ($request->input('udf3') ?: 'yearly-package'));
@@ -301,7 +306,7 @@ class PayUController extends Controller
                 'shop_code' => $code,
                 'slug' => $slug,
                 'owner_name' => $ownerName,
-                'owner_email' => strtolower(Str::slug($ownerName)) . '@' . strtolower($code) . '.shoppy.io',
+                'owner_email' => $ownerEmail,
                 'owner_phone' => $ownerPhone,
                 'database_name' => $dbName,
                 'status' => 'active',
@@ -426,10 +431,11 @@ class PayUController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                // Seed Default Admin User
+                // Seed Default Admin User with actual merchant email & mobile
                 DB::connection('tenant')->table('users')->insert([
                     'name' => $ownerName,
-                    'email' => strtolower(Str::slug($ownerName)) . '@' . strtolower($code) . '.shoppy.io',
+                    'email' => $ownerEmail,
+                    'phone' => $ownerPhone,
                     'password' => bcrypt('admin123'),
                     'role' => 'admin',
                     'branch_id' => $branchId,
@@ -443,6 +449,7 @@ class PayUController extends Controller
                     ['key' => 'store_name', 'value' => $storeName, 'created_at' => now(), 'updated_at' => now()],
                     ['key' => 'owner_name', 'value' => $ownerName, 'created_at' => now(), 'updated_at' => now()],
                     ['key' => 'contact_phone', 'value' => $ownerPhone, 'created_at' => now(), 'updated_at' => now()],
+                    ['key' => 'contact_email', 'value' => $ownerEmail, 'created_at' => now(), 'updated_at' => now()],
                     ['key' => 'state_code', 'value' => $stateCode, 'created_at' => now(), 'updated_at' => now()],
                     ['key' => 'state_name', 'value' => $stateName, 'created_at' => now(), 'updated_at' => now()],
                     ['key' => 'theme_color', 'value' => '#008ba3', 'created_at' => now(), 'updated_at' => now()],
@@ -457,6 +464,34 @@ class PayUController extends Controller
                 Log::error('Tenant DB provisioning error: ' . $e->getMessage());
             }
 
+            // Dispatch Welcome SMS and Welcome Email with Merchant Credentials
+            try {
+                \App\Services\CommunicationService::sendWelcomeSms(
+                    name: $ownerName,
+                    mobile: $ownerPhone,
+                    storeCode: $code,
+                    password: 'admin123',
+                    mpin: '123456'
+                );
+            } catch (\Throwable $e) {
+                Log::warning("PayU verify: Welcome SMS error: " . $e->getMessage());
+            }
+
+            try {
+                \App\Services\CommunicationService::sendWelcomeEmail(
+                    ownerName: $ownerName,
+                    ownerEmail: $ownerEmail,
+                    storeCode: $code,
+                    password: 'admin123',
+                    storeName: $storeName,
+                    validUntil: $validUntil,
+                    planName: $planInfo['plan_name'],
+                    mpin: '123456'
+                );
+            } catch (\Throwable $e) {
+                Log::warning("PayU verify: Welcome Email error: " . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'type' => 'onboard',
@@ -466,6 +501,7 @@ class PayUController extends Controller
                     'shop_code' => $code,
                     'name' => $storeName,
                     'owner_name' => $ownerName,
+                    'owner_email' => $ownerEmail,
                     'owner_phone' => $ownerPhone,
                     'state_code' => $stateCode,
                     'state_name' => $stateName,
@@ -475,6 +511,7 @@ class PayUController extends Controller
                     'billing_cycle' => $cycle,
                     'valid_until' => $validUntil,
                     'terminal_password' => 'admin123',
+                    'default_mpin' => '123456',
                     'status' => 'active',
                     'transaction_id' => $txnid,
                 ],
