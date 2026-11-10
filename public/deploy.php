@@ -131,20 +131,29 @@ $repo_url = !empty($git_token)
 
 $is_windows = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
 
-// 3. Resolve PHP Binary
+// 3. Resolve PHP CLI Binary (Must NEVER be php-fpm FastCGI daemon)
 $php_bin = 'php';
 if (!$is_windows) {
-    $php_candidates = [
-        PHP_BINARY,
-        '/usr/local/bin/ea-php83',
-        '/usr/local/bin/ea-php82',
+    // Determine CLI path from php-fpm version (e.g. php-fpm8.5 -> /usr/bin/php8.5)
+    $cli_from_fpm = null;
+    if (preg_match('/php-fpm(\d+\.\d+)/', PHP_BINARY, $m_fpm)) {
+        $cli_from_fpm = '/usr/bin/php' . $m_fpm[1];
+    }
+
+    $php_candidates = array_filter([
+        $cli_from_fpm,
+        '/usr/bin/php8.5',
+        '/usr/bin/php8.4',
         '/usr/bin/php8.3',
         '/usr/bin/php8.2',
+        '/usr/bin/php',
         '/usr/local/bin/php',
-        '/usr/bin/php'
-    ];
+        '/usr/local/bin/ea-php83',
+        '/usr/local/bin/ea-php82'
+    ]);
+
     foreach ($php_candidates as $cand) {
-        if (@is_executable($cand)) {
+        if (@is_executable($cand) && strpos($cand, 'php-fpm') === false) {
             $php_bin = $cand;
             break;
         }
