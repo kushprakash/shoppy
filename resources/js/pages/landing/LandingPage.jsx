@@ -54,7 +54,8 @@ import {
   User,
   AlertCircle,
   MessageCircle,
-  QrCode
+  QrCode,
+  Copy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import subscriptionService from '../../services/subscriptionService';
@@ -185,12 +186,14 @@ export default function LandingPage({ defaultPage = 'home' }) {
     city: 'BIHAR',
     category: '',
     subCategory: '',
-    paymentMethod: 'payu_money'
+    paymentMethod: 'paytm_upi'
   });
   const [provisionedStore, setProvisionedStore] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [payuOnboardData, setPayuOnboardData] = useState(null);
-  const [payuError, setPayuError] = useState(null);
+  const [paytmOnboardData, setPaytmOnboardData] = useState(null);
+  const [paytmUtr, setPaytmUtr] = useState('');
+  const [paymentError, setPaymentError] = useState(null);
+  const [copiedVpa, setCopiedVpa] = useState(false);
 
   // Renewal / Upgrade Modal State
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
@@ -613,7 +616,26 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }
   };
 
-  // Proceed from Step 2 to Step 3: Initiate PayU Money Payment for Onboarding
+  // Auto-poll Paytm order status when on Step 3
+  useEffect(() => {
+    let pollInterval = null;
+    if (isOnboardingOpen && onboardStep === 3 && paytmOnboardData?.order_id && !provisionedStore) {
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await subscriptionService.checkPaytmOrderStatus(paytmOnboardData.order_id);
+          if (res && res.status === 'TXN_SUCCESS') {
+            clearInterval(pollInterval);
+            handleCompleteOnboarding('success');
+          }
+        } catch (e) {}
+      }, 4000);
+    }
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [isOnboardingOpen, onboardStep, paytmOnboardData, provisionedStore]);
+
+  // Proceed from Step 2 to Step 3: Initiate Paytm UPI Dynamic QR / Intent
   const handleProceedToPayment = async () => {
     if (!onboardForm.storeName || !onboardForm.ownerName || !onboardForm.ownerPhone || !onboardForm.ownerEmail || !onboardForm.stateCode) {
       showToast('Please fill all required store details (Shop Name, Owner Name, Mobile, Email & State).');
@@ -632,9 +654,9 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }
 
     setIsProcessingPayment(true);
-    setPayuError(null);
+    setPaymentError(null);
 
-    const res = await subscriptionService.initiatePayU({
+    const res = await subscriptionService.initiatePaytmUpi({
       type: 'onboard',
       plan_id: selectedOnboardPlan.id,
       billing_cycle: billingCycle,
@@ -653,28 +675,28 @@ export default function LandingPage({ defaultPage = 'home' }) {
     setIsProcessingPayment(false);
 
     if (res && res.success) {
-      setPayuOnboardData(res);
+      setPaytmOnboardData(res);
       setOnboardStep(3);
     } else {
-      setPayuError(res?.message || 'Could not connect to PayU Money gateway.');
+      setPaymentError(res?.message || 'Could not connect to Paytm UPI gateway.');
       setOnboardStep(3);
     }
   };
 
-  // Complete Onboarding: Verify PayU Payment and Provision Isolated Database Store
-  // Rule: Bina payment complete huye store create nahi hoga
+  // Complete Onboarding: Verify Paytm UPI Payment and Provision Isolated Database Store
   const handleCompleteOnboarding = async (paymentStatus = 'success') => {
     setIsProcessingPayment(true);
-    setPayuError(null);
+    setPaymentError(null);
 
-    if (!payuOnboardData?.txnid) {
-      setPayuError('No active payment session found. Please initiate PayU payment.');
+    if (!paytmOnboardData?.order_id) {
+      setPaymentError('No active payment session found. Please initiate Paytm payment.');
       setIsProcessingPayment(false);
       return;
     }
 
-    const result = await subscriptionService.verifyPayU({
-      txnid: payuOnboardData.txnid,
+    const result = await subscriptionService.verifyPaytmPayment({
+      order_id: paytmOnboardData.order_id,
+      utr: paytmUtr ? paytmUtr.trim() : undefined,
       status: paymentStatus,
       type: 'onboard',
       store_data: {
@@ -702,55 +724,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
       localStorage.setItem('shoppy_initial_setup', 'true');
 
       setOnboardStep(4);
-      showToast(`Congratulations! Store ${result.store.shop_code} is live! Launching Store Settings...`);
+      showToast(`🎉 Congratulations! Store ${result.store.shop_code} is live! Launching Store Settings...`);
 
-      // Auto redirect to Store Setting page after 1.8 seconds
+      // Auto redirect to Store Setting page after 2.5 seconds
       setTimeout(() => {
         setIsOnboardingOpen(false);
         navigate('/shop-admin/settings?setup=1');
-      }, 1800);
+      }, 2500);
     } else {
-      setPayuError(result?.message || 'PayU Payment verification failed. Store cannot be created without verified payment.');
+      setPaymentError(result?.message || 'Payment verification failed. If paid via UPI, please enter your 12-digit UTR below.');
     }
   };
 
-  // Redirect to PayU Hosted Checkout for Onboarding (Opens official PayU Money gateway directly)
-  const handleRedirectPayUOnboarding = async () => {
-    if (payuOnboardData?.action && payuOnboardData?.params) {
-      subscriptionService.submitPayUForm(payuOnboardData.action, payuOnboardData.params);
-      return;
-    }
 
-    setIsProcessingPayment(true);
-    setPayuError(null);
-    try {
-      const res = await subscriptionService.initiatePayU({
-        type: 'onboard',
-        plan_id: selectedOnboardPlan.id,
-        billing_cycle: billingCycle,
-        own_whatsapp: !!(ownWhatsapp[selectedOnboardPlan.id] || ownWhatsapp[selectedOnboardPlan.code]),
-        name: onboardForm.storeName,
-        owner_name: onboardForm.ownerName,
-        owner_phone: onboardForm.ownerPhone,
-        state_code: onboardForm.stateCode,
-        referral_code: onboardForm.referralCode || '',
-        city: onboardForm.city || 'BIHAR',
-        category: onboardForm.category,
-        sub_category: onboardForm.subCategory,
-      });
-
-      if (res && res.success && res.action && res.params) {
-        setPayuOnboardData(res);
-        subscriptionService.submitPayUForm(res.action, res.params);
-      } else {
-        setPayuError(res?.message || 'Could not connect to PayU Money gateway.');
-      }
-    } catch (e) {
-      setPayuError('Error connecting to PayU Money gateway.');
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
 
   // Dedicated Production Store Login Screen (Distraction-free, Store Code + Password, Zero clutter)
   if (currentPage === 'store') {
@@ -2920,16 +2906,16 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <button
                       onClick={handleProceedToPayment}
                       disabled={isProcessingPayment}
-                      className="px-6 py-2.5 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-bold text-xs shadow-md shadow-cyan-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#002e6e] to-[#00b9f5] hover:opacity-95 text-white font-bold text-xs shadow-md shadow-blue-600/25 flex items-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       {isProcessingPayment ? (
                         <>
                           <RotateCcw className="w-4 h-4 animate-spin" />
-                          <span>Initiating PayU...</span>
+                          <span>Generating Paytm QR...</span>
                         </>
                       ) : (
                         <>
-                          <span>Proceed to PayU Payment</span>
+                          <span>Proceed to Paytm UPI Payment</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
@@ -2938,122 +2924,152 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 </div>
               )}
 
-              {/* Step 3: PayU Money Payment Gateway */}
+              {/* Step 3: Paytm UPI Dynamic QR & Intent Payment Gateway */}
               {onboardStep === 3 && (
                 <div className="space-y-4 animate-in fade-in">
-                  {payuError && (
+                  {paymentError && (
                     <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-between">
-                      <span>{payuError}</span>
-                      <button onClick={() => setPayuError(null)} className="text-rose-500 hover:text-rose-700">
+                      <span>{paymentError}</span>
+                      <button onClick={() => setPaymentError(null)} className="text-rose-500 hover:text-rose-700">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   )}
 
-                  {/* PayU Gateway Badge */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-[#00a2c7]/10 via-cyan-500/5 to-transparent border border-[#00a2c7]/30 flex items-center justify-between">
+                  {/* Paytm Gateway Header Badge */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#002e6e]/10 via-[#00b9f5]/10 to-transparent border border-[#00b9f5]/30 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#00a2c7] text-white flex items-center justify-center font-black shadow-md shadow-cyan-600/20">
-                        <CreditCard className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#002e6e] to-[#00b9f5] text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
+                        <QrCode className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-xs text-slate-900 dark:text-white">PayU Money Gateway</span>
-                          <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-[#00a2c7] text-white">SECURE 256-BIT</span>
+                          <span className="font-extrabold text-xs text-slate-900 dark:text-white">Paytm UPI &amp; Dynamic QR</span>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-[#00b9f5] text-white">INSTANT ACTIVATION</span>
                         </div>
                         <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                          Official Indian Payment Partner • Instant Tenant Activation
+                          Scan with any UPI App • Instant Automatic Database Provisioning
                         </span>
                       </div>
                     </div>
                     <ShieldCheck className="w-6 h-6 text-emerald-500 shrink-0" />
                   </div>
 
-                  {/* Order & Pricing Breakdown */}
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
-                    <div className="flex justify-between font-bold">
-                      <span className="text-slate-700 dark:text-slate-300">Store Name:</span>
-                      <span className="text-slate-900 dark:text-white font-extrabold">{onboardForm.storeName} ({onboardForm.city})</span>
+                  {/* Dynamic QR & Price Card */}
+                  <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-center space-y-3">
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Amount to Pay:</span>
+                      <span className="text-3xl font-black text-slate-900 dark:text-white">
+                        ₹{paytmOnboardData?.formatted_amount || getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-slate-500">
-                      <span>Plan Package:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedOnboardPlan.name} ({billingCycle})</span>
-                    </div>
-                    <div className="flex justify-between text-slate-500">
-                      <span>Base Plan Price:</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-300">₹{getPrice(selectedOnboardPlan).baseOffer.toLocaleString('en-IN')}</span>
-                    </div>
-                    {(ownWhatsapp[selectedOnboardPlan.id] || ownWhatsapp[selectedOnboardPlan.code]) && getPrice(selectedOnboardPlan).whatsappAddon > 0 && (
-                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-                        <span>WhatsApp Message Suite Add-on:</span>
-                        <span>+₹{getPrice(selectedOnboardPlan).whatsappAddon.toLocaleString('en-IN')}</span>
-                      </div>
-                    )}
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-baseline">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Payable</span>
-                        <span className="text-2xl font-black text-slate-900 dark:text-white">₹{getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}</span>
-                      </div>
-                      {payuOnboardData?.txnid && (
-                        <span className="text-[10px] font-mono text-slate-400">Ref: {payuOnboardData.txnid}</span>
+
+                    {/* QR Code Container */}
+                    <div className="relative inline-block p-3 rounded-2xl bg-white shadow-md border border-slate-200">
+                      {paytmOnboardData?.qr_image_url ? (
+                        <img
+                          src={paytmOnboardData.qr_image_url}
+                          alt="Paytm Dynamic QR"
+                          className="w-48 h-48 mx-auto rounded-lg object-contain"
+                        />
+                      ) : (
+                        <div className="w-48 h-48 flex items-center justify-center bg-slate-100 rounded-lg">
+                          <RotateCcw className="w-8 h-8 animate-spin text-[#00b9f5]" />
+                        </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Accepted Payment Modes via PayU */}
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                      Accepted Modes on PayU:
-                    </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
-                        <QrCode className="w-3.5 h-3.5 text-[#00a2c7]" />
-                        <span>UPI & QR</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
-                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>Cards (Visa, RuPay)</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
-                        <Globe className="w-3.5 h-3.5 text-indigo-500" />
-                        <span>Net Banking</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-1.5 font-medium">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                        <span>PayU Wallets</span>
+                      <div className="mt-1 text-[10px] font-bold text-slate-600 flex items-center justify-center gap-1">
+                        <span>Scan &amp; Pay via Any UPI App</span>
                       </div>
                     </div>
+
+                    {/* UPI VPA Copy Bar */}
+                    <div className="flex items-center justify-center gap-2 text-xs">
+                      <span className="text-slate-500">Merchant UPI:</span>
+                      <span className="font-mono font-bold text-[#002e6e] dark:text-[#38bdf8] bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                        {paytmOnboardData?.vpa || 'paytm.s1lcife@pty'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(paytmOnboardData?.vpa || 'paytm.s1lcife@pty');
+                          setCopiedVpa(true);
+                          setTimeout(() => setCopiedVpa(false), 2000);
+                        }}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                        title="Copy UPI ID"
+                      >
+                        {copiedVpa ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    {/* Supported UPI Apps */}
+                    <p className="text-[10px] text-slate-400">
+                      Supported: Paytm • Google Pay • PhonePe • BHIM • CRED • Any Bank UPI
+                    </p>
                   </div>
 
-                  {/* Single Pay Now Button (Directly opens PayU Money Gateway) */}
-                  <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {/* Direct Mobile UPI Intent Button */}
+                  {paytmOnboardData?.upi_intent_url && (
+                    <div>
+                      <a
+                        href={paytmOnboardData.upi_intent_url}
+                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#002e6e] via-[#0052a3] to-[#00b9f5] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition"
+                      >
+                        <Smartphone className="w-4 h-4" />
+                        <span>Pay via UPI App (Mobile GPay / PhonePe / Paytm)</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Manual UTR Input Box (Optional) */}
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      Paid via UPI? Enter 12-digit UPI Reference / UTR (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={16}
+                      placeholder="e.g. 431289102941"
+                      value={paytmUtr}
+                      onChange={(e) => setPaytmUtr(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold focus:outline-none focus:border-[#00b9f5]"
+                    />
+                  </div>
+
+                  {/* Verification CTA Button */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <button
                       type="button"
-                      onClick={handleRedirectPayUOnboarding}
+                      onClick={() => handleCompleteOnboarding('success')}
                       disabled={isProcessingPayment}
-                      className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#008ba3] via-[#00a2c7] to-cyan-500 hover:from-[#00768c] hover:to-[#008ba3] text-white font-black text-sm tracking-wide shadow-xl shadow-cyan-600/30 flex items-center justify-center gap-2.5 cursor-pointer transition transform active:scale-[0.99] disabled:opacity-60"
+                      className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-wide shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-[0.99] disabled:opacity-60"
                     >
                       {isProcessingPayment ? (
                         <>
-                          <RotateCcw className="w-5 h-5 animate-spin" />
-                          <span>Connecting to PayU Money Gateway...</span>
+                          <RotateCcw className="w-4 h-4 animate-spin" />
+                          <span>Verifying Payment &amp; Provisioning Database...</span>
                         </>
                       ) : (
                         <>
-                          <Lock className="w-5 h-5 stroke-[2.5]" />
-                          <span>
-                            Pay Now INR {(payuOnboardData?.amount ? Number(payuOnboardData.amount) : Number(getPrice(selectedOnboardPlan).offerPrice)).toFixed(2)}
-                          </span>
-                          <ArrowRight className="w-5 h-5 stroke-[2.5] ml-1" />
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>I Have Paid — Verify &amp; Launch Store</span>
+                          <ArrowRight className="w-4 h-4" />
                         </>
                       )}
                     </button>
 
-                    <div className="flex justify-between items-center pt-1">
-                      <button onClick={() => setOnboardStep(2)} className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-white cursor-pointer">
+                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                      <button
+                        onClick={() => setOnboardStep(2)}
+                        className="font-semibold hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                      >
                         ← Back to Store Details
                       </button>
-                      <span className="text-[10px] text-slate-400">Isolated MySQL Database auto-provisioned</span>
+                      <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Listening for UPI payment...
+                      </span>
                     </div>
                   </div>
                 </div>

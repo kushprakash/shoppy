@@ -60,3 +60,4 @@ class SendTestOtp extends Command
         return 0;
     }
 }
+

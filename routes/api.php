@@ -154,6 +154,17 @@ Route::prefix('payu')->group(function () {
     Route::get('/status', [\App\Http\Controllers\Central\PayUController::class, 'getSubscriptionStatus']);
 });
 
+/*
+|--------------------------------------------------------------------------
+| 7. Paytm UPI Intent & Dynamic QR Gateway Routes (Store Signup & Renewal)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('paytm')->group(function () {
+    Route::post('/initiate-upi', [\App\Http\Controllers\Central\PaytmController::class, 'initiateUpiIntent']);
+    Route::post('/verify', [\App\Http\Controllers\Central\PaytmController::class, 'verifyPayment']);
+    Route::get('/order-status', [\App\Http\Controllers\Central\PaytmController::class, 'checkOrderStatus']);
+});
+
 // Tenant Subscription & Payment Passbook Routes
 Route::prefix('tenant/subscription')->group(function () {
     Route::get('/passbook', [\App\Http\Controllers\Central\PayUController::class, 'getPassbook']);

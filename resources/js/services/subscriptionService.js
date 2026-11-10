@@ -735,6 +735,62 @@ class SubscriptionService {
     return state.stores.find((s) => s.shop_code.toUpperCase() === shopCode.toUpperCase());
   }
 
+  // Paytm UPI Intent & Dynamic QR: Initiate payment request
+  async initiatePaytmUpi(payload) {
+    try {
+      const res = await fetch('/api/paytm/initiate-upi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch (e) {
+      console.error('Paytm UPI initiation error:', e);
+      return { success: false, message: 'Could not connect to Paytm UPI gateway.' };
+    }
+  }
+
+  // Paytm UPI Intent & Dynamic QR: Verify payment and finalize store provisioning
+  async verifyPaytmPayment(payload) {
+    try {
+      const res = await fetch('/api/paytm/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data && data.success && data.store) {
+        // Sync local storage store list
+        const state = this.getState();
+        if (data.type === 'onboard') {
+          state.stores = [data.store, ...(state.stores || [])];
+        } else if (data.type === 'renew') {
+          state.stores = (state.stores || []).map(s => {
+            if (s.shop_code.toUpperCase() === data.store.shop_code.toUpperCase()) {
+              return { ...s, valid_until: data.valid_until || data.store.valid_until, status: 'active' };
+            }
+            return s;
+          });
+        }
+        this.saveState(state);
+      }
+      return data;
+    } catch (e) {
+      console.error('Paytm verification error:', e);
+      return { success: false, message: 'Could not verify Paytm payment.' };
+    }
+  }
+
+  // Paytm UPI: Poll Order Status
+  async checkPaytmOrderStatus(orderId) {
+    try {
+      const res = await fetch(`/api/paytm/order-status?order_id=${encodeURIComponent(orderId)}`);
+      return await res.json();
+    } catch (e) {
+      return { success: false, status: 'PENDING' };
+    }
+  }
+
   // PayU Money Gateway: Initiate payment request
   async initiatePayU(payload) {
     try {
@@ -835,6 +891,62 @@ class SubscriptionService {
     });
     this.saveState(state);
     return state.stores.find((s) => s.shop_code.toUpperCase() === shopCode.toUpperCase());
+  }
+
+  // Paytm UPI Intent & Dynamic QR: Initiate payment request
+  async initiatePaytmUpi(payload) {
+    try {
+      const res = await fetch('/api/paytm/initiate-upi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch (e) {
+      console.error('Paytm UPI initiation error:', e);
+      return { success: false, message: 'Could not connect to Paytm UPI gateway.' };
+    }
+  }
+
+  // Paytm UPI Intent & Dynamic QR: Verify payment and finalize store provisioning
+  async verifyPaytmPayment(payload) {
+    try {
+      const res = await fetch('/api/paytm/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data && data.success && data.store) {
+        // Sync local storage store list
+        const state = this.getState();
+        if (data.type === 'onboard') {
+          state.stores = [data.store, ...(state.stores || [])];
+        } else if (data.type === 'renew') {
+          state.stores = (state.stores || []).map(s => {
+            if (s.shop_code.toUpperCase() === data.store.shop_code.toUpperCase()) {
+              return { ...s, valid_until: data.valid_until || data.store.valid_until, status: 'active' };
+            }
+            return s;
+          });
+        }
+        this.saveState(state);
+      }
+      return data;
+    } catch (e) {
+      console.error('Paytm verification error:', e);
+      return { success: false, message: 'Could not verify Paytm payment.' };
+    }
+  }
+
+  // Paytm UPI: Poll Order Status
+  async checkPaytmOrderStatus(orderId) {
+    try {
+      const res = await fetch(`/api/paytm/order-status?order_id=${encodeURIComponent(orderId)}`);
+      return await res.json();
+    } catch (e) {
+      return { success: false, status: 'PENDING' };
+    }
   }
 
   // PayU Money Gateway: Initiate payment request
