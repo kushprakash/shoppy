@@ -17,7 +17,7 @@ $project_path = dirname(__DIR__);
 // Read .env to get DB_USERNAME
 $env_file = $project_path . DIRECTORY_SEPARATOR . '.env';
 $env_content = file_exists($env_file) ? @file_get_contents($env_file) : '';
-$env_db_user = 'root';
+$env_db_user = 'shoppy-live';
 if (preg_match('/^DB_USERNAME=(.*)$/m', $env_content, $m_user)) {
     $env_db_user = trim($m_user[1], " \t\n\r\0\x0B\"'");
 }
@@ -25,9 +25,9 @@ if (preg_match('/^DB_USERNAME=(.*)$/m', $env_content, $m_user)) {
 // Check if user requested to auto-grant MySQL permissions via Root
 $grant_feedback = null;
 if (isset($_POST['apply_db_perms']) || isset($_GET['apply_db_perms'])) {
-    $mysql_root_pass = $_POST['mysql_root_pass'] ?? $_GET['mysql_root_pass'] ?? '';
+    $mysql_root_pass = $_POST['shoppy-live'] ?? $_GET['shoppy-live'] ?? '';
     try {
-        $root_pdo = new PDO("mysql:host=localhost", "root", $mysql_root_pass, [
+        $root_pdo = new PDO("mysql:host=localhost", "shoppy-live", $mysql_root_pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
         $root_pdo->exec("GRANT CREATE ON *.* TO '{$env_db_user}'@'localhost'");
@@ -234,8 +234,7 @@ $commands = [
     'Composer Install (Download Vendor Packages)' => "{$composer_cmd} install --no-dev --optimize-autoloader --prefer-dist --no-interaction 2>&1",
     'Clear Laravel Optimize Caches' => "{$php_bin} artisan optimize:clear 2>&1",
     'Run Central Migrations' => "{$php_bin} artisan migrate --force --path=database/migrations/central 2>&1",
-    'Verify Tenant Database Permissions' => "{$php_bin} artisan tenant:check-db 2>&1",
-    'Sync & Auto-Provision Missing Tenant Databases' => "{$php_bin} artisan tenant:sync-databases 2>&1",
+    'Sync & Auto-Provision Tenant Databases' => "{$php_bin} artisan tenant:sync-databases --no-interaction 2>&1",
     'Current Git Commit Status' => 'git log -1 --pretty=format:"Commit: %h | %an (%ci) | %s" 2>&1'
 ];
 
