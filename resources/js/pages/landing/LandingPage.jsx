@@ -194,6 +194,9 @@ export default function LandingPage({ defaultPage = 'home' }) {
   const [paytmUtr, setPaytmUtr] = useState('');
   const [paymentError, setPaymentError] = useState(null);
   const [copiedVpa, setCopiedVpa] = useState(false);
+  const [provisioningPhase, setProvisioningPhase] = useState('idle'); // 'idle' | 'blink' | 'progress' | 'done'
+  const [provisionStepIndex, setProvisionStepIndex] = useState(0);
+  const [provisionProgress, setProvisionProgress] = useState(15);
 
   // Renewal / Upgrade Modal State
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
@@ -447,6 +450,9 @@ export default function LandingPage({ defaultPage = 'home' }) {
     setPaytmOnboardData(null);
     setPaymentError(null);
     setPaytmUtr('');
+    setProvisioningPhase('idle');
+    setProvisionStepIndex(0);
+    setProvisionProgress(15);
     setIsOnboardingOpen(true);
   };
 
@@ -623,10 +629,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }
   };
 
-  // Auto-poll Paytm order status when on Step 3
+  // Auto-poll Paytm order status continuously when on Step 3
   useEffect(() => {
     let pollInterval = null;
-    if (isOnboardingOpen && onboardStep === 3 && paytmOnboardData?.order_id && !provisionedStore) {
+    if (isOnboardingOpen && onboardStep === 3 && paytmOnboardData?.order_id && !provisionedStore && provisioningPhase === 'idle') {
       pollInterval = setInterval(async () => {
         try {
           const res = await subscriptionService.checkPaytmOrderStatus(paytmOnboardData.order_id);
@@ -635,12 +641,12 @@ export default function LandingPage({ defaultPage = 'home' }) {
             handleCompleteOnboarding('success');
           }
         } catch (e) {}
-      }, 4000);
+      }, 3500);
     }
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [isOnboardingOpen, onboardStep, paytmOnboardData, provisionedStore]);
+  }, [isOnboardingOpen, onboardStep, paytmOnboardData, provisionedStore, provisioningPhase]);
 
   // Proceed from Step 2 to Step 3: Initiate Paytm UPI Dynamic QR / Intent
   const handleProceedToPayment = async () => {
@@ -662,6 +668,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
     setIsProcessingPayment(true);
     setPaymentError(null);
+    setProvisioningPhase('idle');
 
     const res = await subscriptionService.initiatePaytmUpi({
       type: 'onboard',
@@ -692,6 +699,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Complete Onboarding: Verify Paytm UPI Payment and Provision Isolated Database Store
   const handleCompleteOnboarding = async (paymentStatus = 'success') => {
+    if (isProcessingPayment) return;
     setIsProcessingPayment(true);
     setPaymentError(null);
 
@@ -701,45 +709,87 @@ export default function LandingPage({ defaultPage = 'home' }) {
       return;
     }
 
-    const result = await subscriptionService.verifyPaytmPayment({
-      order_id: paytmOnboardData.order_id,
-      utr: paytmUtr ? paytmUtr.trim() : undefined,
-      status: paymentStatus,
-      type: 'onboard',
-      store_data: {
-        storeName: onboardForm.storeName,
-        ownerName: onboardForm.ownerName,
-        ownerPhone: onboardForm.ownerPhone,
-        ownerEmail: onboardForm.ownerEmail.trim(),
-        stateCode: onboardForm.stateCode,
-        referralCode: onboardForm.referralCode,
-        planId: selectedOnboardPlan.id,
-        billingCycle: billingCycle,
-        ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+    try {
+      const result = await subscriptionService.verifyPaytmPayment({
+        order_id: paytmOnboardData.order_id,
+        utr: paytmUtr ? paytmUtr.trim() : undefined,
+        status: paymentStatus,
+        type: 'onboard',
+        store_data: {
+          storeName: onboardForm.storeName,
+          ownerName: onboardForm.ownerName,
+          ownerPhone: onboardForm.ownerPhone,
+          ownerEmail: onboardForm.ownerEmail.trim(),
+          stateCode: onboardForm.stateCode,
+          referralCode: onboardForm.referralCode,
+          planId: selectedOnboardPlan.id,
+          billingCycle: billingCycle,
+          ownWhatsapp: !!ownWhatsapp[selectedOnboardPlan.id]
+        }
+      });
+
+      if (result && result.success && result.store) {
+        const store = result.store;
+        setProvisionedStore(store);
+
+        // Store login tokens & cookies for seamless merchant auto-login
+        localStorage.setItem('shoppy_active_store_code', store.shop_code);
+        localStorage.setItem('shoppy_active_store', JSON.stringify(store));
+        document.cookie = `shoppy_active_store_code=${store.shop_code}; path=/; max-age=86400`;
+        document.cookie = `shoppy_active_store=${store.shop_code}; path=/; max-age=86400`;
+        localStorage.setItem('shoppy_initial_setup', 'true');
+
+        // Phase 1: Round tick mark blinking animation (1.4 seconds)
+        setProvisioningPhase('blink');
+
+        setTimeout(() => {
+          // Phase 2: Live multi-step provisioning checklist animation
+          setProvisioningPhase('progress');
+          setProvisionStepIndex(0);
+          setProvisionProgress(15);
+
+          const stepSequence = [
+            { step: 1, progress: 30 },
+            { step: 2, progress: 50 },
+            { step: 3, progress: 68 },
+            { step: 4, progress: 82 },
+            { step: 5, progress: 92 },
+            { step: 6, progress: 100 }
+          ];
+
+          stepSequence.forEach((item, idx) => {
+            setTimeout(() => {
+              setProvisionStepIndex(item.step);
+              setProvisionProgress(item.progress);
+
+              // Phase 3: All steps finished -> Show credentials & Auto-redirect
+              if (idx === stepSequence.length - 1) {
+                setTimeout(() => {
+                  setProvisioningPhase('done');
+                  setOnboardStep(4);
+                  setIsProcessingPayment(false);
+                  showToast(`🎉 Store ${store.shop_code} live! Dispatching credentials...`);
+
+                  // Auto-redirect to Store Settings with store code to guarantee no blank page
+                  setTimeout(() => {
+                    setIsOnboardingOpen(false);
+                    window.location.href = `/shop-admin/settings?setup=1&code=${store.shop_code}`;
+                  }, 3000);
+                }, 600);
+              }
+            }, (idx + 1) * 450);
+          });
+        }, 1400);
+
+      } else {
+        setIsProcessingPayment(false);
+        setProvisioningPhase('idle');
+        setPaymentError(result?.message || 'Payment verification failed. If paid via UPI, please enter your 12-digit UTR below.');
       }
-    });
-
-    setIsProcessingPayment(false);
-
-    if (result && result.success && result.store) {
-      setProvisionedStore(result.store);
-
-      // Automatic Store Login
-      localStorage.setItem('shoppy_active_store_code', result.store.shop_code);
-      localStorage.setItem('shoppy_active_store', JSON.stringify(result.store));
-      document.cookie = `shoppy_active_store=${result.store.shop_code}; path=/; max-age=86400`;
-      localStorage.setItem('shoppy_initial_setup', 'true');
-
-      setOnboardStep(4);
-      showToast(`🎉 Congratulations! Store ${result.store.shop_code} is live! Launching Store Settings...`);
-
-      // Auto redirect to Store Setting page after 2.5 seconds
-      setTimeout(() => {
-        setIsOnboardingOpen(false);
-        navigate('/shop-admin/settings?setup=1');
-      }, 2500);
-    } else {
-      setPaymentError(result?.message || 'Payment verification failed. If paid via UPI, please enter your 12-digit UTR below.');
+    } catch (err) {
+      setIsProcessingPayment(false);
+      setProvisioningPhase('idle');
+      setPaymentError('Connection error during verification. Please check your network and try again.');
     }
   };
 
@@ -2950,166 +3000,272 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 </div>
               )}
 
-              {/* Step 3: Paytm UPI Dynamic QR & Intent Payment Gateway */}
+              {/* Step 3: Paytm UPI Dynamic QR & Intent Payment Gateway OR Live Provisioning Progress */}
               {onboardStep === 3 && (
                 <div className="space-y-4 animate-in fade-in">
-                  {paymentError && (
-                    <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-between">
-                      <span>{paymentError}</span>
-                      <button onClick={() => setPaymentError(null)} className="text-rose-500 hover:text-rose-700">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Paytm Gateway Header Badge */}
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#002e6e]/10 via-[#00b9f5]/10 to-transparent border border-[#00b9f5]/30 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#002e6e] to-[#00b9f5] text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
-                        <QrCode className="w-5 h-5 text-white" />
+                  {/* PHASE 1: ROUND TICK BLINKING ANIMATION (Payment Success) */}
+                  {provisioningPhase === 'blink' && (
+                    <div className="p-8 text-center space-y-4 animate-in zoom-in-95 duration-200">
+                      <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full bg-emerald-500/30 animate-ping"></div>
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40 animate-pulse">
+                          <Check className="w-12 h-12 stroke-[3.5]" />
+                        </div>
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-xs text-slate-900 dark:text-white">Paytm UPI &amp; Dynamic QR</span>
-                          <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-[#00b9f5] text-white">INSTANT ACTIVATION</span>
-                        </div>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                          Scan with any UPI App • Instant Automatic Database Provisioning
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                          Payment Verified Successfully
                         </span>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mt-2">
+                          Paytm UPI Payment Received!
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Transaction confirmed. Starting automated dedicated database provisioning...
+                        </p>
                       </div>
-                    </div>
-                    <ShieldCheck className="w-6 h-6 text-emerald-500 shrink-0" />
-                  </div>
-
-                  {/* Dynamic QR & Price Card */}
-                  <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-center space-y-3">
-                    <div className="flex items-baseline justify-center gap-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Amount to Pay:</span>
-                      <span className="text-3xl font-black text-slate-900 dark:text-white">
-                        ₹{paytmOnboardData?.formatted_amount || getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    {/* QR Code Container */}
-                    <div className="relative inline-block p-3 rounded-2xl bg-white shadow-md border border-slate-200">
-                      {paytmOnboardData?.qr_image_url ? (
-                        <img
-                          src={paytmOnboardData.qr_image_url}
-                          alt="Paytm Dynamic QR"
-                          className="w-48 h-48 mx-auto rounded-lg object-contain"
-                        />
-                      ) : (
-                        <div className="w-48 h-48 flex items-center justify-center bg-slate-100 rounded-lg">
-                          <RotateCcw className="w-8 h-8 animate-spin text-[#00b9f5]" />
-                        </div>
-                      )}
-                      <div className="mt-1 text-[10px] font-bold text-slate-600 flex items-center justify-center gap-1">
-                        <span>Scan &amp; Pay via Any UPI App</span>
-                      </div>
-                    </div>
-
-                    {/* UPI VPA Copy Bar */}
-                    <div className="flex items-center justify-center gap-2 text-xs">
-                      <span className="text-slate-500">Merchant UPI:</span>
-                      <span className="font-mono font-bold text-[#002e6e] dark:text-[#38bdf8] bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                        {paytmOnboardData?.vpa || 'paytm.s1lcife@pty'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(paytmOnboardData?.vpa || 'paytm.s1lcife@pty');
-                          setCopiedVpa(true);
-                          setTimeout(() => setCopiedVpa(false), 2000);
-                        }}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-                        title="Copy UPI ID"
-                      >
-                        {copiedVpa ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                    </div>
-
-                    {/* Supported UPI Apps */}
-                    <p className="text-[10px] text-slate-400">
-                      Supported: Paytm • Google Pay • PhonePe • BHIM • CRED • Any Bank UPI
-                    </p>
-                  </div>
-
-                  {/* Direct Mobile UPI Intent Button */}
-                  {paytmOnboardData?.upi_intent_url && (
-                    <div>
-                      <a
-                        href={paytmOnboardData.upi_intent_url}
-                        className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#002e6e] via-[#0052a3] to-[#00b9f5] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition"
-                      >
-                        <Smartphone className="w-4 h-4" />
-                        <span>Pay via UPI App (Mobile GPay / PhonePe / Paytm)</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
                     </div>
                   )}
 
-                  {/* Manual UTR Input Box (Optional) */}
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                      Paid via UPI? Enter 12-digit UPI Reference / UTR (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={16}
-                      placeholder="e.g. 431289102941"
-                      value={paytmUtr}
-                      onChange={(e) => setPaytmUtr(e.target.value.replace(/[^0-9]/g, ''))}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold focus:outline-none focus:border-[#00b9f5]"
-                    />
-                  </div>
+                  {/* PHASE 2: PROCESSING CHECKLIST (Create Store, Database, Schema, GST, SMS/Email) */}
+                  {provisioningPhase === 'progress' && (
+                    <div className="p-6 space-y-5 animate-in fade-in duration-200 text-center">
+                      {/* Pulsing Database Icon */}
+                      <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping"></div>
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#008ba3] to-cyan-400 text-white flex items-center justify-center shadow-xl shadow-cyan-500/30">
+                          <Database className="w-8 h-8 animate-pulse" />
+                        </div>
+                      </div>
 
-                  {/* Verification CTA Button */}
-                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => handleCompleteOnboarding('success')}
-                      disabled={isProcessingPayment}
-                      className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-wide shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-[0.99] disabled:opacity-60"
-                    >
-                      {isProcessingPayment ? (
-                        <>
-                          <RotateCcw className="w-4 h-4 animate-spin" />
-                          <span>Verifying Payment &amp; Provisioning Database...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>I Have Paid — Verify &amp; Launch Store</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
+                      <div>
+                        <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-100 dark:bg-cyan-950/60 text-[#008ba3] border border-cyan-200 dark:border-cyan-800">
+                          Automated Tenant Provisioning
+                        </span>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1.5">
+                          Creating Your Dedicated Cloud Store...
+                        </h3>
+                        <p className="text-xs text-slate-500 font-mono mt-0.5">
+                          {provisionedStore?.database_name || 'Allocating dedicated MySQL schema instance...'}
+                        </p>
+                      </div>
 
-                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
-                      <button
-                        onClick={() => setOnboardStep(2)}
-                        className="font-semibold hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                      >
-                        ← Back to Store Details
-                      </button>
-                      <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Listening for UPI payment...
-                      </span>
+                      {/* Animated Progress Bar */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <span>Provisioning Progress</span>
+                          <span className="text-[#00a2c7] font-mono">{provisionProgress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+                          <div
+                            className="bg-gradient-to-r from-[#008ba3] via-cyan-400 to-emerald-400 h-full rounded-full transition-all duration-400 ease-out shadow-sm"
+                            style={{ width: `${provisionProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Step-by-Step Live Status Checklist */}
+                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-left text-xs">
+                        {[
+                          { label: 'Paytm UPI Payment Confirmed & Verified', sub: `Ref: ${paytmOnboardData?.order_id || 'Paytm Verified'}` },
+                          { label: 'Allocating Store Code & Subscription License', sub: `Store: ${provisionedStore?.shop_code || 'Generating Code...'}` },
+                          { label: 'Creating Dedicated Isolated MySQL Database', sub: `DB: ${provisionedStore?.database_name || 'Allocating schema...'}` },
+                          { label: 'Executing Tenant Database Migrations', sub: 'Setting up POS tables & indexes' },
+                          { label: 'Seeding 38 Indian GST States & Default Branch', sub: 'Master tax ledger mapped' },
+                          { label: 'Setup Admin Login Credentials & Default M-PIN', sub: `ID: ${provisionedStore?.owner_email || onboardForm.ownerEmail} • Password: admin123 • PIN: 123456` },
+                          { label: 'Dispatching Welcome SMS & Email with Credentials', sub: `Sending to +91 ${provisionedStore?.owner_phone || onboardForm.ownerPhone} via Buzzify & SMTP` }
+                        ].map((s, idx) => {
+                          const isDone = provisionStepIndex > idx;
+                          const isCurrent = provisionStepIndex === idx;
+                          return (
+                            <div key={idx} className="flex items-start gap-2.5">
+                              <div className="mt-0.5 shrink-0">
+                                {isDone ? (
+                                  <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                  </div>
+                                ) : isCurrent ? (
+                                  <div className="w-4 h-4 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[10px]">
+                                    <RotateCcw className="w-3 h-3 animate-spin" />
+                                  </div>
+                                ) : (
+                                  <div className="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600"></div>
+                                )}
+                              </div>
+                              <div className="leading-tight">
+                                <p className={`font-bold ${isDone ? 'text-emerald-600 dark:text-emerald-400' : isCurrent ? 'text-cyan-600 dark:text-cyan-400 font-extrabold' : 'text-slate-400'}`}>
+                                  {s.label}
+                                </p>
+                                <p className="text-[10px] text-slate-400">{s.sub}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* STANDARD PAYMENT SCREEN (When provisioningPhase === 'idle') */}
+                  {provisioningPhase === 'idle' && (
+                    <>
+                      {paymentError && (
+                        <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-between">
+                          <span>{paymentError}</span>
+                          <button onClick={() => setPaymentError(null)} className="text-rose-500 hover:text-rose-700">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Paytm Gateway Header Badge */}
+                      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#002e6e]/10 via-[#00b9f5]/10 to-transparent border border-[#00b9f5]/30 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#002e6e] to-[#00b9f5] text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
+                            <QrCode className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-xs text-slate-900 dark:text-white">Paytm UPI &amp; Dynamic QR</span>
+                              <span className="px-2 py-0.5 rounded text-[9px] font-extrabold bg-[#00b9f5] text-white">INSTANT ACTIVATION</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                              Scan with any UPI App • Instant Automatic Database Provisioning
+                            </span>
+                          </div>
+                        </div>
+                        <ShieldCheck className="w-6 h-6 text-emerald-500 shrink-0" />
+                      </div>
+
+                      {/* Dynamic QR & Price Card */}
+                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-center space-y-3">
+                        <div className="flex items-baseline justify-center gap-2">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Amount to Pay:</span>
+                          <span className="text-3xl font-black text-slate-900 dark:text-white">
+                            ₹{paytmOnboardData?.formatted_amount || getPrice(selectedOnboardPlan).offerPrice.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {/* QR Code Container */}
+                        <div className="relative inline-block p-3 rounded-2xl bg-white shadow-md border border-slate-200">
+                          {paytmOnboardData?.qr_image_url ? (
+                            <img
+                              src={paytmOnboardData.qr_image_url}
+                              alt="Paytm Dynamic QR"
+                              className="w-48 h-48 mx-auto rounded-lg object-contain"
+                            />
+                          ) : (
+                            <div className="w-48 h-48 flex items-center justify-center bg-slate-100 rounded-lg">
+                              <RotateCcw className="w-8 h-8 animate-spin text-[#00b9f5]" />
+                            </div>
+                          )}
+                          <div className="mt-1 text-[10px] font-bold text-slate-600 flex items-center justify-center gap-1">
+                            <span>Scan &amp; Pay via Any UPI App</span>
+                          </div>
+                        </div>
+
+                        {/* UPI VPA Copy Bar */}
+                        <div className="flex items-center justify-center gap-2 text-xs">
+                          <span className="text-slate-500">Merchant UPI:</span>
+                          <span className="font-mono font-bold text-[#002e6e] dark:text-[#38bdf8] bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                            {paytmOnboardData?.vpa || 'paytm.s1lcife@pty'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(paytmOnboardData?.vpa || 'paytm.s1lcife@pty');
+                              setCopiedVpa(true);
+                              setTimeout(() => setCopiedVpa(false), 2000);
+                            }}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                            title="Copy UPI ID"
+                          >
+                            {copiedVpa ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+
+                        {/* Supported UPI Apps */}
+                        <p className="text-[10px] text-slate-400">
+                          Supported: Paytm • Google Pay • PhonePe • BHIM • CRED • Any Bank UPI
+                        </p>
+                      </div>
+
+                      {/* Direct Mobile UPI Intent Button */}
+                      {paytmOnboardData?.upi_intent_url && (
+                        <div>
+                          <a
+                            href={paytmOnboardData.upi_intent_url}
+                            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#002e6e] via-[#0052a3] to-[#00b9f5] hover:opacity-95 text-white font-black text-xs shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition"
+                          >
+                            <Smartphone className="w-4 h-4" />
+                            <span>Pay via UPI App (Mobile GPay / PhonePe / Paytm)</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Manual UTR Input Box (Optional) */}
+                      <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                          Paid via UPI? Enter 12-digit UPI Reference / UTR (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={16}
+                          placeholder="e.g. 431289102941"
+                          value={paytmUtr}
+                          onChange={(e) => setPaytmUtr(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold focus:outline-none focus:border-[#00b9f5]"
+                        />
+                      </div>
+
+                      {/* Verification CTA Button */}
+                      <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => handleCompleteOnboarding('success')}
+                          disabled={isProcessingPayment}
+                          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-wide shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-[0.99] disabled:opacity-60"
+                        >
+                          {isProcessingPayment ? (
+                            <>
+                              <RotateCcw className="w-4 h-4 animate-spin" />
+                              <span>Verifying Payment &amp; Launching Provisioning...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>I Have Paid — Verify &amp; Launch Store</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
+
+                        <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                          <button
+                            onClick={() => setOnboardStep(2)}
+                            className="font-semibold hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                          >
+                            ← Back to Store Details
+                          </button>
+                          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Listening for UPI payment...
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Step 4: Live Store Provisioned */}
               {onboardStep === 4 && provisionedStore && (
-                <div className="space-y-4 text-center">
+                <div className="space-y-4 text-center animate-in fade-in">
                   <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div>
                     <h4 className="text-lg font-black text-slate-900 dark:text-white">
-                      Payment Verified & Store Live!
+                      Payment Verified &amp; Store Live!
                     </h4>
                     <p className="text-xs text-slate-500 mt-1">
                       Dedicated tenant database created. You are now logged in automatically.
@@ -3161,11 +3317,11 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       type="button"
                       onClick={() => {
                         setIsOnboardingOpen(false);
-                        navigate('/shop-admin/settings?setup=1');
+                        window.location.href = `/shop-admin/settings?setup=1&code=${provisionedStore.shop_code}`;
                       }}
                       className="w-full py-3 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white font-black text-xs block text-center shadow-md shadow-cyan-600/30 transition cursor-pointer"
                     >
-                      Open Store Settings Now (Setup GST & Brand) →
+                      Open Store Settings Now (Setup GST &amp; Brand) →
                     </button>
                   </div>
                 </div>

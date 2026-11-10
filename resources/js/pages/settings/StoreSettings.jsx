@@ -229,39 +229,39 @@ export default function StoreSettings() {
   // Form State initialized with defaults & fallback to local context
   const [formData, setFormData] = useState({
     // 1. Branding & Identity
-    store_name: storeSettings.store_name || storeSettings.storeName || 'Ramesh Fashion Store',
-    logo: isCleanUrl(storeSettings.logo) ? storeSettings.logo : '',
-    footer_logo: isCleanUrl(storeSettings.footer_logo) ? storeSettings.footer_logo : '',
-    favicon: isCleanUrl(storeSettings.favicon) ? storeSettings.favicon : '/favicon.png',
-    theme_color: storeSettings.theme_color || '#00a2c7',
-    secondary_color: storeSettings.secondary_color || '#06b6d4',
+    store_name: storeSettings?.store_name || storeSettings?.storeName || 'Ramesh Fashion Store',
+    logo: isCleanUrl(storeSettings?.logo) ? storeSettings?.logo : '',
+    footer_logo: isCleanUrl(storeSettings?.footer_logo) ? storeSettings?.footer_logo : '',
+    favicon: isCleanUrl(storeSettings?.favicon) ? storeSettings?.favicon : '/favicon.png',
+    theme_color: storeSettings?.theme_color || '#00a2c7',
+    secondary_color: storeSettings?.secondary_color || '#06b6d4',
 
     // 2. GST & Business Details
-    owner_name: storeSettings.owner_name || 'Ramesh Sundaram',
-    base_name: storeSettings.base_name || 'Ramesh Fashion Store Private Limited',
-    gst_legal_name: storeSettings.gst_legal_name || 'Ramesh Fashion Store Private Limited',
-    gst_trade_name: storeSettings.gst_trade_name || 'Ramesh Fashion Store',
-    gst_number: storeSettings.gst_number || '08AABCR1290M1Z5',
-    gst_state: storeSettings.gst_state || '08 - Rajasthan',
-    gst_scheme: storeSettings.gst_scheme || 'regular',
-    pan_number: storeSettings.pan_number || 'AABCR1290M',
-    e_invoicing_enabled: storeSettings.e_invoicing_enabled ?? false,
-    rcm_applicable: storeSettings.rcm_applicable ?? false,
+    owner_name: storeSettings?.owner_name || 'Ramesh Sundaram',
+    base_name: storeSettings?.base_name || 'Ramesh Fashion Store Private Limited',
+    gst_legal_name: storeSettings?.gst_legal_name || 'Ramesh Fashion Store Private Limited',
+    gst_trade_name: storeSettings?.gst_trade_name || 'Ramesh Fashion Store',
+    gst_number: storeSettings?.gst_number || '08AABCR1290M1Z5',
+    gst_state: storeSettings?.gst_state || '08 - Rajasthan',
+    gst_scheme: storeSettings?.gst_scheme || 'regular',
+    pan_number: storeSettings?.pan_number || 'AABCR1290M',
+    e_invoicing_enabled: storeSettings?.e_invoicing_enabled ?? false,
+    rcm_applicable: storeSettings?.rcm_applicable ?? false,
 
     // 3. Footer & Contact Details
-    footer_about_us: storeSettings.footer_about_us || 'Leading omnichannel fashion and retail enterprise delivering authentic products with seamless offline POS and doorstep delivery across India.',
-    footer_copyright: storeSettings.footer_copyright || '© 2026 Ramesh Fashion Store. All Rights Reserved. Built on Shoppy Multi-Tenant ERP.',
-    contact_address: storeSettings.contact_address || 'Shop #14-16, Commercial Plaza, M.I. Road, Jaipur, Rajasthan - 302001',
-    contact_email: storeSettings.contact_email || 'ramesh@fashion.in',
-    website_url: storeSettings.website_url || 'https://rameshfashion.shoppy.local',
-    app_playstore_url: storeSettings.app_playstore_url || 'https://play.google.com/store/apps/details?id=com.shoppy.rameshfashion',
-    contact_phone: storeSettings.contact_phone || '+91 98290 12345',
-    contact_map_iframe: storeSettings.contact_map_iframe || '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14234.677!2d75.7873!3d26.9124!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjbCsDU0JzQ0LjYiTiA3NcKwNDcnMTQuMyJF!5e0!3m2!1sen!2sin!4v1600000000000!5m2!1sen!2sin" width="100%" height="220" style="border:0;" allowfullscreen="" loading="lazy"></iframe>',
+    footer_about_us: storeSettings?.footer_about_us || 'Leading omnichannel fashion and retail enterprise delivering authentic products with seamless offline POS and doorstep delivery across India.',
+    footer_copyright: storeSettings?.footer_copyright || '© 2026 Ramesh Fashion Store. All Rights Reserved. Built on Shoppy Multi-Tenant ERP.',
+    contact_address: storeSettings?.contact_address || 'Shop #14-16, Commercial Plaza, M.I. Road, Jaipur, Rajasthan - 302001',
+    contact_email: storeSettings?.contact_email || 'ramesh@fashion.in',
+    website_url: storeSettings?.website_url || 'https://rameshfashion.shoppy.local',
+    app_playstore_url: storeSettings?.app_playstore_url || 'https://play.google.com/store/apps/details?id=com.shoppy.rameshfashion',
+    contact_phone: storeSettings?.contact_phone || '+91 98290 12345',
+    contact_map_iframe: storeSettings?.contact_map_iframe || '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14234.677!2d75.7873!3d26.9124!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjbCsDU0JzQ0LjYiTiA3NcKwNDcnMTQuMyJF!5e0!3m2!1sen!2sin!4v1600000000000!5m2!1sen!2sin" width="100%" height="220" style="border:0;" allowfullscreen="" loading="lazy"></iframe>',
 
     // 4. Home Meta & SEO
-    meta_title: storeSettings.meta_title || 'Ramesh Fashion Store | Premium Retail & Online Shopping',
-    meta_keyword: storeSettings.meta_keyword || 'fashion, retail, online shopping, apparel, footwear, accessories, buy online, gst invoice, ethnic wear, men kurta',
-    meta_description: storeSettings.meta_description || 'Explore exclusive collection of apparel, designer wear, and accessories at Ramesh Fashion Store. Instant billing, fast express courier delivery and secure UPI/COD payment options.',
+    meta_title: storeSettings?.meta_title || 'Ramesh Fashion Store | Premium Retail & Online Shopping',
+    meta_keyword: storeSettings?.meta_keyword || 'fashion, retail, online shopping, apparel, footwear, accessories, buy online, gst invoice, ethnic wear, men kurta',
+    meta_description: storeSettings?.meta_description || 'Explore exclusive collection of apparel, designer wear, and accessories at Ramesh Fashion Store. Instant billing, fast express courier delivery and secure UPI/COD payment options.',
 
     // 5. SMS Settings
     sms_settings: {
@@ -294,8 +294,8 @@ export default function StoreSettings() {
       printer: 'USB Generic / Text Printer (USB-001)',
       dotmatrix_printer: 'Epson LX-300+II / TVS MSP Dot Matrix (LPT1/USB)',
       default_invoice_format: 'a4',
-      a4_items_per_page: storeSettings.a4_items_per_page || 10,
-      a4_paging_mode: storeSettings.a4_paging_mode || 'fixed',
+      a4_items_per_page: storeSettings?.a4_items_per_page || 10,
+      a4_paging_mode: storeSettings?.a4_paging_mode || 'fixed',
       scale: 'COM3 Serial Port (9600 Baud, 8N1)',
       barcode: 'USB HID Keyboard Hook (Fast)',
     }
@@ -580,7 +580,7 @@ export default function StoreSettings() {
     } catch (err) {
       setSmsTestResult({
         success: true,
-        message: `SMS Gateway Simulation: Test SMS dispatched to +91 ${testPhoneNumber} via ${formData.sms_settings.provider.toUpperCase()} (Sender ID: ${formData.sms_settings.sender_id})!`
+        message: `SMS Gateway Simulation: Test SMS dispatched to +91 ${testPhoneNumber} via ${(formData.sms_settings?.provider || 'fast2sms').toUpperCase()} (Sender ID: ${formData.sms_settings?.sender_id || 'ENEXAI'})!`
       });
       showToast('SMS dispatched successfully!');
     } finally {
@@ -2542,7 +2542,7 @@ export default function StoreSettings() {
             </div>
 
             <p className="text-xs text-slate-500">
-              A sample verification SMS will be sent via <strong className="text-slate-700 dark:text-slate-300">{formData.sms_settings.provider.toUpperCase()} (Sender ID: {formData.sms_settings.sender_id})</strong>.
+              A sample verification SMS will be sent via <strong className="text-slate-700 dark:text-slate-300">{(formData.sms_settings?.provider || 'fast2sms').toUpperCase()} (Sender ID: {formData.sms_settings?.sender_id || 'ENEXAI'})</strong>.
             </p>
 
             <div>
