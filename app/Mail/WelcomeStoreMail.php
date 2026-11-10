@@ -63,3 +63,4 @@ class WelcomeStoreMail extends Mailable
         return [];
     }
 }
+

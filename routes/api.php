@@ -45,6 +45,9 @@ Route::prefix('master')->group(function () {
 
 // Merchant Store Terminal Authentication (Database shops verification)
 Route::post('/store/login', [MasterPortalApiController::class, 'storeLogin']);
+Route::post('/store/forgot-password/send-otp', [MasterPortalApiController::class, 'forgotPasswordSendOtp']);
+Route::post('/store/forgot-password/verify-otp', [MasterPortalApiController::class, 'forgotPasswordVerifyOtp']);
+Route::post('/store/forgot-password/reset-password', [MasterPortalApiController::class, 'forgotPasswordReset']);
 
 // Public Dynamic Website APIs
 Route::get('/public/landing-data', [MasterPortalApiController::class, 'getPublicLandingData']);

@@ -59,6 +59,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import subscriptionService from '../../services/subscriptionService';
 import StoreRenewalModal from '../../components/StoreRenewalModal';
+import ForgotPasswordModal from '../../components/ForgotPasswordModal';
 
 // Social Icon Components for Contact section
 const FacebookIcon = ({ className = "w-4 h-4" }) => (
@@ -225,6 +226,16 @@ export default function LandingPage({ defaultPage = 'home' }) {
   const [rememberTerminal, setRememberTerminal] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState(null);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('forgot') === '1') {
+        setIsForgotModalOpen(true);
+      }
+    } catch (e) {}
+  }, []);
 
   const handleStoreLogin = async (e) => {
     e.preventDefault();
@@ -909,7 +920,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   <span>Remember Store Code</span>
                 </label>
 
-
+                <button
+                  type="button"
+                  onClick={() => setIsForgotModalOpen(true)}
+                  className="text-[#00a2c7] hover:text-[#38bdf8] hover:underline font-bold transition cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
               </div>
 
               <div className="pt-2">
@@ -3126,6 +3143,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
         onRenewSuccess={(renewed) => {
           showToast(`Store ${renewed?.shop_code || lookupStoreCode} subscription renewed successfully!`);
           setIsRenewModalOpen(false);
+        }}
+      />
+
+      {/* =================================================================== */}
+      {/* 8. FORGOT PASSWORD & DUAL-CHANNEL OTP RESET MODAL                   */}
+      {/* =================================================================== */}
+      <ForgotPasswordModal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+        initialIdentifier={inputStoreCode}
+        onSuccess={(updatedCode) => {
+          if (updatedCode) {
+            setInputStoreCode(updatedCode);
+          }
+          showToast('Password reset successfully! Please login with your new password.');
         }}
       />
 

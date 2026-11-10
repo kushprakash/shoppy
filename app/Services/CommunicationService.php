@@ -201,4 +201,85 @@ class CommunicationService
             ];
         }
     }
+
+    /**
+     * Dispatch Password Reset OTP SMS via Buzzify HTTP API
+     *
+     * Template:
+     * Your verification login (OTP) is: $otp. Do not share this OTP with anyone. It is valid for the next 10 minutes. ENEXA
+     */
+    public static function sendOtpSms(string $mobile, string $otp): array
+    {
+        $message = "Your verification login (OTP) is: {$otp}. Do not share this OTP with anyone. It is valid for the next 10 minutes. ENEXA";
+
+        return self::sendSms($message, $mobile);
+    }
+
+    /**
+     * Dispatch Password Reset OTP Email via Gmail SMTP
+     */
+    public static function sendOtpEmail(
+        string $ownerName,
+        string $ownerEmail,
+        string $otp,
+        string $storeCode,
+        string $storeName = ''
+    ): array {
+        try {
+            if (empty($ownerEmail) || !filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+                Log::warning("sendOtpEmail: Invalid or empty email '{$ownerEmail}'");
+                return [
+                    'status' => 0,
+                    'message' => 'Invalid email address.'
+                ];
+            }
+
+            // Configure dynamic dedicated SMTP mailer for Enexa Gmail
+            $host = config('services.enexa_mail.host', env('MAIL_HOST', 'smtp.gmail.com'));
+            $port = (int)config('services.enexa_mail.port', env('MAIL_PORT', 587));
+            $username = config('services.enexa_mail.username', env('MAIL_USERNAME', 'contact@enexa.in'));
+            $passwordVal = config('services.enexa_mail.password', env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'));
+            $encryption = config('services.enexa_mail.encryption', env('MAIL_ENCRYPTION', 'tls'));
+            $fromAddress = config('services.enexa_mail.from_address', env('MAIL_FROM_ADDRESS', 'contact@enexa.in'));
+            $fromName = config('services.enexa_mail.from_name', env('MAIL_FROM_NAME', 'Shoppy ERP Security'));
+
+            Config::set('mail.mailers.enexa_smtp', [
+                'transport' => 'smtp',
+                'host' => $host,
+                'port' => $port,
+                'encryption' => $encryption,
+                'username' => $username,
+                'password' => $passwordVal,
+                'timeout' => 20,
+            ]);
+
+            Config::set('mail.from', [
+                'address' => $fromAddress,
+                'name' => $fromName,
+            ]);
+
+            $mailable = new \App\Mail\OtpVerificationMail(
+                ownerName: $ownerName,
+                otp: $otp,
+                storeCode: $storeCode,
+                storeName: $storeName,
+            );
+
+            Mail::mailer('enexa_smtp')->to($ownerEmail)->send($mailable);
+
+            Log::info("sendOtpEmail: OTP email sent successfully to {$ownerEmail} for store {$storeCode}");
+
+            return [
+                'status' => 1,
+                'message' => "OTP email sent to {$ownerEmail}"
+            ];
+        } catch (\Throwable $e) {
+            Log::error("sendOtpEmail error for {$ownerEmail}: " . $e->getMessage());
+            return [
+                'status' => 0,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
 }
+

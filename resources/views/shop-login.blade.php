@@ -94,6 +94,12 @@
                     />
                 </div>
 
+                <div class="flex items-center justify-end text-[11px]">
+                    <a href="/store?forgot=1" class="text-cyan-400 hover:text-cyan-300 hover:underline font-semibold transition">
+                        Forgot Password?
+                    </a>
+                </div>
+
                 <div class="pt-2 space-y-2.5">
                     <button 
                         type="submit" 

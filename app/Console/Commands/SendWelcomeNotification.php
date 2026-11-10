@@ -73,3 +73,4 @@ class SendWelcomeNotification extends Command
         return 0;
     }
 }
+

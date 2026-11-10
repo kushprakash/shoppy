@@ -1060,6 +1060,232 @@ class MasterPortalApiController extends Controller
     }
 
     /**
+     * Send Password Reset OTP to registered Phone (SMS) & Email
+     *
+     * SMS Template:
+     * Your verification login (OTP) is: $otp. Do not share this OTP with anyone. It is valid for the next 10 minutes. ENEXA
+     */
+    public function forgotPasswordSendOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'identifier' => 'required|string|max:255',
+        ]);
+
+        $identifier = trim($validated['identifier']);
+        $code = strtoupper($identifier);
+
+        $shop = DB::connection('mysql')->table('shops')
+            ->where(function ($q) use ($code, $identifier) {
+                $q->where('shop_code', $code)
+                  ->orWhere('owner_email', strtolower($identifier))
+                  ->orWhere('owner_phone', $identifier);
+            })
+            ->first();
+
+        if (!$shop) {
+            return response()->json([
+                'success' => false,
+                'message' => "No registered store found matching '{$identifier}'. Please enter your valid Store Code, Email, or Mobile."
+            ], 404);
+        }
+
+        if ($shop->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => "Store [{$shop->shop_code}] is currently {$shop->status}. Please contact support."
+            ], 403);
+        }
+
+        // Generate 6-digit numeric OTP
+        $otp = (string) random_int(100000, 999999);
+        $cacheKey = "store_pwd_reset_otp_{$shop->id}";
+
+        \Illuminate\Support\Facades\Cache::put($cacheKey, [
+            'otp' => $otp,
+            'shop_id' => $shop->id,
+            'shop_code' => $shop->shop_code,
+            'attempts' => 0,
+            'created_at' => now()->timestamp,
+            'expires_at' => now()->addMinutes(10)->timestamp,
+        ], now()->addMinutes(10));
+
+        // Format masked phone & email
+        $phone = (string) $shop->owner_phone;
+        $maskedPhone = (strlen($phone) >= 10)
+            ? str_repeat('*', strlen($phone) - 4) . substr($phone, -4)
+            : '******' . substr($phone, -2);
+
+        $email = (string) $shop->owner_email;
+        $emailParts = explode('@', $email);
+        $maskedEmail = (strlen($emailParts[0]) > 2)
+            ? substr($emailParts[0], 0, 2) . '***@' . ($emailParts[1] ?? 'domain.com')
+            : '*@' . ($emailParts[1] ?? 'domain.com');
+
+        // Dispatch SMS via Buzzify HTTP API
+        try {
+            \App\Services\CommunicationService::sendOtpSms(
+                mobile: $shop->owner_phone,
+                otp: $otp
+            );
+        } catch (\Throwable $e) {
+            Log::error("forgotPasswordSendOtp SMS error: " . $e->getMessage());
+        }
+
+        // Dispatch Email via Gmail SMTP
+        try {
+            \App\Services\CommunicationService::sendOtpEmail(
+                ownerName: $shop->owner_name ?: $shop->name,
+                ownerEmail: $shop->owner_email,
+                otp: $otp,
+                storeCode: $shop->shop_code,
+                storeName: $shop->name
+            );
+        } catch (\Throwable $e) {
+            Log::error("forgotPasswordSendOtp Email error: " . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Verification OTP has been sent to your registered Mobile ({$maskedPhone}) and Email ({$maskedEmail}). It is valid for 10 minutes.",
+            'shop_code' => $shop->shop_code,
+            'shop_name' => $shop->name,
+            'masked_phone' => $maskedPhone,
+            'masked_email' => $maskedEmail,
+        ]);
+    }
+
+    /**
+     * Verify Password Reset OTP
+     */
+    public function forgotPasswordVerifyOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'identifier' => 'required|string',
+            'otp' => 'required|string|size:6',
+        ]);
+
+        $identifier = trim($validated['identifier']);
+        $code = strtoupper($identifier);
+
+        $shop = DB::connection('mysql')->table('shops')
+            ->where(function ($q) use ($code, $identifier) {
+                $q->where('shop_code', $code)
+                  ->orWhere('owner_email', strtolower($identifier))
+                  ->orWhere('owner_phone', $identifier);
+            })
+            ->first();
+
+        if (!$shop) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        $cacheKey = "store_pwd_reset_otp_{$shop->id}";
+        $cacheData = \Illuminate\Support\Facades\Cache::get($cacheKey);
+
+        if (!$cacheData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP has expired or does not exist. Please request a new OTP.'
+            ], 422);
+        }
+
+        if (($cacheData['attempts'] ?? 0) >= 5) {
+            \Illuminate\Support\Facades\Cache::forget($cacheKey);
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many invalid attempts. Please request a new OTP.'
+            ], 429);
+        }
+
+        if (trim($cacheData['otp']) !== trim($validated['otp'])) {
+            $cacheData['attempts'] = ($cacheData['attempts'] ?? 0) + 1;
+            \Illuminate\Support\Facades\Cache::put($cacheKey, $cacheData, now()->addMinutes(10));
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP code. Please enter the correct 6-digit OTP.'
+            ], 422);
+        }
+
+        // OTP is verified! Generate single-use reset token valid for 15 minutes
+        $resetToken = hash('sha256', \Illuminate\Support\Str::random(40) . '_' . $shop->id . '_' . time());
+        \Illuminate\Support\Facades\Cache::put("store_pwd_reset_token_{$resetToken}", [
+            'shop_id' => $shop->id,
+            'shop_code' => $shop->shop_code,
+        ], now()->addMinutes(15));
+
+        \Illuminate\Support\Facades\Cache::forget($cacheKey);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP verified successfully! Please enter your new password.',
+            'reset_token' => $resetToken,
+            'shop_code' => $shop->shop_code,
+        ]);
+    }
+
+    /**
+     * Set New Password after verified OTP
+     */
+    public function forgotPasswordReset(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'reset_token' => 'required|string',
+            'password' => 'required|string|min:4|confirmed',
+        ]);
+
+        $resetToken = $validated['reset_token'];
+        $tokenData = \Illuminate\Support\Facades\Cache::get("store_pwd_reset_token_{$resetToken}");
+
+        if (!$tokenData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password reset session has expired or is invalid. Please request OTP again.'
+            ], 422);
+        }
+
+        $shop = DB::connection('mysql')->table('shops')->where('id', $tokenData['shop_id'])->first();
+        if (!$shop) {
+            return response()->json(['success' => false, 'message' => 'Store not found.'], 404);
+        }
+
+        $newPassword = $validated['password'];
+
+        // 1. Update central shops settings table
+        $settings = json_decode($shop->settings, true) ?: [];
+        $settings['terminal_password'] = $newPassword;
+        DB::connection('mysql')->table('shops')->where('id', $shop->id)->update([
+            'settings' => json_encode($settings),
+            'updated_at' => now(),
+        ]);
+
+        // 2. Update tenant database admin users table
+        try {
+            $sanitizedDb = preg_replace('/[^a-zA-Z0-9_\-]/', '', $shop->database_name);
+            Config::set('database.connections.tenant.database', $sanitizedDb);
+            DB::purge('tenant');
+            DB::reconnect('tenant');
+
+            DB::connection('tenant')->table('users')
+                ->where('role', 'admin')
+                ->orWhere('email', $shop->owner_email)
+                ->update([
+                    'password' => Hash::make($newPassword),
+                    'updated_at' => now(),
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning("forgotPasswordReset tenant sync warning: " . $e->getMessage());
+        }
+
+        \Illuminate\Support\Facades\Cache::forget("store_pwd_reset_token_{$resetToken}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated successfully! You can now log in with your new password.',
+            'shop_code' => $shop->shop_code,
+        ]);
+    }
+
+    /**
      * Agent Partner Authentication
      */
     public function agentLogin(Request $request): JsonResponse
