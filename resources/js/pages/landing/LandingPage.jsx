@@ -435,11 +435,18 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Start Onboarding Flow
   const handleStartOnboarding = (plan) => {
-    setSelectedOnboardPlan(plan);
-    setBillingCycle(plan?.billingCycle || 'monthly');
+    const targetPlan = plan || (plans && plans.length > 0 ? plans[0] : {
+      id: 'monthly-package',
+      name: 'Monthly Package',
+      billingCycle: 'monthly',
+      basePrice: 999
+    });
+    setSelectedOnboardPlan(targetPlan);
+    setBillingCycle(targetPlan?.billingCycle || 'monthly');
     setOnboardStep(1);
-    setPayuOnboardData(null);
-    setPayuError(null);
+    setPaytmOnboardData(null);
+    setPaymentError(null);
+    setPaytmUtr('');
     setIsOnboardingOpen(true);
   };
 
@@ -1115,7 +1122,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
             Store Login
           </button>
 
-
+          <button
+            onClick={() => handleStartOnboarding()}
+            className="hidden sm:inline-flex px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition items-center gap-1.5 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Sign Up Store</span>
+          </button>
 
           <button
             onClick={() => navigateTo('contact')}
@@ -1212,6 +1225,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       {leg.label}
                     </button>
                   ))}
+                </div>
+
+                <div className="pt-3">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleStartOnboarding();
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Sign Up Store Now</span>
+                  </button>
                 </div>
               </div>
             </div>

@@ -127,7 +127,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-CrOAc_WE.css",
+    "file": "assets/app-DFnU8O0d.css",
     "name": "app",
     "names": [
       "app.css"
@@ -136,7 +136,7 @@
     "isEntry": true
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-BU56EBHk.js",
+    "file": "assets/app-C13xzmVP.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -159,7 +159,7 @@
       "_trending-up-DZiFK7g7.js"
     ],
     "css": [
-      "assets/app-CrOAc_WE.css"
+      "assets/app-DFnU8O0d.css"
     ]
   },
   "resources/js/entries/banking-panel.jsx": {
