@@ -16,6 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class,
         ]);
+        $middleware->encryptCookies(except: [
+            'shoppy_store_token',
+            'shoppy_active_store_code',
+            'shoppy_active_store',
+            'shoppy_erp_theme',
+        ]);
         $middleware->validateCsrfTokens(except: [
             'payu/*',
             'api/payu/*',

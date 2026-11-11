@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useErp } from '../../context/ErpContext';
 import StoreRenewalModal from '../../components/StoreRenewalModal';
+import { getActiveShopCode, getStoreAuthHeaders } from '../../utils/storeAuth';
 import {
   Building2,
   FileText,
@@ -139,9 +140,14 @@ export default function StoreSettings() {
 
   // Fetch Passbook data when subscription tab is opened
   const fetchPassbook = () => {
-    const code = searchParams.get('code') || searchParams.get('shop_code') || localStorage.getItem('shoppy_active_store_code') || '';
+    const code = getActiveShopCode();
     setIsLoadingPassbook(true);
-    fetch(`/api/payu/passbook?code=${encodeURIComponent(code)}`)
+    fetch(`/api/payu/passbook?code=${encodeURIComponent(code)}`, {
+      headers: {
+        'Accept': 'application/json',
+        ...getStoreAuthHeaders(code)
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -306,11 +312,11 @@ export default function StoreSettings() {
     let isMounted = true;
     setIsLoading(true);
 
-    const activeCode = searchParams.get('code') || searchParams.get('shop_code') || localStorage.getItem('shoppy_active_store_code') || '';
-    const headers = { 'Accept': 'application/json' };
-    if (activeCode) {
-      headers['X-Shop-Code'] = activeCode;
-    }
+    const activeCode = getActiveShopCode();
+    const headers = {
+      'Accept': 'application/json',
+      ...getStoreAuthHeaders(activeCode)
+    };
 
     fetch(`/api/tenant/settings/branding?code=${encodeURIComponent(activeCode)}&shop_code=${encodeURIComponent(activeCode)}`, { headers })
       .then((res) => res.json())

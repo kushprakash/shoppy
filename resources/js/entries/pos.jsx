@@ -7,11 +7,12 @@ import {
   ArrowLeft, ShieldCheck, Receipt, Trash2, TrendingUp, TrendingDown, Phone
 } from 'lucide-react';
 import InvoicePrintModal from '../components/InvoicePrintModal';
+import { getActiveShopCode, installStoreFetchInterceptor, syncAxiosStoreHeaders } from '../utils/storeAuth';
+
+installStoreFetchInterceptor();
 
 export default function PosBilling() {
-  const [shopCode, setShopCode] = useState(
-    document.getElementById('root')?.dataset?.shopCode || localStorage.getItem('shoppy_active_store_code') || ''
-  );
+  const [shopCode, setShopCode] = useState(() => getActiveShopCode());
   
   // Dual Billing: Barcode Scanner & Manual Search
   const [barcodeQuery, setBarcodeQuery] = useState('');
@@ -43,7 +44,10 @@ export default function PosBilling() {
   
   const barcodeInputRef = useRef(null);
 
-  axios.defaults.headers.common['X-Shop-Code'] = shopCode;
+  syncAxiosStoreHeaders(axios);
+  if (shopCode) {
+    axios.defaults.headers.common['X-Shop-Code'] = shopCode;
+  }
 
   // Local sample catalog fallback for offline / fast search
   const localCatalog = [

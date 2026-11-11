@@ -13,11 +13,12 @@ import {
   INITIAL_SHIPPING_RULES,
   INITIAL_COUPONS
 } from '../context/ErpContext';
+import { getActiveShopCode, installStoreFetchInterceptor, syncAxiosStoreHeaders } from '../utils/storeAuth';
+
+installStoreFetchInterceptor();
 
 export default function Storefront() {
-  const [shopCode, setShopCode] = useState(
-    document.getElementById('root')?.dataset?.shopCode || localStorage.getItem('shoppy_active_store_code') || ''
-  );
+  const [shopCode, setShopCode] = useState(() => getActiveShopCode());
   const [storeInfo, setStoreInfo] = useState(null);
   
   // Categories from localStorage or defaults
@@ -96,7 +97,10 @@ export default function Storefront() {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
 
-  axios.defaults.headers.common['X-Shop-Code'] = shopCode;
+  syncAxiosStoreHeaders(axios);
+  if (shopCode) {
+    axios.defaults.headers.common['X-Shop-Code'] = shopCode;
+  }
 
   // Fetch Store Info & DB catalog if available
   const fetchStoreData = async () => {

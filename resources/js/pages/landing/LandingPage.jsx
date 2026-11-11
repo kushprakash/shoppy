@@ -61,6 +61,7 @@ import { useNavigate } from 'react-router-dom';
 import subscriptionService from '../../services/subscriptionService';
 import StoreRenewalModal from '../../components/StoreRenewalModal';
 import ForgotPasswordModal from '../../components/ForgotPasswordModal';
+import { setStoreAuthSession } from '../../utils/storeAuth';
 
 // Social Icon Components for Contact section
 const FacebookIcon = ({ className = "w-4 h-4" }) => (
@@ -277,28 +278,31 @@ export default function LandingPage({ defaultPage = 'home' }) {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const resolvedCode = (data.store?.code || data.store?.shop_code || cleanCode).toUpperCase();
         try {
           if (rememberTerminal) {
-            localStorage.setItem('shoppy_saved_store_code', cleanCode);
+            localStorage.setItem('shoppy_saved_store_code', resolvedCode);
           } else {
             localStorage.removeItem('shoppy_saved_store_code');
           }
-          localStorage.setItem('shoppy_active_store_code', cleanCode);
-          if (data.store) {
-            localStorage.setItem('shoppy_active_store', JSON.stringify(data.store));
-          }
-          document.cookie = `shoppy_active_store=${cleanCode}; path=/; max-age=86400`;
+
+          setStoreAuthSession({
+            token: data.token || '',
+            shopCode: resolvedCode,
+            store: data.store || null
+          });
 
           // Check if store subscription is expiring in last 5 days (or expired) to auto-trigger renewal popup!
-          const expCheck = subscriptionService.getStoreExpiryStatus(cleanCode);
+          const expCheck = subscriptionService.getStoreExpiryStatus(resolvedCode);
           if (expCheck && expCheck.showAlert) {
             localStorage.setItem('shoppy_trigger_renewal_popup', 'true');
             sessionStorage.setItem('shoppy_show_renewal_popup', 'true');
           }
+          window.dispatchEvent(new Event('shoppy:store_auth_changed'));
         } catch (err) { }
 
-        showToast(data.message || `Welcome! Store ${cleanCode} authenticated`);
-        navigate('/shop-admin/dashboard');
+        showToast(data.message || `Welcome! Store ${resolvedCode} authenticated`);
+        window.location.assign('/shop-admin/dashboard');
       } else {
         setLoginError(data.message || 'Invalid store code or password.');
       }
@@ -349,12 +353,11 @@ export default function LandingPage({ defaultPage = 'home' }) {
       if (sp.get('payu_status') === 'success') {
         const paidShop = sp.get('shop');
         if (paidShop) {
-          localStorage.setItem('shoppy_active_store_code', paidShop);
-          document.cookie = `shoppy_active_store=${paidShop}; path=/; max-age=86400`;
+          setStoreAuthSession({ shopCode: paidShop });
           localStorage.setItem('shoppy_initial_setup', 'true');
           showToast(`✓ Payment verified! Launching Store Settings for ${paidShop}...`);
           setTimeout(() => {
-            navigate('/shop-admin/settings?setup=1');
+            window.location.assign(`/shop-admin/settings?setup=1&code=${encodeURIComponent(paidShop)}`);
           }, 1000);
         }
       }
@@ -735,10 +738,11 @@ export default function LandingPage({ defaultPage = 'home' }) {
         setProvisionedStore(store);
 
         // Store login tokens & cookies for seamless merchant auto-login
-        localStorage.setItem('shoppy_active_store_code', store.shop_code);
-        localStorage.setItem('shoppy_active_store', JSON.stringify(store));
-        document.cookie = `shoppy_active_store_code=${store.shop_code}; path=/; max-age=86400`;
-        document.cookie = `shoppy_active_store=${store.shop_code}; path=/; max-age=86400`;
+        setStoreAuthSession({
+          token: result.token || '',
+          shopCode: store.shop_code || store.code || '',
+          store
+        });
         localStorage.setItem('shoppy_initial_setup', 'true');
 
         // Keep blink for 1.8 seconds then move to progress

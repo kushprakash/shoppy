@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useErp } from '../context/ErpContext';
+import { logoutStore } from '../utils/storeAuth';
 import {
   Grid2X2,
   Moon,
@@ -351,13 +352,14 @@ export default function Header() {
                       </div>
                     </button>
 
-                    <a
-                      href="/store"
-                      className="w-full px-3 py-2 rounded-xl text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5 transition"
+                    <button
+                      type="button"
+                      onClick={() => logoutStore('/store')}
+                      className="w-full px-3 py-2 rounded-xl text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5 transition cursor-pointer"
                     >
                       <LogOut className="w-4 h-4 text-rose-500" />
                       <span>Logout / Switch Store</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </>

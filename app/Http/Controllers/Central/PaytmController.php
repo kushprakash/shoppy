@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Central;
 use App\Http\Controllers\Controller;
 use App\Services\CommunicationService;
 use App\Services\PaytmChecksum;
+use App\Support\StoreToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -656,12 +657,16 @@ class PaytmController extends Controller
                 Log::error("Paytm verify: Welcome Email error: " . $e->getMessage());
             }
 
-            return response()->json([
+            $token = StoreToken::issue((int) $shopId, $code);
+
+            $response = response()->json([
                 'success' => true,
                 'type' => 'onboard',
+                'token' => $token,
                 'message' => "Payment verified! Store {$code} has been provisioned successfully via Paytm UPI.",
                 'store' => [
                     'id' => $shopId,
+                    'code' => $code,
                     'shop_code' => $code,
                     'name' => $storeName,
                     'owner_name' => $ownerName,
@@ -682,6 +687,12 @@ class PaytmController extends Controller
                 'auto_login' => true,
                 'redirect_url' => '/shop-admin/settings?setup=1',
             ]);
+
+            foreach (StoreToken::authCookies($code, $token) as $cookie) {
+                $response->withCookie($cookie);
+            }
+
+            return $response;
         }
 
         // =====================================================================
@@ -816,18 +827,28 @@ class PaytmController extends Controller
                 Log::error("Paytm renewal: GST Invoice Email error: " . $e->getMessage());
             }
 
-            return response()->json([
+            $token = StoreToken::issue($shop);
+
+            $response = response()->json([
                 'success' => true,
                 'type' => 'renew',
+                'token' => $token,
                 'message' => "Store {$shop->shop_code} subscription renewed until {$newValidUntil} via Paytm UPI!",
                 'store' => [
                     'id' => $shop->id,
+                    'code' => $shop->shop_code,
                     'shop_code' => $shop->shop_code,
                     'name' => $shop->name,
                     'valid_until' => $newValidUntil,
                     'plan_name' => $planInfo['plan_name'],
                 ]
             ]);
+
+            foreach (StoreToken::authCookies($shop->shop_code, $token) as $cookie) {
+                $response->withCookie($cookie);
+            }
+
+            return $response;
         }
 
         return response()->json(['success' => false, 'message' => 'Invalid transaction type.'], 400);

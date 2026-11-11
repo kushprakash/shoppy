@@ -1,11 +1,36 @@
 <?php
 
+use App\Support\StoreToken;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 
+$resolveWebShopCode = function (): string {
+    $req = request();
+    $queryCode = strtoupper(trim((string) ($req->query('code') ?: $req->query('shop_code') ?: '')));
+    if ($queryCode !== '') {
+        if ($req->hasSession()) {
+            session(['active_store_code' => $queryCode]);
+        }
+        return $queryCode;
+    }
+
+    $tokenCode = StoreToken::resolveShopCodeFromRequest($req);
+    if ($tokenCode) {
+        return $tokenCode;
+    }
+
+    $cookieOrSession = strtoupper(trim((string) (
+        $req->cookie(StoreToken::CODE_COOKIE)
+        ?: $req->cookie(StoreToken::LEGACY_CODE_COOKIE)
+        ?: ($req->hasSession() ? session('active_store_code') : '')
+    )));
+
+    return $cookieOrSession;
+};
+
 // Dedicated portals
-Route::get('/storefront', function () {
-    $shopCode = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
+Route::get('/storefront', function () use ($resolveWebShopCode) {
+    $shopCode = $resolveWebShopCode();
     if (!$shopCode) {
         $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
         $shopCode = $shop->shop_code ?? '';
@@ -20,14 +45,9 @@ Route::get('/storefront', function () {
     ]);
 });
 
-Route::get('/pos-terminal', function () {
-    $shopCode = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
-    if (!$shopCode) {
-        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
-        $shopCode = $shop->shop_code ?? '';
-    } else {
-        $shop = DB::connection('mysql')->table('shops')->where('shop_code', $shopCode)->first();
-    }
+Route::get('/pos-terminal', function () use ($resolveWebShopCode) {
+    $shopCode = $resolveWebShopCode();
+    $shop = $shopCode ? DB::connection('mysql')->table('shops')->where('shop_code', $shopCode)->first() : null;
     $title = ($shop ? $shop->name : 'Shoppy') . ' — POS Billing Counter Terminal';
     return view('app', [
         'entry' => 'pos',
@@ -69,11 +89,7 @@ Route::get('/master/{any?}', function () {
 
 // Merchant Store Login Portal (http://domain/store)
 Route::get('/store', function () {
-    $code = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
-    if (!$code) {
-        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
-        $code = $shop->shop_code ?? '';
-    }
+    $code = strtoupper(trim((string) (request()->query('code') ?: request()->query('shop_code') ?: '')));
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
     return response()
@@ -141,12 +157,8 @@ Route::get('/invoice-mail-send', [\App\Http\Controllers\Central\PaytmController:
 
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)
 // Handles direct URLs: /shop-admin, /shop-admin/products, /shop-admin/orders, /shop-admin/inventory, etc.
-Route::get('/{any}', function () {
-    $shopCode = strtoupper(request()->query('code') ?: session('active_store_code') ?: request()->cookie('shoppy_active_store_code') ?: '');
-    if (!$shopCode) {
-        $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
-        $shopCode = $shop->shop_code ?? '';
-    }
+Route::get('/{any}', function () use ($resolveWebShopCode) {
+    $shopCode = $resolveWebShopCode();
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
     return response()

@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
+import { getActiveShopCode, installStoreFetchInterceptor, setStoreAuthSession, syncAxiosStoreHeaders } from '../utils/storeAuth';
+
+installStoreFetchInterceptor();
+syncAxiosStoreHeaders(axios);
 import {
   LayoutDashboard,
   Building2,
@@ -86,19 +90,11 @@ const INITIAL_BRANCHES = [];
 
 export default function ShopAdmin() {
   const [shopCode, setShopCode] = useState(() => {
-    const urlCode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('code') : null;
-    if (urlCode) {
-      try {
-        localStorage.setItem('shoppy_active_store_code', urlCode);
-        document.cookie = `shoppy_active_store=${urlCode}; path=/; max-age=86400`;
-      } catch (e) {}
-      return urlCode;
+    const resolved = getActiveShopCode();
+    if (resolved) {
+      setStoreAuthSession({ shopCode: resolved });
     }
-    return (
-      (typeof document !== 'undefined' ? document.getElementById('root')?.dataset?.shopCode : '') ||
-      (typeof localStorage !== 'undefined' ? localStorage.getItem('shoppy_active_store_code') : '') ||
-      ''
-    );
+    return resolved;
   });
 
   const activeStore = useMemo(() => {

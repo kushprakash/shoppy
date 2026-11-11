@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Support\StoreToken;
 use App\Tenancy\TenantManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,20 +36,26 @@ class TenantErpApiController extends Controller
      */
     protected function resolveShop(Request $request)
     {
-        $shopCode = strtoupper(trim(
-            $request->header('X-Shop-Code')
-            ?: $request->query('shop_code')
-            ?: session('active_store_code')
-            ?: $request->cookie('shoppy_active_store_code')
+        $tokenCode = StoreToken::resolveShopCodeFromRequest($request);
+
+        $shopCode = strtoupper(trim((string) (
+            $request->query('shop_code')
+            ?: $request->query('code')
+            ?: $tokenCode
+            ?: $request->header('X-Shop-Code')
+            ?: $request->header('X-Store-Code')
+            ?: $request->cookie(StoreToken::CODE_COOKIE)
+            ?: $request->cookie(StoreToken::LEGACY_CODE_COOKIE)
+            ?: ($request->hasSession() ? session('active_store_code') : '')
             ?: ''
-        ));
+        )));
 
         if ($shopCode) {
             $shop = DB::connection('mysql')->table('shops')->where('shop_code', $shopCode)->first();
             if ($shop) return $shop;
         }
 
-        return DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+        return null;
     }
 
     /**
@@ -57,6 +64,13 @@ class TenantErpApiController extends Controller
     public function getInitData(Request $request): JsonResponse
     {
         $shop = $this->resolveShop($request);
+        if (!$shop) {
+            return response()->json([
+                'success' => false,
+                'error' => 'store_unauthenticated',
+                'message' => 'Active store session not found. Please log in to your store terminal.',
+            ], 401);
+        }
         $shopCode = $shop->shop_code ?? '';
 
         $shopSettings = $shop ? (json_decode($shop->settings, true) ?: []) : [];

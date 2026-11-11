@@ -197,7 +197,7 @@ class SettingsController extends Controller
     public function getStoreBrandingSettings(Request $request): JsonResponse
     {
         /** @var Shop|null $shop */
-        $shop = $request->attributes->get('tenant') ?? Shop::where('status', 'active')->first();
+        $shop = $request->attributes->get('tenant');
 
         if (!$shop) {
             return response()->json([
@@ -214,7 +214,7 @@ class SettingsController extends Controller
             'shop_code' => $shop->shop_code,
             'slug' => $shop->slug,
             'store_name' => $shop->name,
-            'owner_name' => $shop->owner_name ?? ($settings['owner_name'] ?? 'Ramesh Sundaram'),
+            'owner_name' => $shop->owner_name ?? ($settings['owner_name'] ?? 'Store Owner'),
             'base_name' => $settings['base_name'] ?? $shop->name . ' Private Limited',
             'gst_legal_name' => $settings['gst_legal_name'] ?? ($settings['base_name'] ?? $shop->name . ' Private Limited'),
             'gst_trade_name' => $settings['gst_trade_name'] ?? $shop->name,
@@ -276,7 +276,7 @@ class SettingsController extends Controller
     public function updateStoreBrandingSettings(Request $request): JsonResponse
     {
         /** @var Shop|null $shop */
-        $shop = $request->attributes->get('tenant') ?? Shop::where('status', 'active')->first();
+        $shop = $request->attributes->get('tenant');
 
         if (!$shop) {
             return response()->json([

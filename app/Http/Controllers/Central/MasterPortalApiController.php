@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
+use App\Support\StoreToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -1043,20 +1044,108 @@ class MasterPortalApiController extends Controller
             }
         }
 
-        session(['active_store_code' => $code]);
+        if ($request->hasSession()) {
+            session(['active_store_code' => $shop->shop_code]);
+        }
 
-        return response()->json([
+        $token = StoreToken::issue($shop);
+
+        $response = response()->json([
             'success' => true,
             'message' => "Authenticated for store {$shop->name}",
+            'token' => $token,
             'store' => [
                 'id' => $shop->id,
                 'code' => $shop->shop_code,
+                'shop_code' => $shop->shop_code,
                 'name' => $shop->name,
                 'status' => $shop->status,
                 'owner_name' => $shop->owner_name,
                 'owner_email' => $shop->owner_email,
+                'owner_phone' => $shop->owner_phone,
+                'database_name' => $shop->database_name ?? null,
+                'valid_until' => $settings['valid_until'] ?? null,
+                'plan_name' => $settings['plan_name'] ?? null,
             ],
         ]);
+
+        foreach (StoreToken::authCookies($shop->shop_code, $token) as $cookie) {
+            $response->withCookie($cookie);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Get Currently Authenticated Store from Signed Token / Cookie
+     */
+    public function storeMe(Request $request): JsonResponse
+    {
+        $resolvedCode = StoreToken::resolveShopCodeFromRequest($request)
+            ?: strtoupper(trim((string) (
+                $request->header('X-Shop-Code')
+                ?: $request->cookie(StoreToken::CODE_COOKIE)
+                ?: $request->cookie(StoreToken::LEGACY_CODE_COOKIE)
+                ?: ($request->hasSession() ? session('active_store_code') : '')
+            )));
+
+        if (!$resolvedCode) {
+            return response()->json([
+                'authenticated' => false,
+                'message' => 'No active store session.',
+            ], 401);
+        }
+
+        $shop = DB::connection('mysql')->table('shops')
+            ->where('shop_code', $resolvedCode)
+            ->first();
+
+        if (!$shop || $shop->status !== 'active') {
+            return response()->json([
+                'authenticated' => false,
+                'message' => 'Store session invalid or inactive.',
+            ], 401);
+        }
+
+        $settings = json_decode($shop->settings ?? '{}', true) ?: [];
+
+        return response()->json([
+            'authenticated' => true,
+            'store' => [
+                'id' => $shop->id,
+                'code' => $shop->shop_code,
+                'shop_code' => $shop->shop_code,
+                'name' => $shop->name,
+                'status' => $shop->status,
+                'owner_name' => $shop->owner_name,
+                'owner_email' => $shop->owner_email,
+                'owner_phone' => $shop->owner_phone,
+                'database_name' => $shop->database_name ?? null,
+                'valid_until' => $settings['valid_until'] ?? null,
+                'plan_name' => $settings['plan_name'] ?? null,
+            ],
+        ]);
+    }
+
+    /**
+     * Logout Merchant Store Session & Clear Token Cookies
+     */
+    public function storeLogout(Request $request): JsonResponse
+    {
+        if ($request->hasSession()) {
+            session()->forget('active_store_code');
+        }
+
+        $response = response()->json([
+            'success' => true,
+            'message' => 'Logged out from store session.',
+        ]);
+
+        foreach (StoreToken::clearCookies() as $cookie) {
+            $response->withCookie($cookie);
+        }
+
+        return $response;
     }
 
     /**

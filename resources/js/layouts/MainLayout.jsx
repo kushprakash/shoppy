@@ -9,6 +9,7 @@ import ProfileUpdateModal from '../components/ProfileUpdateModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import StoreRenewalModal from '../components/StoreRenewalModal';
 import subscriptionService from '../services/subscriptionService';
+import { getActiveShopCode, setStoreAuthSession } from '../utils/storeAuth';
 import {
   CheckCircle2,
   X,
@@ -52,7 +53,7 @@ export default function MainLayout() {
   } = useErp();
 
   // Active Store Code & Expiry Status
-  const activeCode = localStorage.getItem('shoppy_active_store_code') || shopCode || '';
+  const activeCode = getActiveShopCode() || shopCode || '';
   const [expiryStatus, setExpiryStatus] = useState(() => subscriptionService.getStoreExpiryStatus(activeCode));
   const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
 
@@ -64,7 +65,7 @@ export default function MainLayout() {
         const txn = sp.get('txnid') || '';
         const storeCode = sp.get('code') || activeCode;
         if (storeCode) {
-          localStorage.setItem('shoppy_active_store_code', storeCode);
+          setStoreAuthSession({ shopCode: storeCode });
         }
         showToast(`🎉 Subscription renewed successfully via PayU! Txn: ${txn || 'Verified'}`);
         // Fetch fresh passbook and status from API

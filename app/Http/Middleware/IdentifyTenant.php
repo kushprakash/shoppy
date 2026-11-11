@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Central\Shop;
 use App\Models\Central\ShopDomain;
+use App\Support\StoreToken;
 use App\Tenancy\TenantManager;
 use Closure;
 use Illuminate\Http\Request;
@@ -52,24 +53,27 @@ class IdentifyTenant
      */
     protected function resolveTenant(Request $request): ?Shop
     {
-        // 1. Explicit Header / Request Hint / Cookie / Session (Highest priority for API/POS/Mobile clients)
-        $shopCode = $request->header('X-Shop-Code')
-            ?? $request->header('X-Store-Code')
-            ?? $request->cookie('shoppy_active_store_code')
-            ?? $request->cookie('shoppy_active_store')
-            ?? session('active_store_code')
-            ?? $request->query('code')
+        // 1. Explicit Query Hint / Verified Store Auth Token / Header / Cookie / Session
+        $tokenCode = StoreToken::resolveShopCodeFromRequest($request);
+
+        $shopCode = $request->query('code')
             ?? $request->query('shop_code')
-            ?? $request->query('store_code');
+            ?? $request->query('store_code')
+            ?? $tokenCode
+            ?? $request->header('X-Shop-Code')
+            ?? $request->header('X-Store-Code')
+            ?? $request->cookie(StoreToken::CODE_COOKIE)
+            ?? $request->cookie(StoreToken::LEGACY_CODE_COOKIE)
+            ?? ($request->hasSession() ? session('active_store_code') : null);
 
         if ($shopCode) {
-            $shop = Shop::where('shop_code', strtoupper(trim($shopCode)))->first();
+            $shop = Shop::where('shop_code', strtoupper(trim((string) $shopCode)))->first();
             if ($shop) {
                 return $shop;
             }
         }
 
-        // 2. Resolve via Full Hostname in shop_domains (e.g. store.rameshfashion.com or ramesh.shoppy.local)
+        // 2. Resolve via Full Hostname in shop_domains (e.g. store.brand.com)
         $host = strtolower($request->getHost());
 
         $shopDomain = ShopDomain::where('domain', $host)
@@ -81,11 +85,10 @@ class IdentifyTenant
             return $shopDomain->shop;
         }
 
-        // 3. Fallback: Extract subdomain (e.g. 'ramesh' from 'ramesh.shoppy.local' or 'ramesh.localhost')
+        // 3. Fallback: Extract subdomain
         $parts = explode('.', $host);
         if (count($parts) >= 2) {
             $subdomain = $parts[0];
-            // Exclude central domains
             if (!in_array($subdomain, ['www', 'admin', 'api', 'central', 'localhost', '127'])) {
                 $shop = Shop::where('slug', $subdomain)->first();
                 if ($shop) {
@@ -94,7 +97,11 @@ class IdentifyTenant
             }
         }
 
-        // 4. Safe fallback for single tenant local dev or test environments
-        return Shop::where('status', 'active')->first();
+        // 4. Only allow default active shop fallback on public storefront routes, NEVER private tenant admin/POS APIs
+        if ($request->is('api/storefront/*')) {
+            return Shop::where('status', 'active')->first();
+        }
+
+        return null;
     }
 }

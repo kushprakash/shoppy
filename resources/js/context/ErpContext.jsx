@@ -1,4 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import {
+  getActiveShopCode,
+  getStoreAuthHeaders,
+  setStoreAuthSession,
+  clearStoreAuthSession
+} from '../utils/storeAuth';
 
 const ErpContext = createContext();
 
@@ -156,29 +162,36 @@ export const INITIAL_PAYROLL = [];
 export const INITIAL_EXPENSES = [];
 
 export function ErpProvider({ children }) {
-  // Check URL query parameters and dataset for explicit store code
+  // Check URL query parameters for explicit store code override (e.g. ?setup=1&code=SP...)
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const urlCode = urlParams ? (urlParams.get('code') || urlParams.get('shop_code')) : null;
-  const datasetCode = typeof document !== 'undefined' ? document.getElementById('root')?.dataset?.shopCode : null;
+  const urlCode = urlParams ? (urlParams.get('code') || urlParams.get('shop_code') || '').trim().toUpperCase() : '';
 
-  // If a new store code is passed in URL or dataset, synchronize and clear previous store cache
-  if (urlCode && urlCode !== localStorage.getItem('shoppy_active_store_code')) {
-    try {
-      localStorage.setItem('shoppy_active_store_code', urlCode);
-      localStorage.removeItem('shoppy_store_branding_data');
-      localStorage.removeItem('shoppy_store_branding');
-      localStorage.removeItem('shoppy_active_store');
-      localStorage.removeItem('shoppy_products_v3');
-      localStorage.removeItem('shoppy_orders_v3');
-      localStorage.removeItem('shoppy_customers');
-      localStorage.removeItem('shoppy_suppliers');
-      localStorage.removeItem('shoppy_purchase_bills');
-      localStorage.removeItem('shoppy_expenses');
-      localStorage.removeItem('shoppy_active_user');
-    } catch (e) {}
+  // Synchronize store session & clear stale caches if switching to a different store via URL
+  if (urlCode) {
+    setStoreAuthSession({ shopCode: urlCode });
   }
 
-  const shopCode = urlCode || datasetCode || localStorage.getItem('shoppy_active_store_code') || '';
+  const [shopCode, setShopCode] = useState(() => {
+    const resolved = getActiveShopCode();
+    if (resolved) {
+      setStoreAuthSession({ shopCode: resolved });
+    }
+    return resolved;
+  });
+
+  // Listen for login / store switch / logout events across SPA transitions
+  useEffect(() => {
+    const handleAuthChanged = () => {
+      const nextCode = getActiveShopCode();
+      setShopCode((prev) => (prev !== nextCode ? nextCode : prev));
+    };
+    window.addEventListener('shoppy:store_auth_changed', handleAuthChanged);
+    window.addEventListener('storage', handleAuthChanged);
+    return () => {
+      window.removeEventListener('shoppy:store_auth_changed', handleAuthChanged);
+      window.removeEventListener('storage', handleAuthChanged);
+    };
+  }, []);
 
   // 3-Tier Hierarchy Categories, Sizes, Colors & Shipping Rules
   const [topCategories, setTopCategories] = useState(() => {
@@ -310,9 +323,33 @@ export function ErpProvider({ children }) {
   // -------------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
-    fetch(`/api/tenant/erp/init?shop_code=${shopCode}`)
-      .then((res) => res.json())
+    const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/shop-admin');
+
+    if (!shopCode) {
+      if (isAdminRoute && typeof window !== 'undefined') {
+        window.location.replace('/store');
+      }
+      return () => { isMounted = false; };
+    }
+
+    fetch(`/api/tenant/erp/init?shop_code=${encodeURIComponent(shopCode)}`, {
+      headers: {
+        'Accept': 'application/json',
+        ...getStoreAuthHeaders(shopCode)
+      }
+    })
+      .then(async (res) => {
+        const json = await res.json();
+        return { ok: res.ok, status: res.status, ...json };
+      })
       .then((res) => {
+        if (!res.ok && res.status === 401 && isAdminRoute) {
+          clearStoreAuthSession();
+          if (typeof window !== 'undefined') {
+            window.location.replace('/store');
+          }
+          return;
+        }
         if (isMounted && res.success && res.data) {
           const d = res.data;
           if (Array.isArray(d.products)) setProducts(d.products);
@@ -329,10 +366,8 @@ export function ErpProvider({ children }) {
           if (d.shippingRules) setShippingRules(d.shippingRules);
           if (d.shop) {
             if (d.shop.code) {
-              try {
-                localStorage.setItem('shoppy_active_store_code', d.shop.code);
-                localStorage.setItem('shoppy_active_store', JSON.stringify(d.shop));
-              } catch (e) {}
+              setStoreAuthSession({ shopCode: d.shop.code, store: d.shop });
+              setShopCode(d.shop.code);
             }
             setStoreSettings((prev) => ({
               ...prev,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useErp } from '../context/ErpContext';
+import { logoutStore } from '../utils/storeAuth';
 import {
   LayoutDashboard,
   Package,
@@ -463,13 +464,14 @@ export default function Sidebar() {
             </div>
 
             {/* Logout Button */}
-            <a
-              href="/store"
+            <button
+              type="button"
+              onClick={() => logoutStore('/store')}
               title="Logout / Switch Store"
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer shrink-0 ml-1"
             >
               <LogOut className="w-4 h-4" />
-            </a>
+            </button>
           </div>
 
           {/* Quick Actions Tray for I-Card, Profile Updates, and Change Password */}

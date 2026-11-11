@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
+use App\Support\StoreToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -492,12 +493,16 @@ class PayUController extends Controller
                 Log::warning("PayU verify: Welcome Email error: " . $e->getMessage());
             }
 
-            return response()->json([
+            $token = StoreToken::issue((int) $shopId, $code);
+
+            $response = response()->json([
                 'success' => true,
                 'type' => 'onboard',
+                'token' => $token,
                 'message' => "Payment verified! Store {$code} has been provisioned successfully via PayU Money.",
                 'store' => [
                     'id' => $shopId,
+                    'code' => $code,
                     'shop_code' => $code,
                     'name' => $storeName,
                     'owner_name' => $ownerName,
@@ -518,6 +523,12 @@ class PayUController extends Controller
                 'auto_login' => true,
                 'redirect_url' => '/shop-admin/settings?setup=1',
             ]);
+
+            foreach (StoreToken::authCookies($code, $token) as $cookie) {
+                $response->withCookie($cookie);
+            }
+
+            return $response;
         }
 
         // =====================================================================
@@ -672,12 +683,16 @@ class PayUController extends Controller
                 Log::error('Agent renewal commission credit error: ' . $e->getMessage());
             }
 
-            return response()->json([
+            $token = StoreToken::issue($shop);
+
+            $response = response()->json([
                 'success' => true,
                 'type' => 'renew',
+                'token' => $token,
                 'message' => "Payment of ₹" . number_format($planInfo['total_amount'], 2) . " received via PayU Money! Store {$shop->shop_code} validity extended until {$newValidUntil}.",
                 'store' => [
                     'id' => $shop->id,
+                    'code' => $shop->shop_code,
                     'shop_code' => $shop->shop_code,
                     'name' => $shop->name,
                     'plan_name' => $planInfo['plan_name'],
@@ -689,6 +704,12 @@ class PayUController extends Controller
                 ],
                 'valid_until' => $newValidUntil,
             ]);
+
+            foreach (StoreToken::authCookies($shop->shop_code, $token) as $cookie) {
+                $response->withCookie($cookie);
+            }
+
+            return $response;
         }
 
         return response()->json(['success' => false, 'message' => 'Invalid transaction type.'], 400);
@@ -719,12 +740,19 @@ class PayUController extends Controller
             $response = $this->verifyAndComplete($req);
             $respData = $response->getData(true);
             $finalStoreCode = $respData['store']['shop_code'] ?? $shopCode;
+            $issuedToken = $respData['token'] ?? null;
 
             if ($type === 'onboard') {
                 if ($finalStoreCode) {
                     session(['active_store_code' => $finalStoreCode]);
-                    cookie()->queue(cookie('shoppy_active_store_code', $finalStoreCode, 60 * 24));
-                    cookie()->queue(cookie('shoppy_active_store', $finalStoreCode, 60 * 24));
+                    if ($issuedToken) {
+                        foreach (StoreToken::authCookies($finalStoreCode, $issuedToken) as $c) {
+                            cookie()->queue($c);
+                        }
+                    } else {
+                        cookie()->queue(cookie(StoreToken::CODE_COOKIE, $finalStoreCode, StoreToken::TTL_MINUTES, '/', null, null, false, false, 'lax'));
+                        cookie()->queue(cookie(StoreToken::LEGACY_CODE_COOKIE, $finalStoreCode, StoreToken::TTL_MINUTES, '/', null, null, false, false, 'lax'));
+                    }
                 }
                 return redirect('/shop-admin/settings?setup=1&code=' . urlencode($finalStoreCode) . '&provisioning=1&txnid=' . urlencode($txnid));
             }
@@ -732,8 +760,14 @@ class PayUController extends Controller
             if ($type === 'renew') {
                 if ($finalStoreCode) {
                     session(['active_store_code' => $finalStoreCode]);
-                    cookie()->queue(cookie('shoppy_active_store_code', $finalStoreCode, 60 * 24));
-                    cookie()->queue(cookie('shoppy_active_store', $finalStoreCode, 60 * 24));
+                    if ($issuedToken) {
+                        foreach (StoreToken::authCookies($finalStoreCode, $issuedToken) as $c) {
+                            cookie()->queue($c);
+                        }
+                    } else {
+                        cookie()->queue(cookie(StoreToken::CODE_COOKIE, $finalStoreCode, StoreToken::TTL_MINUTES, '/', null, null, false, false, 'lax'));
+                        cookie()->queue(cookie(StoreToken::LEGACY_CODE_COOKIE, $finalStoreCode, StoreToken::TTL_MINUTES, '/', null, null, false, false, 'lax'));
+                    }
                 }
                 return redirect('/shop-admin?renewal_status=success&code=' . urlencode($finalStoreCode) . '&txnid=' . urlencode($txnid));
             }
@@ -749,18 +783,19 @@ class PayUController extends Controller
      */
     public function getPassbook(Request $request): JsonResponse
     {
+        $tokenCode = StoreToken::resolveShopCodeFromRequest($request);
+
         $shopCode = $request->query('code')
-            ?? $request->query('shop_code')
-            ?? $request->header('X-Shop-Code')
-            ?? session('active_store_code')
-            ?? $request->cookie('shoppy_active_store_code');
+            ?: $request->query('shop_code')
+            ?: $tokenCode
+            ?: $request->header('X-Shop-Code')
+            ?: ($request->hasSession() ? session('active_store_code') : null)
+            ?: $request->cookie(StoreToken::CODE_COOKIE)
+            ?: $request->cookie(StoreToken::LEGACY_CODE_COOKIE);
 
         $shop = null;
         if ($shopCode) {
-            $shop = DB::connection('mysql')->table('shops')->where('shop_code', strtoupper(trim($shopCode)))->first();
-        }
-        if (!$shop) {
-            $shop = DB::connection('mysql')->table('shops')->where('status', 'active')->first();
+            $shop = DB::connection('mysql')->table('shops')->where('shop_code', strtoupper(trim((string) $shopCode)))->first();
         }
 
         if (!$shop) {
