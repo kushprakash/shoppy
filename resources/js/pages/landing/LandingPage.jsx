@@ -134,32 +134,54 @@ const BrandLogoMark = ({ settings, variant = 'header' }) => {
   const logoUrl = (isFooter ? (settings?.footer_logo || settings?.site_logo) : settings?.site_logo) || '';
 
   if (logoUrl.trim()) {
+    const imgSizeClass = isFooter
+      ? 'h-20 w-auto max-w-[380px]'
+      : isDrawer
+      ? 'h-12 w-auto max-w-[220px]'
+      : 'h-14 sm:h-16 lg:h-[76px] w-auto max-w-[240px] sm:max-w-[320px] lg:max-w-[380px]';
+
     return (
       <img
         src={logoUrl.trim()}
         alt={settings?.brand_title || 'Shoppy ERP'}
-        className={`${isDrawer ? 'h-9' : 'h-10'} w-auto max-w-[190px] object-contain rounded-lg`}
+        className={`${imgSizeClass} object-contain rounded-lg`}
       />
     );
   }
 
+  const boxSizeClass = isFooter
+    ? 'w-16 h-16'
+    : isDrawer
+    ? 'w-11 h-11'
+    : 'w-12 h-12 sm:w-14 sm:h-14';
+  const iconSizeClass = isFooter
+    ? 'w-8 h-8'
+    : isDrawer
+    ? 'w-5 h-5'
+    : 'w-6 h-6 sm:w-7 sm:h-7';
+  const titleSizeClass = isFooter
+    ? 'text-2xl sm:text-3xl'
+    : isDrawer
+    ? 'text-lg'
+    : 'text-xl sm:text-2xl';
+
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-3">
       <div
-        className={`${isDrawer ? 'w-9 h-9' : 'w-10 h-10'} rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20`}
+        className={`${boxSizeClass} rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20 shrink-0`}
       >
-        <Receipt className="w-5 h-5 stroke-[2.3]" />
+        <Receipt className={`${iconSizeClass} stroke-[2.3]`} />
       </div>
       <div>
         <span
-          className={`${isDrawer ? 'text-base' : 'text-xl'} font-bold tracking-tight block leading-tight ${
+          className={`${titleSizeClass} font-bold tracking-tight block leading-tight ${
             isFooter ? 'text-white' : 'text-slate-900'
           }`}
         >
           Shoppy<span className={isFooter ? 'text-[#38BDF8]' : 'text-[#0EA5E9]'}>ERP</span>
         </span>
         <span
-          className={`${isFooter ? 'text-[11px] font-medium text-slate-400' : 'text-[10px] font-semibold text-slate-500 tracking-wide'} block -mt-0.5`}
+          className={`${isFooter ? 'text-xs font-medium text-slate-400' : 'text-[11px] font-semibold text-slate-500 tracking-wide'} block -mt-0.5`}
         >
           {settings?.brand_subtext || 'Powered by Enexa IT'}
         </span>

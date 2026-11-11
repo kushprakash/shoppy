@@ -30,12 +30,18 @@
   left: 0;
   right: 0;
   z-index: 60;
-  height: 78px;
+  height: 82px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.65);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 1024px) {
+  .enexa-header {
+    height: 98px;
+  }
 }
 
 .enexa-header.scrolled {
