@@ -1,0 +1,471 @@
+/* ==========================================================================
+   Enexa / Shoppy ERP — Landing Page Design System
+   Scoped cleanly under .enexa-landing so Store Admin / POS ERP styles remain untouched
+   ========================================================================== */
+
+.enexa-landing {
+  --enexa-primary: #0EA5E9;
+  --enexa-primary-dark: #0284C7;
+  --enexa-primary-light: #38BDF8;
+  --enexa-cta: #F59E0B;
+  --enexa-cta-dark: #D97706;
+  --enexa-dark: #1E293B;
+  --enexa-darker: #0F172A;
+  --enexa-slate: #475569;
+  --enexa-muted: #64748B;
+  --enexa-light-bg: #F8FAFB;
+  --enexa-border: #E2E8F0;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: var(--enexa-dark);
+  background-color: #FFFFFF;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Header & Navigation */
+.enexa-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 78px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.65);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enexa-header.scrolled {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+  border-bottom-color: rgba(226, 232, 240, 0.9);
+}
+
+.enexa-nav-link {
+  position: relative;
+  color: #334155;
+  font-size: 0.925rem;
+  font-weight: 500;
+  padding: 0.5rem 0.25rem;
+  transition: color 0.2s ease;
+}
+
+.enexa-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--enexa-primary);
+  transition: width 0.22s ease;
+}
+
+.enexa-nav-link:hover,
+.enexa-nav-link.active {
+  color: var(--enexa-primary);
+}
+
+.enexa-nav-link:hover::after,
+.enexa-nav-link.active::after {
+  width: 100%;
+}
+
+/* Enexa Signature Buttons */
+.enexa-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.78rem 1.65rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #FB923C 0%, #F59E0B 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.34);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.enexa-btn-primary:hover {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(245, 158, 11, 0.42);
+}
+
+.enexa-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.78rem 1.55rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--enexa-primary-dark);
+  background: #FFFFFF;
+  border: 1.5px solid #BAE6FD;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.enexa-btn-secondary:hover {
+  background: #F0F9FF;
+  border-color: var(--enexa-primary);
+  color: var(--enexa-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.16);
+}
+
+.enexa-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--enexa-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.enexa-btn-ghost:hover {
+  color: var(--enexa-primary-dark);
+  transform: translateX(3px);
+}
+
+/* Hero Section (Exact match to https://enexa.in/) */
+.enexa-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 238, 218, 0.55) 0%,
+    rgba(255, 224, 188, 0.45) 55%,
+    rgba(255, 249, 242, 0.95) 100%
+  );
+  padding: 4.5rem 0 5rem;
+}
+
+@media (min-width: 1024px) {
+  .enexa-hero {
+    min-height: calc(100vh - 78px);
+    display: flex;
+    align-items: center;
+    padding: 3.5rem 0 4.5rem;
+  }
+}
+
+.enexa-hero-dots {
+  position: absolute;
+  top: 2.25rem;
+  left: 4.5%;
+  width: 150px;
+  height: 150px;
+  border-radius: 9999px;
+  background-image: radial-gradient(rgba(14, 165, 233, 0.22) 1.6px, transparent 1.6px);
+  background-size: 16px 16px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.enexa-hero-title {
+  font-size: clamp(2.15rem, 4.1vw, 3.35rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+  color: #1E293B;
+}
+
+.enexa-typed-cursor {
+  display: inline-block;
+  color: var(--enexa-primary);
+  font-weight: 400;
+  margin-left: 2px;
+  animation: enexaCursorBlink 0.85s step-end infinite;
+}
+
+@keyframes enexaCursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.enexa-hero-visual-wrap {
+  position: relative;
+  border-radius: 1.5rem;
+  overflow: hidden;
+}
+
+.enexa-hero-visual-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  mix-blend-mode: multiply;
+}
+
+/* Section Alternating Backgrounds */
+.enexa-section-api {
+  background: linear-gradient(180deg, #F0F9FF 0%, #E8F6FF 52%, #F5FAFF 100%);
+}
+
+.enexa-section-peach {
+  background: linear-gradient(180deg, #FFF8F0 0%, #FFF1E0 50%, #FFF9F2 100%);
+}
+
+.enexa-section-cta {
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 60%, #EEF7FF 100%);
+}
+
+/* Section Badges & Headings */
+.enexa-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #E0F2FE;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+}
+
+.enexa-section-title {
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: #1E293B;
+}
+
+/* Glassmorphic Value Cards with Top Reveal Line */
+.enexa-value-card {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 1rem;
+  padding: 1.75rem 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.enexa-value-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.enexa-value-card:hover {
+  transform: translateY(-6px);
+  background: #FFFFFF;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.enexa-value-card:hover::before {
+  transform: scaleX(1);
+}
+
+.enexa-value-card--blue::before { background: linear-gradient(90deg, #0EA5E9, #38BDF8); }
+.enexa-value-card--blue:hover { border-color: rgba(14, 165, 233, 0.45); }
+
+.enexa-value-card--amber::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.enexa-value-card--amber:hover { border-color: rgba(245, 158, 11, 0.45); }
+
+.enexa-value-card--green::before { background: linear-gradient(90deg, #10B981, #34D399); }
+.enexa-value-card--green:hover { border-color: rgba(16, 185, 129, 0.45); }
+
+.enexa-value-card--purple::before { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
+.enexa-value-card--purple:hover { border-color: rgba(139, 92, 246, 0.45); }
+
+/* Mini Module Cards in API/Billing Suite Section */
+.enexa-api-card {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  border-radius: 0.9rem;
+  padding: 1.25rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.enexa-api-card:hover {
+  transform: translateY(-4px);
+  background: #FFFFFF;
+  border-color: rgba(14, 165, 233, 0.45);
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.1);
+}
+
+/* Service Cards */
+.enexa-service-card {
+  position: relative;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  padding: 1.75rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.enexa-service-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px;
+  background: linear-gradient(90deg, #0EA5E9, #0284C7);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.enexa-service-card:hover {
+  transform: translateY(-5px);
+  border-color: #BAE6FD;
+  box-shadow: 0 18px 34px rgba(14, 165, 233, 0.12);
+}
+
+.enexa-service-card:hover::before {
+  opacity: 1;
+}
+
+/* Floating Animated Pill Badges */
+.enexa-floating-badge {
+  animation: enexaFloat 3.4s ease-in-out infinite;
+}
+
+.enexa-floating-badge-delayed {
+  animation: enexaFloat 3.4s ease-in-out 1.4s infinite;
+}
+
+@keyframes enexaFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Feature Chips & Stat Cards */
+.enexa-stat-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  transition: all 0.22s ease;
+}
+
+.enexa-stat-card:hover {
+  background: #F0F9FF;
+  border-color: #BAE6FD;
+}
+
+.enexa-feature-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+  transition: all 0.2s ease;
+}
+
+.enexa-feature-chip:hover {
+  background: #F0F9FF;
+  border-color: #BAE6FD;
+  color: #0284C7;
+}
+
+/* Testimonials Carousel Card */
+.enexa-testimonial-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  padding: 1.75rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+}
+
+.enexa-testimonial-card:hover {
+  border-color: #BAE6FD;
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.1);
+}
+
+/* Dark Slate Footer matching https://enexa.in/ */
+.enexa-footer {
+  background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
+  color: #CBD5E1;
+}
+
+.enexa-footer-link {
+  color: #94A3B8;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.enexa-footer-link:hover {
+  color: #38BDF8;
+  transform: translateX(4px);
+}
+
+.enexa-social-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #E2E8F0;
+  transition: all 0.22s ease;
+}
+
+.enexa-social-btn:hover {
+  background: linear-gradient(135deg, #0EA5E9, #0284C7);
+  color: #FFFFFF;
+  transform: translateY(-2px);
+}
+
+/* Floating WhatsApp Widget */
+.enexa-whatsapp-float {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  z-index: 70;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background: #25D366;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enexa-whatsapp-float:hover {
+  background: #128C7E;
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 10px 28px rgba(37, 211, 102, 0.5);
+}
+

@@ -55,9 +55,16 @@ import {
   AlertCircle,
   MessageCircle,
   QrCode,
-  Copy
+  Copy,
+  Rocket,
+  Headphones,
+  BarChart3,
+  Cpu,
+  HeartHandshake,
+  Quote
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import '../../../css/enexa-landing.css';
 import subscriptionService, { resolveRibbonStyle } from '../../services/subscriptionService';
 import StoreRenewalModal from '../../components/StoreRenewalModal';
 import ForgotPasswordModal from '../../components/ForgotPasswordModal';
@@ -144,6 +151,20 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Hero interactive preview tab: 'invoice' | 'whatsapp' | 'thermal' | 'storefront'
   const [heroPreviewTab, setHeroPreviewTab] = useState('invoice');
+
+  // Enexa-style Hero Typewriter & Scroll Header State
+  const TYPED_PHRASES = [
+    'GST Billing Software',
+    'High-Speed Retail POS',
+    'WhatsApp Smart Bills',
+    'Online Storefronts',
+    'Barcode Inventory ERP'
+  ];
+  const [typedPhraseIdx, setTypedPhraseIdx] = useState(0);
+  const [typedCharCount, setTypedCharCount] = useState(20);
+  const [isTypedDeleting, setIsTypedDeleting] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [testimonialIdx, setTestimonialIdx] = useState(0);
 
   // FAQ Accordion Active Item
   const [openFaq, setOpenFaq] = useState(0);
@@ -436,6 +457,90 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }, 5500);
     return () => clearInterval(timer);
   }, [isPaused, slides.length, currentPage]);
+
+  // Enexa-style Header Scroll Shadow & Hero Typewriter Loop
+  useEffect(() => {
+    const onScroll = () => setHeaderScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (currentPage !== 'home') return;
+    const currentPhrase = TYPED_PHRASES[typedPhraseIdx % TYPED_PHRASES.length];
+    let delay = isTypedDeleting ? 38 : 75;
+
+    if (!isTypedDeleting && typedCharCount >= currentPhrase.length) {
+      delay = 1850;
+      const pauseTimer = setTimeout(() => setIsTypedDeleting(true), delay);
+      return () => clearTimeout(pauseTimer);
+    }
+
+    if (isTypedDeleting && typedCharCount === 0) {
+      const nextTimer = setTimeout(() => {
+        setIsTypedDeleting(false);
+        setTypedPhraseIdx((prev) => (prev + 1) % TYPED_PHRASES.length);
+      }, 280);
+      return () => clearTimeout(nextTimer);
+    }
+
+    const typeTimer = setTimeout(() => {
+      setTypedCharCount((prev) => prev + (isTypedDeleting ? -1 : 1));
+    }, delay);
+
+    return () => clearTimeout(typeTimer);
+  }, [typedCharCount, isTypedDeleting, typedPhraseIdx, currentPage]);
+
+  const ENEXA_TESTIMONIALS = [
+    {
+      name: 'Rajeshwar Agrawal',
+      role: 'Owner, Agrawal Supermart & Kirana (Patna)',
+      quote: 'Shoppy ERP cut our evening queue time by half. Barcode scan billing and 80mm thermal receipt printing work in milliseconds even with 8,000+ SKUs.',
+      rating: 5,
+      initials: 'RA',
+      color: '#0EA5E9'
+    },
+    {
+      name: 'Dr. Ananya Deshmukh',
+      role: 'Director, MedLife Wellness Pharmacy (Pune)',
+      quote: 'Dot-matrix tear-off format, batch expiry alerts, and 1-click GSTR-1 export saved our accountant hours every single month. Zero billing errors.',
+      rating: 5,
+      initials: 'AD',
+      color: '#10B981'
+    },
+    {
+      name: 'Imran Khan',
+      role: 'Founder, ZAM ZAM Fashion House (Muzaffarpur)',
+      quote: 'Our customers love receiving instant GST invoices and UPI payment QR links on WhatsApp. Plus our online storefront orders sync directly to the counter!',
+      rating: 5,
+      initials: 'IK',
+      color: '#F59E0B'
+    },
+    {
+      name: 'Saurabh Kapoor',
+      role: 'Managing Partner, Kapoor Electronics (Jaipur)',
+      quote: 'Every branch runs smoothly on an isolated database with real-time serial number warranty tracking and multi-counter cashier shift closing reports.',
+      rating: 5,
+      initials: 'SK',
+      color: '#8B5CF6'
+    },
+    {
+      name: 'Meera Nair',
+      role: 'Owner, FreshBasket Organic Stores (Kochi)',
+      quote: 'Setup took literally under 5 minutes. Weighing scale integration and automated low-stock alerts on owner WhatsApp changed how we manage inventory.',
+      rating: 5,
+      initials: 'MN',
+      color: '#0284C7'
+    },
+    {
+      name: 'Vikramjit Gill',
+      role: 'Director, Gill Footwear & Apparel (Ludhiana)',
+      quote: 'Size-color matrix barcodes and festive discount coupons run seamlessly across our showroom and online store powered by Enexa IT Solutions.',
+      rating: 5,
+      initials: 'VG',
+      color: '#EC4899'
+    }
+  ];
 
   // Calculate live price for any plan
   const getPrice = (plan) => {
@@ -1023,228 +1128,161 @@ export default function LandingPage({ defaultPage = 'home' }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="enexa-landing min-h-screen bg-white text-slate-800 flex flex-col transition-colors duration-200">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
-          <Sparkles className="w-4 h-4 text-[#db631a]" />
+        <div className="fixed bottom-6 left-6 z-50 px-4 py-3 rounded-xl bg-slate-900 text-white shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+          <Sparkles className="w-4 h-4 text-[#F59E0B]" />
           <span>{toast}</span>
         </div>
       )}
 
       {/* =================================================================== */}
-      {/* 1. TOP ANNOUNCEMENT RIBBON (Enexa IT Solutions Branding)            */}
+      {/* 1. ENEXA SIGNATURE STICKY GLASS HEADER                               */}
       {/* =================================================================== */}
-      <div className="w-full bg-gradient-to-r from-[#1e1b4b] via-[#311042] to-[#0f172a] text-white text-xs py-2 px-4 flex items-center justify-between border-b border-indigo-950/80">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 truncate">
-            <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-extrabold text-[10px] tracking-wide border border-cyan-400/30">
-              OFFICIAL
-            </span>
-            <span className="font-medium text-slate-200 truncate">
-              {settings.header_notice || '🚀 Next-Gen Retail POS & Omnichannel Cloud ERP — Powered by Enexa IT Solutions Private Limited'}
-            </span>
-          </div>
-          <div className="hidden sm:flex items-center gap-4 text-[11px] shrink-0 font-semibold">
-            <a href="tel:+919546042639" className="text-slate-300 hover:text-white flex items-center gap-1 transition">
-              <Phone className="w-3 h-3 text-cyan-400" />
-              <span>+91 95460 42639</span>
-            </a>
-            <span className="text-slate-600">|</span>
-            <a
-              href="https://www.enexa.in"
-              target="_blank"
-              rel="noreferrer"
-              className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-bold transition"
+      <header className={`enexa-header ${headerScrolled ? 'scrolled' : ''}`}>
+        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+          {/* Left: Mobile Drawer Trigger + Brand Logo */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-sky-50 hover:text-[#0EA5E9] transition cursor-pointer"
+              title="Open Menu"
+              aria-label="Open Navigation Menu"
             >
-              <span>www.enexa.in</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-        </div>
-      </div>
+              <Menu className="w-5 h-5" />
+            </button>
 
-      {/* =================================================================== */}
-      {/* 2. STICKY NAVBAR WITH MULTI-PAGE LINKS                              */}
-      {/* =================================================================== */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
-        {/* Left: Mobile Drawer Trigger + Brand Logo */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-            title="Open Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          <div onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer select-none">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#008ba3] via-[#00a2c7] to-[#10b981] flex items-center justify-center text-white shadow-md shadow-cyan-600/20">
-              <Building2 className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div>
-              <span className="text-xl font-black text-slate-900 dark:text-white font-heading tracking-tight block leading-tight">
-                Shoppy<span className="text-[#00a2c7]">ERP</span>
-              </span>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block -mt-0.5">
-                by Enexa IT Solutions
-              </span>
+            <div onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer select-none">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+                <Receipt className="w-5 h-5 stroke-[2.3]" />
+              </div>
+              <div>
+                <span className="text-xl font-bold text-slate-900 tracking-tight block leading-tight">
+                  Shoppy<span className="text-[#0EA5E9]">ERP</span>
+                </span>
+                <span className="text-[10px] font-semibold text-slate-500 tracking-wide block -mt-0.5">
+                  Powered by Enexa IT
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Center: 6 Main Navigation Links (Home, About, Services, Pricing, Blog, Contact) */}
-        <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-700 dark:text-slate-300">
-          <button
-            onClick={() => navigateTo('home')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'home'
-              ? 'text-[#00a2c7] border-[#00a2c7]'
-              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            Home
-          </button>
+          {/* Center: Clean Horizontal Navigation Links matching enexa.in */}
+          <nav className="hidden lg:flex items-center gap-7">
+            <button
+              onClick={() => navigateTo('home')}
+              className={`enexa-nav-link cursor-pointer ${currentPage === 'home' ? 'active font-semibold' : ''}`}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => navigateTo('about')}
+              className={`enexa-nav-link cursor-pointer ${currentPage === 'about' ? 'active font-semibold' : ''}`}
+            >
+              About
+            </button>
+            <button
+              onClick={() => navigateTo('services')}
+              className={`enexa-nav-link cursor-pointer ${currentPage === 'services' ? 'active font-semibold' : ''}`}
+            >
+              Services
+            </button>
+            <button
+              onClick={() => navigateTo('pricing')}
+              className={`enexa-nav-link cursor-pointer ${currentPage === 'pricing' ? 'active font-semibold' : ''}`}
+            >
+              Pricing
+            </button>
+            <button
+              onClick={() => navigateTo('blog')}
+              className={`enexa-nav-link cursor-pointer ${currentPage === 'blog' ? 'active font-semibold' : ''}`}
+            >
+              Blog
+            </button>
+            <button
+              onClick={() => navigateTo('contact')}
+              className={`enexa-nav-link cursor-pointer ${currentPage === 'contact' ? 'active font-semibold' : ''}`}
+            >
+              Contact
+            </button>
+          </nav>
 
-          <button
-            onClick={() => navigateTo('about')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'about'
-              ? 'text-[#00a2c7] border-[#00a2c7]'
-              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            About Us
-          </button>
+          {/* Right CTA Actions matching enexa.in Sign In + Get Started */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <button
+              onClick={() => {
+                const savedCode = localStorage.getItem('shoppy_saved_store_code') || '';
+                setLookupStoreCode(savedCode);
+                setIsRenewModalOpen(true);
+              }}
+              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-[#0EA5E9] hover:bg-sky-50 transition cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-[#0EA5E9]" />
+              <span>Renew Plan</span>
+            </button>
 
-          <button
-            onClick={() => navigateTo('services')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'services'
-              ? 'text-[#00a2c7] border-[#00a2c7]'
-              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            Services & Solutions
-          </button>
+            <button
+              onClick={() => navigateTo('store')}
+              className="hidden sm:inline-flex enexa-btn-secondary !py-2 !px-4 !text-xs sm:!text-sm"
+            >
+              Store Login
+            </button>
 
-          <button
-            onClick={() => navigateTo('pricing')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'pricing'
-              ? 'text-[#00a2c7] border-[#00a2c7]'
-              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            Pricing & Packages
-          </button>
-
-          <button
-            onClick={() => navigateTo('blog')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'blog'
-              ? 'text-[#00a2c7] border-[#00a2c7]'
-              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            Blog & Insights
-          </button>
-
-          <button
-            onClick={() => navigateTo('contact')}
-            className={`pb-1 border-b-2 transition cursor-pointer ${currentPage === 'contact'
-              ? 'text-[#00a2c7] border-[#00a2c7]'
-              : 'border-transparent hover:text-slate-900 dark:hover:text-white'
-              }`}
-          >
-            Contact Us
-          </button>
-        </nav>
-
-        {/* Right CTA Actions */}
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => {
-              const savedCode = localStorage.getItem('shoppy_saved_store_code') || '';
-              setLookupStoreCode(savedCode);
-              setIsRenewModalOpen(true);
-            }}
-            className="hidden xl:flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Renew Plan</span>
-          </button>
-
-          <button
-            onClick={() => navigateTo('store')}
-            className={`hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${currentPage === 'store'
-              ? 'bg-cyan-500/15 text-[#00a2c7] border border-[#00a2c7]/40 shadow-xs'
-              : 'text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-          >
-            Store Login
-          </button>
-
-          <button
-            onClick={() => handleStartOnboarding()}
-            className="hidden sm:inline-flex px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition items-center gap-1.5 cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Sign Up Store</span>
-          </button>
-
-          <button
-            onClick={() => navigateTo('contact')}
-            className="px-4 py-2 rounded-full bg-gradient-to-r from-[#008ba3] to-[#00a2c7] hover:from-[#00768c] hover:to-[#008ba3] text-white text-xs font-black shadow-md shadow-cyan-600/20 transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>Book Free Demo</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+            <button
+              onClick={() => handleStartOnboarding()}
+              className="enexa-btn-primary !py-2 !px-4 sm:!px-5 !text-xs sm:!text-sm"
+            >
+              <span>Get Started</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* =================================================================== */}
-      {/* 3. MOBILE LEFT SIDEBAR DRAWER (Requested: Home, About, Services...) */}
+      {/* 2. MOBILE LEFT SIDEBAR DRAWER                                       */}
       {/* =================================================================== */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-[80] flex lg:hidden">
           <div
             onClick={() => setMobileMenuOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
           />
 
-          {/* Drawer Menu */}
-          <div className="relative w-80 max-w-[85%] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-250">
-            <div>
-              {/* Drawer Header */}
-              <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="relative w-80 max-w-[85%] bg-white h-full shadow-2xl flex flex-col justify-between z-10">
+            <div className="overflow-y-auto">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#008ba3] to-[#10b981] flex items-center justify-center text-white">
-                    <Building2 className="w-4 h-4" />
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white">
+                    <Receipt className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-extrabold text-base text-slate-900 dark:text-white">
-                      Shoppy ERP
+                    <span className="font-bold text-base text-slate-900 block leading-tight">
+                      Shoppy<span className="text-[#0EA5E9]">ERP</span>
                     </span>
-                    <span className="block text-[9px] font-bold text-slate-400">
-                      Enexa IT Solutions
+                    <span className="text-[10px] font-medium text-slate-500">
+                      Powered by Enexa IT Solutions
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Navigation Links */}
-              <div className="p-4 space-y-1 text-sm font-bold">
+              <div className="p-4 space-y-1 text-sm font-medium">
                 {[
                   { id: 'home', label: 'Home', icon: Store },
                   { id: 'about', label: 'About Us', icon: Building2 },
-                  { id: 'services', label: 'Services & Solutions', icon: Boxes },
-                  { id: 'pricing', label: 'Pricing Plans', icon: CreditCard },
+                  { id: 'services', label: 'Services & Billing Modules', icon: Boxes },
+                  { id: 'pricing', label: 'Pricing & Packages', icon: CreditCard },
                   { id: 'blog', label: 'Blog & Insights', icon: FileText },
-                  { id: 'contact', label: 'Contact Us & Demo', icon: Phone },
-                  { id: 'store', label: 'Store Login', icon: Lock }
+                  { id: 'contact', label: 'Contact & Book Demo', icon: Phone },
+                  { id: 'store', label: 'Store Merchant Login', icon: Lock }
                 ].map((item) => {
                   const Icon = item.icon;
                   const isActive = currentPage === item.id;
@@ -1252,19 +1290,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <button
                       key={item.id}
                       onClick={() => navigateTo(item.id)}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition text-left cursor-pointer ${isActive
-                        ? 'bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] font-extrabold'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition text-left cursor-pointer ${isActive
+                        ? 'bg-sky-50 text-[#0284C7] font-semibold border border-sky-100'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-[#0EA5E9]'
                         }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#00a2c7]' : 'text-slate-400'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#0EA5E9]' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
                     </button>
                   );
                 })}
 
-                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-                  <span className="px-3 pb-2 block text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                <div className="pt-4 mt-4 border-t border-slate-100">
+                  <span className="px-3 pb-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Legal & Policies
                   </span>
                   {[
@@ -1276,8 +1314,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       key={leg.id}
                       onClick={() => navigateTo(leg.id)}
                       className={`w-full px-3 py-1.5 text-xs text-left transition cursor-pointer ${currentPage === leg.id
-                        ? 'text-[#00a2c7] font-bold'
-                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                        ? 'text-[#0EA5E9] font-semibold'
+                        : 'text-slate-500 hover:text-slate-900'
                         }`}
                     >
                       {leg.label}
@@ -1285,36 +1323,43 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   ))}
                 </div>
 
-                <div className="pt-3">
+                <div className="pt-4 space-y-2.5">
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);
                       handleStartOnboarding();
                     }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                    className="w-full enexa-btn-primary !text-xs"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Sign Up Store Now</span>
+                    <span>Get Started Now</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      const savedCode = localStorage.getItem('shoppy_saved_store_code') || '';
+                      setLookupStoreCode(savedCode);
+                      setIsRenewModalOpen(true);
+                    }}
+                    className="w-full enexa-btn-secondary !text-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Renew Existing Store Plan</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Drawer Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs">
-              <p className="font-bold text-slate-800 dark:text-slate-200">
-                Enexa IT Solutions Pvt Ltd
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                support@enexa.in • +91 95460 42639
-              </p>
+            <div className="p-4 border-t border-slate-100 bg-slate-50 text-xs">
+              <p className="font-semibold text-slate-800">Enexa IT Solutions Pvt Ltd</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">contact@enexa.in • +91 95460 42639</p>
               <a
                 href="https://www.enexa.in"
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 text-xs font-bold text-[#00a2c7] flex items-center gap-1 hover:underline"
+                className="mt-2 text-xs font-semibold text-[#0EA5E9] flex items-center gap-1 hover:underline"
               >
-                <span>Visit www.enexa.in</span>
+                <span>www.enexa.in</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -1330,454 +1375,1109 @@ export default function LandingPage({ defaultPage = 'home' }) {
         {/* PAGE 1: HOME PAGE                                                 */}
         {/* ================================================================= */}
         {currentPage === 'home' && (
-          <div className="space-y-16 animate-in fade-in duration-300">
-            {/* HERO CAROUSEL */}
-            <section
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
-              className="relative overflow-hidden text-white"
-            >
-              <div
-                className={`transition-all duration-700 bg-gradient-to-r ${slides[currentSlide].gradient} py-16 lg:py-24 px-6 sm:px-12`}
+          <div className="space-y-0 animate-in fade-in duration-300">
+            {/* ============================================================= */}
+            {/* 1. HERO SECTION (Exact match to https://enexa.in/)            */}
+            {/* ============================================================= */}
+            <section className="enexa-hero">
+              {/* Top-left Decorative Dot Matrix */}
+              <div className="enexa-hero-dots hidden sm:block" aria-hidden="true" />
+
+              {/* Subtle Diagonal Curved SVG Accent matching enexa.in screenshot */}
+              <svg
+                className="pointer-events-none absolute inset-0 w-full h-full opacity-55"
+                viewBox="0 0 1440 820"
+                fill="none"
+                preserveAspectRatio="none"
+                aria-hidden="true"
               >
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-                  <div className="lg:col-span-7 space-y-6">
-                    <div
-                      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border backdrop-blur-md ${slides[currentSlide].accentBadge}`}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      <span>{slides[currentSlide].badge}</span>
+                <path
+                  d="M0 780C320 620 620 420 960 220C1140 115 1300 45 1440 0V820H0V780Z"
+                  fill="rgba(255,255,255,0.45)"
+                />
+              </svg>
+
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+                  {/* Left Content (~54%) */}
+                  <div className="lg:col-span-6 space-y-6 text-left">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/85 border border-sky-200/80 shadow-xs text-xs font-semibold text-slate-700">
+                      <span className="w-2 h-2 rounded-full bg-[#0EA5E9]" />
+                      <span>Powered by Enexa IT Solutions Private Limited</span>
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl font-black font-heading tracking-tight leading-[1.2]">
-                      {slides[currentSlide].title}
+                    <h1 className="enexa-hero-title">
+                      Elevating <br />
+                      The Experience of Modern <br />
+                      <span className="text-[#0EA5E9]">
+                        {TYPED_PHRASES[typedPhraseIdx % TYPED_PHRASES.length].slice(0, typedCharCount)}
+                      </span>
+                      <span className="enexa-typed-cursor" aria-hidden="true">|</span>
                     </h1>
 
-                    <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
-                      {slides[currentSlide].subtitle}
+                    <p className="text-base sm:text-lg text-[#475569] leading-relaxed max-w-xl">
+                      {settings.hero_subtitle ||
+                        'Your Best Retail Billing Software awaits you! Discover groundbreaking sub-50ms POS billing, automated WhatsApp GST invoices, barcode printing, and online storefronts tailored to your retail business.'}
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-4 pt-2">
+                    <div className="flex flex-wrap items-center gap-3.5 pt-1">
+                      <button
+                        onClick={() => handleStartOnboarding()}
+                        className="enexa-btn-primary"
+                      >
+                        <span>Get Started</span>
+                        <ArrowRight className="w-4 h-4 stroke-[2.3]" />
+                      </button>
+
                       <button
                         onClick={() => navigateTo('pricing')}
-                        className="px-6 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/20 transition flex items-center gap-2 cursor-pointer"
+                        className="enexa-btn-secondary"
                       >
-                        <span>{slides[currentSlide].ctaText || 'Explore Pricing Plans'}</span>
-                        <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                        <span>View Pricing &amp; Plans</span>
                       </button>
+                    </div>
 
+                    <div>
                       <button
-                        onClick={() => navigateTo('contact')}
-                        className="px-5 py-3.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-sm transition flex items-center gap-2 cursor-pointer"
+                        onClick={() => navigateTo('services')}
+                        className="text-sm font-semibold text-[#0EA5E9] hover:text-[#0284C7] inline-flex items-center gap-1.5 transition cursor-pointer group"
                       >
-                        <Phone className="w-4 h-4 text-cyan-300" />
-                        <span>Schedule 1-on-1 Demo</span>
+                        <span>Start Store Setup In Under 5 Minutes</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
+                  </div>
 
-                    {/* Trust Proof Metrics */}
-                    <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/10 text-left">
-                      <div>
-                        <div className="text-xl sm:text-2xl font-black text-amber-300">10,000+</div>
-                        <div className="text-[11px] text-slate-300">Active Stores</div>
-                      </div>
-                      <div>
-                        <div className="text-xl sm:text-2xl font-black text-cyan-300">&lt;50ms</div>
-                        <div className="text-[11px] text-slate-300">Billing Response</div>
-                      </div>
-                      <div>
-                        <div className="text-xl sm:text-2xl font-black text-emerald-300">100% Isolated</div>
-                        <div className="text-[11px] text-slate-300">Tenant DB Security</div>
-                      </div>
+                  {/* Right Isometric Billing Visual (~46%) */}
+                  <div className="lg:col-span-6 flex items-center justify-center">
+                    <div className="enexa-hero-visual-wrap w-full max-w-[560px]">
+                      <img
+                        src="/images/landing/hero-billing-iso.jpg"
+                        alt="Shoppy ERP Billing Software, Thermal Receipt Printer, Barcode Scanner & UPI QR"
+                        className="enexa-hero-visual-img"
+                      />
                     </div>
                   </div>
-
-                  {/* Hero Right Visual: Interactive Simulator */}
-                  <div className="lg:col-span-5 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-6 shadow-2xl space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
-                        <Store className="w-4 h-4 text-amber-400" />
-                        <span>Live Retail Terminal Preview</span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        ONLINE 24x7
-                      </span>
-                    </div>
-
-                    <div className="space-y-3 text-xs">
-                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/10 flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-white">Cotton Formal Shirt (Sky Blue)</p>
-                          <p className="text-[10px] text-slate-400 font-mono">BARCODE: 890123400192</p>
-                        </div>
-                        <span className="font-mono font-black text-emerald-400 text-sm">₹ 899.00</span>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/10 flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-white">Denim Slim-Fit Trousers</p>
-                          <p className="text-[10px] text-slate-400 font-mono">BARCODE: 890123400843</p>
-                        </div>
-                        <span className="font-mono font-black text-emerald-400 text-sm">₹ 1,499.00</span>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span className="font-bold text-[11px]">WhatsApp E-Invoice Link Sent</span>
-                        </div>
-                        <span className="text-[10px] font-mono">DELIVERED</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <a
-                        href="/pos-terminal"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full py-2.5 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-black text-xs flex items-center justify-center gap-2 shadow-md transition"
-                      >
-                        <Zap className="w-4 h-4 text-indigo-600" />
-                        <span>Launch Fullscreen POS Billing Terminal</span>
-                        <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Slider Dots */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20">
-                {slides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${currentSlide === idx ? 'w-8 bg-amber-400' : 'w-2 bg-white/40 hover:bg-white/70'
-                      }`}
-                  />
-                ))}
-              </div>
-            </section>
-
-            {/* 3 CORE PILLARS OVERVIEW */}
-            <section className="max-w-7xl mx-auto px-6 sm:px-12">
-              <div className="text-center max-w-3xl mx-auto space-y-2 mb-10">
-                <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">
-                  Unified Retail Architecture
-                </span>
-                <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white font-heading tracking-tight">
-                  Everything Your Retail Business Needs to Scale
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  Engineered by Enexa IT Solutions Private Limited for high-volume physical counters and modern digital shopping.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-[#00a2c7] transition space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] flex items-center justify-center font-bold">
-                    <Printer className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    High-Speed Counter POS (<span className="text-[#00a2c7]">&lt;50ms</span>)
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Designed for heavy morning and evening counter rush. Instant barcode lookups, 80mm/50mm ESC/POS thermal receipt printing, cash drawer kick, and offline-resilient cache.
-                  </p>
-                  <button
-                    onClick={() => navigateTo('services')}
-                    className="text-xs font-bold text-[#00a2c7] hover:underline flex items-center gap-1 cursor-pointer pt-2"
-                  >
-                    <span>Explore POS Capabilities</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-500 transition space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center font-bold">
-                    <MessageSquare className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Official Meta WhatsApp Suite
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Automated WhatsApp GST invoice links, payment collection with dynamic UPI QR codes, and daily shift sales reports sent straight to owner smartphone.
-                  </p>
-                  <button
-                    onClick={() => navigateTo('services')}
-                    className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1 cursor-pointer pt-2"
-                  >
-                    <span>View WhatsApp Features</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-indigo-500 transition space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center font-bold">
-                    <Globe className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Integrated Online Storefront
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Every enrolled store receives a dedicated web shopping address at domain/{'{storeCode}'}. Live inventory sync, 5 Indian payment gateways, and automated courier AWB dispatch.
-                  </p>
-                  <button
-                    onClick={() => navigateTo('services')}
-                    className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer pt-2"
-                  >
-                    <span>Learn About Storefronts</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               </div>
             </section>
 
-            {/* PRICING PLANS PREVIEW (Connected to MySQL) */}
-            <section className="max-w-7xl mx-auto px-6 sm:px-12 space-y-8">
-              <div className="text-center max-w-3xl mx-auto space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">
-                  Transparent Subscription Packages
-                </span>
-                <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white font-heading tracking-tight">
-                  Choose the Right Plan for Your Business
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  Real-time MySQL synchronized pricing. Includes isolated database, free updates, and priority customer support.
-                </p>
-
-                {/* Billing Cycle Pill Toggle Switch */}
-                <div style={{ display: 'none' }} className="inline-flex p-1 rounded-full bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-inner gap-1 mt-4">
-                  {['monthly', 'quarterly', 'half_yearly', 'yearly'].map((cycle) => (
-                    <button
-                      key={cycle}
-                      onClick={() => setBillingCycle(cycle)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition capitalize cursor-pointer ${billingCycle === cycle
-                        ? 'bg-white dark:bg-slate-900 text-[#00a2c7] shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                    >
-                      {cycle === 'half_yearly' ? 'Half Yearly' : cycle === 'yearly' ? 'Annually (Save up to 33%)' : cycle}
-                    </button>
-                  ))}
+            {/* ============================================================= */}
+            {/* 2. VALUE PROPOSITION CARDS (Why Choose Shoppy ERP)            */}
+            {/* ============================================================= */}
+            <section className="py-20 bg-white">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
+                  <span className="enexa-pill-badge">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Why Choose Shoppy ERP</span>
+                  </span>
+                  <h2 className="enexa-section-title">
+                    Built for High-Speed Indian Retail &amp; Multi-Branch Stores
+                  </h2>
+                  <p className="text-slate-600 text-sm sm:text-base">
+                    Engineered by Enexa IT Solutions Private Limited to keep morning and evening billing queues moving with zero server lag.
+                  </p>
                 </div>
-              </div>
 
-              {/* Pricing Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-                {plans.slice(0, 4).map((plan) => {
-                  const priceInfo = getPrice(plan);
-                  const ribbonStyle = priceInfo.ribbonStyle || resolveRibbonStyle(plan.ribbonBg || plan.ribbon_bg);
-
-                  return (
-                    <div
-                      key={plan.id}
-                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between overflow-hidden relative transition hover:border-[#00a2c7]"
-                    >
-                      {/* Ribbon */}
-                      {priceInfo.ribbonText && (
-                        <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
-                          <div
-                            style={ribbonStyle.style}
-                            className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${ribbonStyle.className}`}
-                          >
-                            {priceInfo.ribbonText}
-                          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Card 1 */}
+                  <div className="enexa-value-card enexa-value-card--blue flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 text-[#0EA5E9] flex items-center justify-center">
+                          <Zap className="w-6 h-6" />
                         </div>
-                      )}
-
-                      <div className="p-6">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                          {plan.shortName}
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-50 text-[#0284C7]">
+                          &lt;50ms Speed
                         </span>
-                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight mt-1 min-h-[44px]">
-                          {plan.name}
-                        </h3>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">
+                        Lightning Counter POS
+                      </h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Instant barcode scanning, 80mm/50mm ESC/POS thermal receipt printing, cash drawer kick, and keyboard shortcuts built for heavy rush hours.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-slate-100">
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">Thermal 80mm</span>
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">Barcode Gun</span>
+                    </div>
+                  </div>
 
-                        {/* Price */}
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-xs font-bold text-slate-400">₹</span>
-                            <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                              {Number(priceInfo.offerPrice ?? priceInfo.offer ?? 0).toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-400">
-                              {priceInfo.label}
-                            </span>
-                          </div>
-
-                          {priceInfo.offPercent > 0 && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-slate-400 line-through">
-                                ₹{Number(priceInfo.regularPrice ?? priceInfo.regular ?? 0).toLocaleString('en-IN')}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
-                                {priceInfo.offPercent}% OFF
-                              </span>
-                            </div>
-                          )}
+                  {/* Card 2 */}
+                  <div className="enexa-value-card enexa-value-card--amber flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 text-[#F59E0B] flex items-center justify-center">
+                          <Receipt className="w-6 h-6" />
                         </div>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700">
+                          100% GST Ready
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">
+                        Zero-Error Tax Billing
+                      </h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Auto-calculated CGST, SGST &amp; IGST slabs with HSN codes, A4 B2B invoices, medical dot-matrix tear-off prints, and 1-click GSTR-1 CA export.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-slate-100">
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">GSTR-1 Ready</span>
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">e-Way Bill</span>
+                    </div>
+                  </div>
 
-                        {/* WhatsApp Option Toggle (+₹500/month) */}
-                        {plan.hasWhatsappOption && (
-                          <div className="mt-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-left">
-                            <label className="flex items-start gap-2 cursor-pointer select-none text-xs">
-                              <input
-                                type="checkbox"
-                                checked={!!(ownWhatsapp[plan.id] || ownWhatsapp[plan.code])}
-                                onChange={(e) =>
-                                  setOwnWhatsapp((prev) => ({
-                                    ...prev,
-                                    [plan.id]: e.target.checked,
-                                    [plan.code || plan.id]: e.target.checked
-                                  }))
-                                }
-                                className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
-                              />
-                              <div className="leading-tight">
-                                <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">
-                                  WhatsApp Message Suite
-                                </span>
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                                  + ₹500 / month {priceInfo.months > 1 ? `(+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : ''}
-                                </span>
-                                <span className="text-[9px] text-slate-500 dark:text-slate-400 block">
-                                  {(ownWhatsapp[plan.id] || ownWhatsapp[plan.code]) ? `✓ Added (+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : 'Optional • Check to add'}
-                                </span>
-                              </div>
-                            </label>
-                          </div>
-                        )}
+                  {/* Card 3 */}
+                  <div className="enexa-value-card enexa-value-card--green flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center">
+                          <MessageSquare className="w-6 h-6" />
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                          98% Open Rate
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">
+                        WhatsApp Bills &amp; UPI QR
+                      </h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Send official PDF tax invoices and dynamic UPI payment QR links directly to customer WhatsApp plus daily shift reports to owner phone.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-slate-100">
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">Meta Cloud API</span>
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">Auto Dues</span>
+                    </div>
+                  </div>
 
-                        {/* Feature bullets */}
-                        <div className="mt-5 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-4 text-xs">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            Included Highlights
-                          </p>
-                          {(plan.features || []).slice(0, 5).map((f, i) => (
-                            <div key={i} className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="leading-tight">{f}</span>
-                            </div>
+                  {/* Card 4 */}
+                  <div className="enexa-value-card enexa-value-card--purple flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-violet-50 border border-violet-100 text-violet-600 flex items-center justify-center">
+                          <Database className="w-6 h-6" />
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-violet-50 text-violet-700">
+                          5 Min Live
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">
+                        Isolated MySQL Vault
+                      </h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Every onboarded store runs on its own dedicated isolated database plus an integrated web storefront at <span className="font-mono text-xs text-slate-800">domain/{'{storeCode}'}</span>.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-slate-100">
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">99.9% Uptime</span>
+                      <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">Online Store</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 3. COMPLETE BILLING & POS SUITE (Enexa Signature Ice-Blue)    */}
+            {/* ============================================================= */}
+            <section className="enexa-section-api py-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                  {/* Left: Interactive Live Billing Preview Terminal */}
+                  <div className="lg:col-span-5">
+                    <div className="bg-white rounded-2xl border border-sky-100 shadow-xl shadow-sky-900/5 overflow-hidden">
+                      {/* Header bar */}
+                      <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-semibold">
+                          <Store className="w-4 h-4 text-[#38BDF8]" />
+                          <span>Live Billing Suite Preview</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {[
+                            { id: 'invoice', label: 'GST Bill' },
+                            { id: 'thermal', label: '80mm' },
+                            { id: 'whatsapp', label: 'WhatsApp' }
+                          ].map((tab) => (
+                            <button
+                              key={tab.id}
+                              onClick={() => setHeroPreviewTab(tab.id)}
+                              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                                heroPreviewTab === tab.id
+                                  ? 'bg-[#0EA5E9] text-white'
+                                  : 'bg-slate-800 text-slate-300 hover:text-white'
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
                           ))}
                         </div>
                       </div>
 
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800">
-                        <button
-                          onClick={() => handleStartOnboarding(plan)}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#008ba3] to-[#00a2c7] hover:from-[#00768c] hover:to-[#008ba3] text-white font-extrabold text-xs shadow-md shadow-cyan-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          <span>{plan.buttonText || 'SIGN UP NOW'}</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="p-5 space-y-3.5">
+                        {heroPreviewTab === 'invoice' && (
+                          <>
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                              <div>
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-[#0EA5E9]">Tax Invoice #INV-0842</p>
+                                <p className="text-sm font-bold text-slate-900">Counter #1 • 12 Nov, 04:18 PM</p>
+                              </div>
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
+                                GST VERIFIED
+                              </span>
+                            </div>
+                            <div className="space-y-2.5 text-xs">
+                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-slate-900">Premium Formal Shirt (XL)</p>
+                                  <p className="text-[11px] text-slate-500 font-mono">HSN 6205 • Barcode 8901234001</p>
+                                </div>
+                                <span className="font-mono font-bold text-slate-900">₹ 1,299.00</span>
+                              </div>
+                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-slate-900">Wireless Optical Mouse</p>
+                                  <p className="text-[11px] text-slate-500 font-mono">HSN 8471 • 18% GST Incl.</p>
+                                </div>
+                                <span className="font-mono font-bold text-slate-900">₹ 649.00</span>
+                              </div>
+                            </div>
+                            <div className="pt-2 border-t border-dashed border-slate-200 flex items-center justify-between text-xs">
+                              <span className="text-slate-500 font-medium">CGST + SGST (Auto-Split)</span>
+                              <span className="font-bold text-slate-800">₹ 214.00 GST</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Grand Total Paid (UPI QR)</span>
+                              <span className="text-lg font-extrabold text-[#0284C7]">₹ 1,948.00</span>
+                            </div>
+                          </>
+                        )}
+
+                        {heroPreviewTab === 'thermal' && (
+                          <div className="bg-slate-50 rounded-xl p-4 font-mono text-[11px] text-slate-800 border border-slate-200 space-y-2">
+                            <div className="text-center border-b border-dashed border-slate-300 pb-2">
+                              <p className="font-bold text-xs">SHARMA SUPERMART &amp; RETAIL</p>
+                              <p className="text-[10px] text-slate-500">GSTIN: 08AABCS1429B1Z • 80MM ESC/POS</p>
+                            </div>
+                            <div className="flex justify-between"><span>1x Basmati Rice 5kg</span><span>₹540.00</span></div>
+                            <div className="flex justify-between"><span>2x Cold Pressed Oil</span><span>₹420.00</span></div>
+                            <div className="border-t border-dashed border-slate-300 pt-2 flex justify-between font-bold text-xs">
+                              <span>TOTAL BILL</span>
+                              <span>₹960.00</span>
+                            </div>
+                            <div className="pt-2 flex items-center justify-between text-[10px] text-emerald-700 font-sans font-semibold">
+                              <span>✓ Auto-Cut &amp; Cash Drawer Kicked</span>
+                              <span>38ms</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {heroPreviewTab === 'whatsapp' && (
+                          <div className="space-y-3">
+                            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                                  <MessageCircle className="w-4 h-4" />
+                                  WhatsApp Digital Bill Delivered
+                                </span>
+                                <span className="text-[10px] font-bold text-emerald-700">✓✓ Read</span>
+                              </div>
+                              <p className="text-xs text-emerald-900 leading-relaxed">
+                                Dear Customer, thank you for shopping! Download your GST Invoice PDF (#INV-0842) for ₹1,948.00 or pay balance via UPI QR.
+                              </p>
+                            </div>
+                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                              <span className="font-medium text-slate-600">Owner Daily Shift Z-Report</span>
+                              <span className="px-2 py-0.5 rounded bg-sky-100 text-[#0284C7] font-bold text-[10px]">Auto Sent 10 PM</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-1">
+                          <a
+                            href="/pos-terminal"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-2 transition"
+                          >
+                            <Zap className="w-3.5 h-3.5 text-[#F59E0B]" />
+                            <span>Launch Live POS Terminal Demo</span>
+                            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                          </a>
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
 
-              <div className="text-center pt-2">
-                <button
-                  onClick={() => navigateTo('pricing')}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-[#00a2c7] text-xs font-bold transition cursor-pointer"
-                >
-                  <span>Compare All Plan Details & Add-ons</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#00a2c7]" />
-                </button>
+                  {/* Right: Headline + 6 Feature Tiles matching enexa.in */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="space-y-2.5">
+                      <span className="enexa-pill-badge">
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>All-In-One Billing Hardware &amp; Tax Engine</span>
+                      </span>
+                      <h2 className="enexa-section-title">
+                        Get Reliable Speed on Counter Billing, Barcodes &amp; GST Invoices
+                      </h2>
+                      <p className="text-slate-600 text-sm sm:text-base max-w-2xl">
+                        Plug-and-play support for thermal printers, barcode guns, electronic weighing scales, and instant online payment collection.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {[
+                        {
+                          icon: Printer,
+                          color: 'bg-sky-50 text-[#0EA5E9]',
+                          title: 'Thermal 80mm & 50mm',
+                          desc: 'Instant ESC/POS receipt print with store logo, GST breakup & QR.'
+                        },
+                        {
+                          icon: FileText,
+                          color: 'bg-emerald-50 text-emerald-600',
+                          title: 'A4 & Dot-Matrix Format',
+                          desc: 'Switch between B2B Tax Invoice & pharma tear-off templates.'
+                        },
+                        {
+                          icon: Barcode,
+                          color: 'bg-amber-50 text-[#F59E0B]',
+                          title: '1D / 2D Barcode Designer',
+                          desc: 'Print shelf tags & garment stickers directly from stock batches.'
+                        },
+                        {
+                          icon: Scale,
+                          color: 'bg-violet-50 text-violet-600',
+                          title: 'Weighing Scale & Batch Expiry',
+                          desc: 'Live weight capture for groceries + FEFO alerts for pharmacies.'
+                        },
+                        {
+                          icon: CreditCard,
+                          color: 'bg-cyan-50 text-[#0284C7]',
+                          title: '5 Payment Gateways + UPI',
+                          desc: 'Accept cards, cash split tenders, Razorpay, PayU & dynamic UPI.'
+                        },
+                        {
+                          icon: TrendingUp,
+                          color: 'bg-rose-50 text-rose-600',
+                          title: 'GSTR-1 & Profit Analytics',
+                          desc: '1-click GST JSON/Excel export, item-wise margin & shift till.'
+                        }
+                      ].map((item, idx) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={idx} className="enexa-api-card flex items-start gap-3.5">
+                            <div className={`w-10 h-10 rounded-lg ${item.color} flex items-center justify-center shrink-0`}>
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-900 text-sm">{item.title}</h3>
+                              <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{item.desc}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                      <button onClick={() => navigateTo('services')} className="enexa-btn-primary">
+                        <span>Explore All Modules</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => navigateTo('contact')} className="enexa-btn-secondary">
+                        <span>Book Live Demo</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 
-            {/* RECENT BLOGS PREVIEW */}
-            {blogs.length > 0 && (
-              <section className="max-w-7xl mx-auto px-6 sm:px-12 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-[#00a2c7]">
-                      Knowledge & Industry Updates
-                    </span>
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white font-heading">
-                      Latest Retail & GST Insights
-                    </h2>
+            {/* ============================================================= */}
+            {/* 4. PRICING PLANS PREVIEW (Connected to MySQL DB & Dynamic Ribbons) */}
+            {/* ============================================================= */}
+            <section className="py-20 bg-white border-y border-slate-100">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+                <div className="text-center max-w-3xl mx-auto space-y-3">
+                  <span className="enexa-pill-badge">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Transparent Subscription Packages</span>
+                  </span>
+                  <h2 className="enexa-section-title">
+                    Choose the Right Plan for Your Retail Business
+                  </h2>
+                  <p className="text-slate-600 text-sm sm:text-base">
+                    Real-time MySQL synchronized pricing. Includes isolated database, free cloud updates, and dedicated merchant support.
+                  </p>
+
+                  {/* Billing Cycle Pill Toggle Switch */}
+                  <div style={{ display: 'none' }} className="inline-flex p-1 rounded-full bg-slate-100 border border-slate-200 gap-1 mt-4">
+                    {['monthly', 'quarterly', 'half_yearly', 'yearly'].map((cycle) => (
+                      <button
+                        key={cycle}
+                        onClick={() => setBillingCycle(cycle)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition capitalize cursor-pointer ${billingCycle === cycle
+                          ? 'bg-white text-[#0EA5E9] shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                      >
+                        {cycle === 'half_yearly' ? 'Half Yearly' : cycle === 'yearly' ? 'Annually (Save up to 33%)' : cycle}
+                      </button>
+                    ))}
                   </div>
-                  <button
-                    onClick={() => navigateTo('blog')}
-                    className="text-xs font-bold text-[#00a2c7] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View All Articles</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {blogs.slice(0, 3).map((b) => (
-                    <div
-                      key={b.id}
-                      onClick={() => setActiveBlogModal(b)}
-                      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs hover:border-[#00a2c7] transition cursor-pointer group flex flex-col justify-between"
-                    >
-                      {b.cover_image && (
-                        <div className="h-44 overflow-hidden relative">
-                          <img
-                            src={b.cover_image}
-                            alt={b.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                          />
-                          <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-xs">
-                            {b.category}
+                {/* Pricing Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                  {plans.slice(0, 4).map((plan) => {
+                    const priceInfo = getPrice(plan);
+                    const ribbonStyle = priceInfo.ribbonStyle || resolveRibbonStyle(plan.ribbonBg || plan.ribbon_bg);
+
+                    return (
+                      <div
+                        key={plan.id}
+                        className="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-xl hover:shadow-sky-500/10 hover:border-[#0EA5E9] hover:-translate-y-1 flex flex-col justify-between overflow-hidden relative transition-all duration-300"
+                      >
+                        {/* Ribbon dynamically loaded from MySQL subscription_plans.badge & ribbon_bg */}
+                        {priceInfo.ribbonText && (
+                          <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
+                            <div
+                              style={ribbonStyle.style}
+                              className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${ribbonStyle.className}`}
+                            >
+                              {priceInfo.ribbonText}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="p-6">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#0EA5E9] block">
+                            {plan.shortName}
                           </span>
-                        </div>
-                      )}
-                      <div className="p-5 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-[#00a2c7] transition line-clamp-2">
-                            {b.title}
+                          <h3 className="text-lg font-bold text-slate-900 leading-tight mt-1 min-h-[44px]">
+                            {plan.name}
                           </h3>
-                          <p className="text-xs text-slate-500 mt-2 line-clamp-3 leading-relaxed">
-                            {b.excerpt}
-                          </p>
+
+                          {/* Price */}
+                          <div className="mt-4 pt-3 border-t border-slate-100">
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xs font-bold text-slate-400">₹</span>
+                              <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                                {Number(priceInfo.offerPrice ?? priceInfo.offer ?? 0).toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-xs font-medium text-slate-500">
+                                {priceInfo.label}
+                              </span>
+                            </div>
+
+                            {priceInfo.offPercent > 0 && (
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className="text-xs text-slate-400 line-through">
+                                  ₹{Number(priceInfo.regularPrice ?? priceInfo.regular ?? 0).toLocaleString('en-IN')}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {priceInfo.offPercent}% OFF
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* WhatsApp Option Toggle (+₹500/month) */}
+                          {plan.hasWhatsappOption && (
+                            <div className="mt-4 p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-left">
+                              <label className="flex items-start gap-2 cursor-pointer select-none text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={!!(ownWhatsapp[plan.id] || ownWhatsapp[plan.code])}
+                                  onChange={(e) =>
+                                    setOwnWhatsapp((prev) => ({
+                                      ...prev,
+                                      [plan.id]: e.target.checked,
+                                      [plan.code || plan.id]: e.target.checked
+                                    }))
+                                  }
+                                  className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
+                                />
+                                <div className="leading-tight">
+                                  <span className="font-semibold text-slate-800 block text-[11px]">
+                                    WhatsApp Message Suite
+                                  </span>
+                                  <span className="text-emerald-700 font-bold text-[10px]">
+                                    + ₹500 / month {priceInfo.months > 1 ? `(+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : ''}
+                                  </span>
+                                  <span className="text-[9px] text-slate-500 block">
+                                    {(ownWhatsapp[plan.id] || ownWhatsapp[plan.code]) ? `✓ Added (+₹${(500 * priceInfo.months).toLocaleString('en-IN')})` : 'Optional • Check to add'}
+                                  </span>
+                                </div>
+                              </label>
+                            </div>
+                          )}
+
+                          {/* Feature bullets */}
+                          <div className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-xs">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Included Highlights
+                            </p>
+                            {(plan.features || []).slice(0, 5).map((f, i) => (
+                              <div key={i} className="flex items-start gap-2 text-slate-700">
+                                <Check className="w-3.5 h-3.5 text-[#0EA5E9] shrink-0 mt-0.5" />
+                                <span className="leading-tight">{f}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-                          <span>{b.read_time || '4 min read'}</span>
-                          <span className="font-bold text-[#00a2c7] flex items-center gap-1">
-                            <span>Read Article</span>
-                            <ArrowRight className="w-3 h-3" />
+
+                        <div className="p-4 bg-slate-50/80 border-t border-slate-100">
+                          <button
+                            onClick={() => handleStartOnboarding(plan)}
+                            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369A1] text-white font-bold text-xs shadow-md shadow-sky-500/20 transition cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span>{plan.buttonText || 'SIGN UP NOW'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => navigateTo('pricing')}
+                    className="enexa-btn-secondary !text-xs"
+                  >
+                    <span>Compare All Plan Details &amp; Add-ons</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#0EA5E9]" />
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 5. COMPLETE OMNICHANNEL RETAIL SUITE (Matching B2B Showcase)  */}
+            {/* ============================================================= */}
+            <section className="py-20 bg-white">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                  {/* Left Content */}
+                  <div className="lg:col-span-6 space-y-6">
+                    <span className="enexa-pill-badge !bg-amber-50 !text-amber-700 !border-amber-200">
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Complete Retail Suite</span>
+                    </span>
+
+                    <h2 className="enexa-section-title">
+                      Launch Your Own Branded Storefront &amp; POS ERP in Minutes
+                    </h2>
+
+                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                      Not just billing — empower your retail shop or supermarket chain with an omnichannel online portal at <span className="font-mono text-xs font-semibold text-[#0284C7]">shoppy.live/{'{storeCode}'}</span> synced seamlessly with live counter inventory.
+                    </p>
+
+                    {/* 2 Stat Highlight Cards matching enexa.in */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="enexa-stat-card">
+                        <div className="text-2xl sm:text-3xl font-extrabold text-[#0EA5E9]">5 Min</div>
+                        <div className="text-xs font-semibold text-slate-600 mt-0.5">Automated DB Activation</div>
+                      </div>
+                      <div className="enexa-stat-card">
+                        <div className="text-2xl sm:text-3xl font-extrabold text-[#F59E0B]">99.9%</div>
+                        <div className="text-xs font-semibold text-slate-600 mt-0.5">Cloud Uptime &amp; Daily Backups</div>
+                      </div>
+                    </div>
+
+                    {/* 8 Feature Chips matching enexa.in B2B grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { icon: Globe, label: 'Online Store' },
+                        { icon: Boxes, label: 'Multi-Branch' },
+                        { icon: Truck, label: 'Courier AWB' },
+                        { icon: Users, label: 'Staff & Payroll' },
+                        { icon: BarChart3, label: 'Live P&L' },
+                        { icon: ShieldCheck, label: 'GST Filings' },
+                        { icon: QrCode, label: 'Dynamic UPI' },
+                        { icon: Headphones, label: '24x7 Desk' }
+                      ].map((chip, idx) => {
+                        const Icon = chip.icon;
+                        return (
+                          <div key={idx} className="enexa-feature-chip">
+                            <Icon className="w-4 h-4 text-[#0EA5E9] shrink-0" />
+                            <span className="truncate text-xs">{chip.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                      <button onClick={() => handleStartOnboarding()} className="enexa-btn-primary">
+                        <span>Start Your Store Today</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => navigateTo('contact')} className="enexa-btn-secondary">
+                        <span>Talk to Our Team</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right Architecture Mockup Card with Floating Badges */}
+                  <div className="lg:col-span-6 relative">
+                    <div className="relative bg-gradient-to-br from-slate-50 to-sky-50/70 rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xl shadow-sky-900/5">
+                      {/* Floating Badge Top Right */}
+                      <div className="enexa-floating-badge hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-emerald-200 shadow-lg text-xs font-bold text-slate-800 absolute -top-4 right-6">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Isolated Tenant DB Ready</span>
+                      </div>
+
+                      {/* Mockup Window */}
+                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                          </div>
+                          <span className="text-[11px] font-mono text-slate-500 bg-white px-3 py-0.5 rounded-md border border-slate-200">
+                            shoppy.live/store-erp
                           </span>
+                          <span className="text-[10px] font-bold text-[#0EA5E9]">LIVE</span>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="p-3 rounded-xl bg-sky-50 border border-sky-100">
+                              <span className="text-[10px] font-semibold text-slate-500 block">Today&apos;s POS</span>
+                              <span className="text-base font-extrabold text-[#0284C7]">₹48,250</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                              <span className="text-[10px] font-semibold text-slate-500 block">Web Orders</span>
+                              <span className="text-base font-extrabold text-emerald-700">14 Synced</span>
+                            </div>
+                            <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
+                              <span className="text-[10px] font-semibold text-slate-500 block">Stock SKUs</span>
+                              <span className="text-base font-extrabold text-amber-700">1,840+</span>
+                            </div>
+                          </div>
+
+                          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                            <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                              <span>Auto-Sync Counter ↔ Web Storefront</span>
+                              <span className="text-emerald-600 font-bold">Real-Time</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                              <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-[#0EA5E9] to-[#10B981]" />
+                            </div>
+                            <p className="text-[11px] text-slate-500">
+                              Barcode billed at Counter #1 immediately updates available quantity on your public web storefront.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Floating Badge Bottom Left */}
+                      <div className="enexa-floating-badge-delayed hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-sky-200 shadow-lg text-xs font-bold text-slate-800 absolute -bottom-4 left-6">
+                        <ShieldCheck className="w-4 h-4 text-[#0EA5E9]" />
+                        <span>Zero Data Mixing Guarantee</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 6. WHO WE ARE SECTION (Enexa Warm Peach Section)              */}
+            {/* ============================================================= */}
+            <section className="enexa-section-peach py-20">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                  {/* Left Company Proof Card */}
+                  <div className="lg:col-span-5 relative">
+                    <div className="bg-white rounded-3xl border border-amber-200/70 p-7 shadow-xl shadow-amber-900/5 space-y-5 relative">
+                      <div className="enexa-floating-badge inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] text-white text-xs font-bold shadow-md">
+                        <Award className="w-4 h-4" />
+                        <span>Enexa IT Solutions Private Limited</span>
+                      </div>
+
+                      <h3 className="text-xl font-bold text-slate-900 leading-snug">
+                        Simplifying Indian Retail Accounting, Billing &amp; Digital Commerce Since Day One
+                      </h3>
+
+                      <div className="grid grid-cols-2 gap-3.5 pt-2">
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="text-xl font-extrabold text-slate-900">10,000+</div>
+                          <div className="text-xs text-slate-500">Retail Terminals Live</div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="text-xl font-extrabold text-[#0EA5E9]">28 States</div>
+                          <div className="text-xs text-slate-500">GST HSN Compliant</div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="text-xl font-extrabold text-emerald-600">50L+</div>
+                          <div className="text-xs text-slate-500">Monthly Invoices Processed</div>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                          <div className="text-xl font-extrabold text-[#F59E0B]">4.8 ★</div>
+                          <div className="text-xs text-slate-500">Merchant Support Rating</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Content */}
+                  <div className="lg:col-span-7 space-y-5">
+                    <span className="enexa-pill-badge">
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>About Enexa IT Solutions</span>
+                    </span>
+
+                    <h2 className="enexa-section-title">
+                      Who We Are
+                    </h2>
+
+                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                      We are <strong>Enexa IT Solutions Private Limited</strong> — a technology-first software company empowering Kirana stores, Supermarkets, Medical Pharmacies, Garment Showrooms, and Electronics Retailers across India with modern cloud billing technology.
+                    </p>
+
+                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                      With <strong>Shoppy ERP</strong>, merchants never choose between fast counter POS and online digital selling. Both run on a unified, isolated cloud database engineered for uncompromising speed and CA-approved GST compliance.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                      <button onClick={() => navigateTo('about')} className="enexa-btn-primary">
+                        <span>More About Company</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => navigateTo('services')} className="enexa-btn-secondary">
+                        <span>Explore All Services</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 7. SERVICES 4-CARD SHOWCASE (Matching enexa.in #services)     */}
+            {/* ============================================================= */}
+            <section className="py-20 bg-white">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                <div className="text-center max-w-3xl mx-auto space-y-3">
+                  <span className="enexa-pill-badge">
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>Services We Offer</span>
+                  </span>
+                  <h2 className="enexa-section-title">
+                    End-to-End Retail Software &amp; Billing Modules
+                  </h2>
+                  <p className="text-slate-600 text-sm sm:text-base">
+                    Tailored modular tools built specifically for high-growth Indian wholesale and retail merchants.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    {
+                      pill: 'POS Counter',
+                      pillClass: 'bg-sky-50 text-[#0284C7]',
+                      iconBg: 'bg-sky-500 text-white',
+                      icon: Printer,
+                      title: 'Retail POS & Tax Billing',
+                      desc: 'Ultra-fast keyboard & barcode counter checkout with thermal 80mm, A4 B2B, and dot-matrix printing.',
+                      bullets: ['Sub-50ms SKU Lookup', 'Hold & Resume Carts', 'Split Cash / Card / UPI']
+                    },
+                    {
+                      pill: 'Inventory',
+                      pillClass: 'bg-amber-50 text-amber-700',
+                      iconBg: 'bg-amber-500 text-white',
+                      icon: Boxes,
+                      title: 'Smart Stock & Barcodes',
+                      desc: 'Batch-wise expiry alerts, size-color variant tracking, supplier GRN inward, and barcode roll printing.',
+                      bullets: ['Size / Color Matrix', 'Low Stock WhatsApp Alert', 'Multi-Godown Transfer']
+                    },
+                    {
+                      pill: 'Omnichannel',
+                      pillClass: 'bg-indigo-50 text-indigo-700',
+                      iconBg: 'bg-indigo-600 text-white',
+                      icon: Globe,
+                      title: 'Online Web Storefront',
+                      desc: 'Custom store portal connected directly to your live stock count with Razorpay/PayU checkout.',
+                      bullets: ['Instant Catalog Publish', 'Courier AWB Generation', 'Zero Double Selling']
+                    },
+                    {
+                      pill: 'CRM & Tax',
+                      pillClass: 'bg-emerald-50 text-emerald-700',
+                      iconBg: 'bg-emerald-600 text-white',
+                      icon: MessageSquare,
+                      title: 'WhatsApp Bills & GST Desk',
+                      desc: 'Automated digital PDF receipts, party khata udhar reminders, and CA-ready GSTR-1 ledger exports.',
+                      bullets: ['Official Meta API Bills', 'Dynamic UPI QR Links', 'GSTR-1 / 3B Reports']
+                    }
+                  ].map((srv, i) => {
+                    const Icon = srv.icon;
+                    return (
+                      <div key={i} className="enexa-service-card flex flex-col justify-between space-y-5">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className={`w-11 h-11 rounded-xl ${srv.iconBg} flex items-center justify-center shadow-sm`}>
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${srv.pillClass}`}>
+                              {srv.pill}
+                            </span>
+                          </div>
+                          <div>
+                            <h3 className="text-base font-bold text-slate-900">{srv.title}</h3>
+                            <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{srv.desc}</p>
+                          </div>
+                          <ul className="space-y-1.5 pt-2 border-t border-slate-100">
+                            {srv.bullets.map((b, bi) => (
+                              <li key={bi} className="flex items-center gap-2 text-xs text-slate-700">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#0EA5E9] shrink-0" />
+                                <span>{b}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <button
+                          onClick={() => navigateTo('services')}
+                          className="enexa-btn-ghost pt-1"
+                        >
+                          <span>Explore Details</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 8. TESTIMONIALS CAROUSEL (Matching enexa.in Reviews Section)  */}
+            {/* ============================================================= */}
+            <section className="py-20 bg-slate-50/75 border-y border-slate-100">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div className="space-y-2.5">
+                    <span className="enexa-pill-badge">
+                      <HeartHandshake className="w-3.5 h-3.5" />
+                      <span>Client Testimonials</span>
+                    </span>
+                    <h2 className="enexa-section-title">
+                      Trusted by Store Owners Across India
+                    </h2>
+                  </div>
+
+                  {/* Google Rating Pill + Arrows matching enexa.in */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-xs">
+                      <div className="flex items-center text-amber-400">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} className="w-3.5 h-3.5 fill-current" />
+                        ))}
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">4.8 / 5</span>
+                      <span className="text-[11px] text-slate-500">Verified Merchants</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setTestimonialIdx((prev) =>
+                            prev === 0 ? Math.max(0, ENEXA_TESTIMONIALS.length - 3) : prev - 1
+                          )
+                        }
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 hover:border-[#0EA5E9] hover:text-[#0EA5E9] flex items-center justify-center transition cursor-pointer shadow-xs"
+                        aria-label="Previous testimonials"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTestimonialIdx((prev) =>
+                            prev >= ENEXA_TESTIMONIALS.length - 3 ? 0 : prev + 1
+                          )
+                        }
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 hover:border-[#0EA5E9] hover:text-[#0EA5E9] flex items-center justify-center transition cursor-pointer shadow-xs"
+                        aria-label="Next testimonials"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3-Card Window */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {ENEXA_TESTIMONIALS.slice(testimonialIdx, testimonialIdx + 3).map((item, idx) => (
+                    <div key={idx} className="enexa-testimonial-card flex flex-col justify-between space-y-5">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-0.5 text-amber-400">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} className="w-3.5 h-3.5 fill-current" />
+                            ))}
+                          </div>
+                          <Quote className="w-5 h-5 text-sky-200" />
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                          &ldquo;{item.quote}&rdquo;
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                        <div
+                          style={{ backgroundColor: item.color }}
+                          className="w-10 h-10 rounded-full text-white font-bold text-xs flex items-center justify-center shrink-0"
+                        >
+                          {item.initials}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">{item.name}</h4>
+                          <p className="text-[11px] text-slate-500">{item.role}</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Dots */}
+                <div className="flex items-center justify-center gap-2">
+                  {[0, 1, 2, 3].map((dot) => (
+                    <button
+                      key={dot}
+                      onClick={() => setTestimonialIdx(dot)}
+                      className={`h-2 rounded-full transition-all cursor-pointer ${
+                        testimonialIdx === dot ? 'w-7 bg-[#0EA5E9]' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                      }`}
+                      aria-label={`Testimonial page ${dot + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 9. RECENT BLOGS PREVIEW (Styled to match Enexa Cards)         */}
+            {/* ============================================================= */}
+            {blogs.length > 0 && (
+              <section className="py-20 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+                  <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                    <div className="space-y-2">
+                      <span className="enexa-pill-badge">
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Knowledge &amp; Industry Updates</span>
+                      </span>
+                      <h2 className="enexa-section-title">
+                        Latest Retail &amp; GST Billing Insights
+                      </h2>
+                    </div>
+                    <button
+                      onClick={() => navigateTo('blog')}
+                      className="enexa-btn-ghost"
+                    >
+                      <span>View All Articles</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {blogs.slice(0, 3).map((b) => (
+                      <div
+                        key={b.id}
+                        onClick={() => setActiveBlogModal(b)}
+                        className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs hover:border-[#0EA5E9] hover:shadow-lg hover:shadow-sky-500/10 hover:-translate-y-1 transition-all cursor-pointer group flex flex-col justify-between"
+                      >
+                        {b.cover_image && (
+                          <div className="h-44 overflow-hidden relative">
+                            <img
+                              src={b.cover_image}
+                              alt={b.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                            />
+                            <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900/85 text-white backdrop-blur-xs">
+                              {b.category}
+                            </span>
+                          </div>
+                        )}
+                        <div className="p-5 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h3 className="font-bold text-base text-slate-900 group-hover:text-[#0EA5E9] transition line-clamp-2">
+                              {b.title}
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-2 line-clamp-3 leading-relaxed">
+                              {b.excerpt}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-slate-400 pt-4 mt-4 border-t border-slate-100">
+                            <span>{b.read_time || '4 min read'}</span>
+                            <span className="font-bold text-[#0EA5E9] flex items-center gap-1">
+                              <span>Read Article</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </section>
             )}
 
-            {/* CALL TO ACTION BANNER */}
-            <section className="max-w-7xl mx-auto px-6 sm:px-12">
-              <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-[#008ba3] via-[#00a2c7] to-[#10b981] text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="space-y-2 max-w-2xl text-left">
-                  <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold">
-                    Join 10,000+ Thriving Merchants
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-black font-heading tracking-tight">
-                    Ready to Automate Your Retail Store Billing & E-Commerce?
-                  </h3>
-                  <p className="text-xs sm:text-sm text-white/90">
-                    Get started in 5 minutes. Real-time setup with isolated database provisioning — powered by Enexa IT Solutions Private Limited.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <button
-                    onClick={() => navigateTo('contact')}
-                    className="px-6 py-3 rounded-xl bg-white text-slate-900 hover:bg-slate-100 font-black text-xs shadow-lg transition cursor-pointer"
-                  >
-                    Request Enterprise Demo
-                  </button>
-                  <button
-                    onClick={() => navigateTo('pricing')}
-                    className="px-5 py-3 rounded-xl bg-slate-900/60 hover:bg-slate-900/80 text-white font-bold text-xs border border-white/20 transition cursor-pointer"
-                  >
-                    View All Plans
-                  </button>
+            {/* ============================================================= */}
+            {/* 10. LIGHT ICE-BLUE CTA SECTION (Exact match to enexa.in)      */}
+            {/* ============================================================= */}
+            <section className="enexa-section-cta py-20 border-t border-sky-100">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                  <div className="lg:col-span-7 space-y-5 text-left">
+                    <span className="enexa-pill-badge">
+                      <Rocket className="w-3.5 h-3.5" />
+                      <span>Join 10,000+ Thriving Indian Retailers</span>
+                    </span>
+                    <h2 className="enexa-section-title">
+                      Ready to <span className="text-[#0EA5E9]">Transform Your Retail Billing</span> &amp; Launch Online?
+                    </h2>
+                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
+                      Activate your dedicated isolated MySQL store terminal, thermal printer setup, WhatsApp invoice engine, and online storefront in under 5 minutes — powered by Enexa IT Solutions Private Limited.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                      <button
+                        onClick={() => handleStartOnboarding()}
+                        className="enexa-btn-primary"
+                      >
+                        <span>Start Free Setup Now</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => navigateTo('store')}
+                        className="enexa-btn-secondary"
+                      >
+                        <span>Store Merchant Login</span>
+                      </button>
+                      <button
+                        onClick={() => navigateTo('contact')}
+                        className="enexa-btn-ghost ml-1"
+                      >
+                        <span>Request Enterprise Demo</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-5 flex items-center justify-center">
+                    <div className="w-full max-w-[440px] rounded-3xl overflow-hidden">
+                      <img
+                        src="/images/landing/launch-cta-iso.jpg"
+                        alt="Launch Shoppy ERP Billing & Retail POS Suite"
+                        className="w-full h-auto block mix-blend-multiply"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -3341,96 +4041,164 @@ export default function LandingPage({ defaultPage = 'home' }) {
       />
 
       {/* =================================================================== */}
-      {/* 8. MODERN ENTERPRISE FOOTER (Powered by Enexa IT Solutions Pvt Ltd) */}
+      {/* 8. ENEXA SIGNATURE FOOTER (Matching https://enexa.in/)              */}
       {/* =================================================================== */}
-      <footer className="bg-slate-900 text-white pt-16 pb-10 px-6 sm:px-12 border-t border-slate-800 mt-16">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 text-xs">
-          {/* Col 1: Corporate Profile */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#008ba3] to-[#10b981] flex items-center justify-center text-white font-black">
-                <Building2 className="w-5 h-5 stroke-[2.5]" />
+      <footer className="enexa-footer pt-16 pb-8 border-t border-slate-800/70">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 text-sm">
+            {/* Col 1: Brand + About + Social Buttons (4 cols) */}
+            <div className="lg:col-span-4 space-y-4">
+              <div onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer select-none">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+                  <Receipt className="w-5 h-5 stroke-[2.3]" />
+                </div>
+                <div>
+                  <span className="text-xl font-bold tracking-tight text-white block leading-tight">
+                    Shoppy<span className="text-[#38BDF8]">ERP</span>
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-400 block -mt-0.5">
+                    Powered by Enexa IT Solutions
+                  </span>
+                </div>
               </div>
-              <span className="text-xl font-black font-heading tracking-tight text-white">
-                Shoppy<span className="text-[#00a2c7]">ERP</span>
-              </span>
+
+              <p className="text-slate-400 leading-relaxed text-xs sm:text-sm max-w-sm">
+                India&apos;s trusted GST billing software, lightning-fast retail POS counter terminal, WhatsApp e-invoicing, and omnichannel e-commerce cloud ERP by Enexa IT Solutions Private Limited.
+              </p>
+
+              {/* Social Links matching enexa.in */}
+              <div className="flex items-center gap-2.5 pt-1">
+                <a
+                  href="https://www.enexa.in"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="enexa-social-btn"
+                  title="Official Website"
+                >
+                  <Globe className="w-4 h-4" />
+                </a>
+                <a
+                  href="mailto:contact@enexa.in"
+                  className="enexa-social-btn"
+                  title="Email Support"
+                >
+                  <Mail className="w-4 h-4" />
+                </a>
+                <a
+                  href="tel:+919546042639"
+                  className="enexa-social-btn"
+                  title="Call Helpline"
+                >
+                  <Phone className="w-4 h-4" />
+                </a>
+                <a
+                  href="https://wa.me/919546042639"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="enexa-social-btn"
+                  title="WhatsApp Support"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </a>
+              </div>
             </div>
 
-            <p className="text-slate-400 leading-relaxed max-w-sm text-xs">
-              Next-generation cloud POS billing, automated WhatsApp GST invoicing, and omnichannel ecommerce platform. Dedicated isolated MySQL databases for retail merchants.
+            {/* Col 2: Quick Links (2 cols) */}
+            <div className="lg:col-span-2 space-y-4">
+              <h4 className="font-semibold text-white text-sm tracking-wide">Quick Links</h4>
+              <ul className="space-y-2.5">
+                <li><button onClick={() => navigateTo('home')} className="enexa-footer-link cursor-pointer">Home</button></li>
+                <li><button onClick={() => navigateTo('about')} className="enexa-footer-link cursor-pointer">About Us</button></li>
+                <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">Services</button></li>
+                <li><button onClick={() => navigateTo('pricing')} className="enexa-footer-link cursor-pointer">Pricing</button></li>
+                <li><button onClick={() => navigateTo('blog')} className="enexa-footer-link cursor-pointer">Blog &amp; Insights</button></li>
+                <li><button onClick={() => navigateTo('contact')} className="enexa-footer-link cursor-pointer">Contact Us</button></li>
+              </ul>
+            </div>
+
+            {/* Col 3: Billing Modules & Account (3 cols) */}
+            <div className="lg:col-span-3 space-y-4">
+              <h4 className="font-semibold text-white text-sm tracking-wide">Billing Solutions</h4>
+              <ul className="space-y-2.5">
+                <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">High-Speed Counter POS (&lt;50ms)</button></li>
+                <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">Thermal 80mm / A4 / Dot-Matrix</button></li>
+                <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">WhatsApp Invoices &amp; UPI QR</button></li>
+                <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">Online Storefront &amp; Couriers</button></li>
+                <li><button onClick={() => navigateTo('store')} className="enexa-footer-link cursor-pointer">Store Merchant Login</button></li>
+                <li><button onClick={() => navigate('/master')} className="enexa-footer-link cursor-pointer">Super Admin Desk</button></li>
+              </ul>
+            </div>
+
+            {/* Col 4: Contact Info matching enexa.in (3 cols) */}
+            <div className="lg:col-span-3 space-y-4">
+              <h4 className="font-semibold text-white text-sm tracking-wide">Contact Information</h4>
+              <ul className="space-y-3 text-xs sm:text-sm text-slate-400">
+                <li className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-[#38BDF8] shrink-0 mt-0.5" />
+                  <span>
+                    {settings.company_address ||
+                      'Yadav Nagar Near Hero Honda Agency, Bhagwanpur, Muzaffarpur, Bihar - 842001'}
+                  </span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Phone className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                  <a href="tel:+919546042639" className="hover:text-[#38BDF8] transition">
+                    +91 95460 42639
+                  </a>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Mail className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                  <a href="mailto:contact@enexa.in" className="hover:text-[#38BDF8] transition">
+                    contact@enexa.in
+                  </a>
+                </li>
+              </ul>
+
+              <div className="pt-2 text-[11px] text-slate-500 space-y-0.5">
+                <p>CIN: {settings.company_cin || 'U72900RJ2021PTC075482'}</p>
+                <p>GSTIN: {settings.company_gstin || '08AABCE1290M1Z5'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-slate-800/80 mt-12 pt-7 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+            <p className="text-center sm:text-left">
+              © 2026{' '}
+              <a href="https://www.enexa.in" target="_blank" rel="noreferrer" className="text-white font-semibold hover:text-[#38BDF8] transition">
+                {settings.company_name || 'Enexa IT Solutions Private Limited'}
+              </a>
+              . All rights reserved.
             </p>
 
-            <div className="pt-1 text-[11px] text-slate-400 space-y-1">
-              <p><strong>Corporate Entity:</strong> {settings.company_name || 'Enexa IT Solutions Private Limited'}</p>
-              <p><strong>CIN:</strong> {settings.company_cin || 'U72900RJ2021PTC075482'} | <strong>GSTIN:</strong> {settings.company_gstin || '08AABCE1290M1Z5'}</p>
-              <p><strong>Official Website:</strong> <a href="https://www.enexa.in" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">www.enexa.in</a></p>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+              <button onClick={() => navigateTo('privacy-policy')} className="hover:text-[#38BDF8] transition cursor-pointer">
+                Privacy Policy
+              </button>
+              <span className="text-slate-700">•</span>
+              <button onClick={() => navigateTo('terms-of-service')} className="hover:text-[#38BDF8] transition cursor-pointer">
+                Terms of Service
+              </button>
+              <span className="text-slate-700">•</span>
+              <button onClick={() => navigateTo('return-policy')} className="hover:text-[#38BDF8] transition cursor-pointer">
+                Refund Policy
+              </button>
             </div>
-          </div>
-
-          {/* Col 2: Solutions & Modules */}
-          <div>
-            <h4 className="font-extrabold text-slate-200 uppercase tracking-wider mb-4 text-xs">
-              Retail Solutions
-            </h4>
-            <ul className="space-y-2.5 text-slate-400">
-              <li><button onClick={() => navigateTo('services')} className="hover:text-cyan-400 transition cursor-pointer">High-Speed POS Counter</button></li>
-              <li><button onClick={() => navigateTo('services')} className="hover:text-cyan-400 transition cursor-pointer">WhatsApp CRM & UPI QR</button></li>
-              <li><button onClick={() => navigateTo('services')} className="hover:text-cyan-400 transition cursor-pointer">Online E-Commerce Storefront</button></li>
-              <li><button onClick={() => navigateTo('services')} className="hover:text-cyan-400 transition cursor-pointer">Multi-Warehouse Inventory</button></li>
-              <li><button onClick={() => navigateTo('services')} className="hover:text-cyan-400 transition cursor-pointer">GSTR-1 & e-Way Bill Desk</button></li>
-            </ul>
-          </div>
-
-          {/* Col 3: Navigation */}
-          <div>
-            <h4 className="font-extrabold text-slate-200 uppercase tracking-wider mb-4 text-xs">
-              Quick Navigation
-            </h4>
-            <ul className="space-y-2.5 text-slate-400">
-              <li><button onClick={() => navigateTo('home')} className="hover:text-cyan-400 transition cursor-pointer">Home Overview</button></li>
-              <li><button onClick={() => navigateTo('about')} className="hover:text-cyan-400 transition cursor-pointer">About Enexa IT Solutions</button></li>
-              <li><button onClick={() => navigateTo('services')} className="hover:text-cyan-400 transition cursor-pointer">Services & Features</button></li>
-              <li><button onClick={() => navigateTo('pricing')} className="hover:text-cyan-400 transition cursor-pointer">Subscription Pricing</button></li>
-              <li><button onClick={() => navigateTo('blog')} className="hover:text-cyan-400 transition cursor-pointer">Blog & Insights</button></li>
-              <li><button onClick={() => navigateTo('contact')} className="hover:text-cyan-400 transition cursor-pointer">Contact & Demo</button></li>
-            </ul>
-          </div>
-
-          {/* Col 4: Legal & Policies (User requested) */}
-          <div>
-            <h4 className="font-extrabold text-slate-200 uppercase tracking-wider mb-4 text-xs">
-              Policies & Legal
-            </h4>
-            <ul className="space-y-2.5 text-slate-400">
-              <li><button onClick={() => navigateTo('privacy-policy')} className="hover:text-cyan-400 transition cursor-pointer">Privacy Policy</button></li>
-              <li><button onClick={() => navigateTo('return-policy')} className="hover:text-cyan-400 transition cursor-pointer">Return Policy</button></li>
-              <li><button onClick={() => navigateTo('terms-of-service')} className="hover:text-cyan-400 transition cursor-pointer">Terms of Service</button></li>
-              <li><button onClick={() => navigate('/master')} className="hover:text-cyan-400 transition cursor-pointer">Super Admin Desk</button></li>
-              <li><button onClick={() => navigateTo('store')} className="hover:text-cyan-400 transition cursor-pointer">Store Merchant Login</button></li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Bottom Bar: Powered by Enexa IT Solutions Private Limited */}
-        <div className="max-w-7xl mx-auto border-t border-slate-800/80 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-4">
-          <div className="flex items-center gap-2">
-            <span>© 2026</span>
-            <a href="https://www.enexa.in" target="_blank" rel="noreferrer" className="text-white font-bold hover:underline">
-              Enexa IT Solutions Private Limited
-            </a>
-            <span>• Official Portal:</span>
-            <a href="https://www.enexa.in" target="_blank" rel="noreferrer" className="text-[#00a2c7] hover:underline">
-              www.enexa.in
-            </a>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold border border-slate-700">
-              Powered by Enexa IT Solutions Private Limited
-            </span>
           </div>
         </div>
       </footer>
-    </div >
+
+      {/* Floating Circular WhatsApp Chat Button matching enexa.in */}
+      <a
+        href="https://wa.me/919546042639?text=Hello%20Enexa%20Team%2C%20I%20would%20like%20to%20know%20more%20about%20Shoppy%20ERP%20billing%20software."
+        target="_blank"
+        rel="noreferrer"
+        className="enexa-whatsapp-float"
+        title="Chat on WhatsApp"
+        aria-label="Chat on WhatsApp"
+      >
+        <MessageCircle className="w-7 h-7 fill-current" />
+      </a>
+    </div>
   );
 }
