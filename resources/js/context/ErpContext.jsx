@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 const ErpContext = createContext();
 
@@ -168,6 +168,13 @@ export function ErpProvider({ children }) {
       localStorage.removeItem('shoppy_store_branding_data');
       localStorage.removeItem('shoppy_store_branding');
       localStorage.removeItem('shoppy_active_store');
+      localStorage.removeItem('shoppy_products_v3');
+      localStorage.removeItem('shoppy_orders_v3');
+      localStorage.removeItem('shoppy_customers');
+      localStorage.removeItem('shoppy_suppliers');
+      localStorage.removeItem('shoppy_purchase_bills');
+      localStorage.removeItem('shoppy_expenses');
+      localStorage.removeItem('shoppy_active_user');
     } catch (e) {}
   }
 
@@ -321,12 +328,47 @@ export function ErpProvider({ children }) {
           if (Array.isArray(d.colors) && d.colors.length > 0) setColors(d.colors);
           if (d.shippingRules) setShippingRules(d.shippingRules);
           if (d.shop) {
+            if (d.shop.code) {
+              try {
+                localStorage.setItem('shoppy_active_store_code', d.shop.code);
+                localStorage.setItem('shoppy_active_store', JSON.stringify(d.shop));
+              } catch (e) {}
+            }
             setStoreSettings((prev) => ({
               ...prev,
               store_name: d.shop.name || prev.store_name,
               owner_name: d.shop.owner_name || prev.owner_name,
               contact_phone: d.shop.owner_phone || prev.contact_phone,
-              footer_copyright: `© ${new Date().getFullYear()} ${d.shop.name || 'Shoppy Store'}. All Rights Reserved. Powered by Enexa IT Solutions.`
+              gst_number: d.shop.gst_number || prev.gst_number || '',
+              contact_address: d.shop.contact_address || prev.contact_address || '',
+              logo: d.shop.logo || prev.logo || '',
+              favicon: d.shop.favicon || prev.favicon || '',
+              theme_color: d.shop.theme_color || prev.theme_color || '#00a2c7',
+              meta_title: d.shop.meta_title || prev.meta_title || '',
+              database_name: d.shop.database_name || prev.database_name || '',
+              plan_name: d.shop.plan_name || prev.plan_name || '',
+              valid_until: d.shop.valid_until || prev.valid_until || '',
+              footer_copyright: d.shop.footer_copyright || `© ${new Date().getFullYear()} ${d.shop.name || 'Shoppy Store'}. All Rights Reserved. Powered by Enexa IT Solutions.`
+            }));
+            setCurrentUser((prev) => {
+              const isGenericName = !prev?.name || ['Store Administrator', 'Store Merchant', 'Store Manager', 'Admin'].includes(prev.name);
+              if (!isGenericName && prev.phone) return prev;
+              return {
+                ...prev,
+                name: isGenericName ? (d.shop.owner_name || prev.name) : prev.name,
+                phone: prev.phone || d.shop.owner_phone || '',
+                address: prev.address || d.shop.contact_address || ''
+              };
+            });
+          }
+          if (d.activeShift) {
+            setShiftData((prev) => ({
+              ...prev,
+              shiftId: d.activeShift.shiftId || prev.shiftId,
+              cashier: d.activeShift.cashier || prev.cashier,
+              openedAt: d.activeShift.openedAt || prev.openedAt,
+              openingFloat: parseFloat(d.activeShift.openingFloat ?? prev.openingFloat ?? 0),
+              status: d.activeShift.status || 'open'
             }));
           }
         }
@@ -809,8 +851,8 @@ export function ErpProvider({ children }) {
   });
 
   const [shiftData, setShiftData] = useState({
-    shiftId: `SHT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-01`,
-    cashier: 'Store Manager',
+    shiftId: 'SHIFT #1',
+    cashier: '',
     openedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     openingFloat: 0.0,
     cashSales: 0.0,
@@ -818,8 +860,84 @@ export function ErpProvider({ children }) {
     cardSales: 0.0,
     pettyCashOut: 0.0,
     expectedCashInDrawer: 0.0,
-    actualPhysicalCash: 0.0
+    actualPhysicalCash: 0.0,
+    status: 'open'
   });
+
+  // Live computed shift metrics derived from real today's orders, expenses & active operator
+  const computedShiftData = useMemo(() => {
+    const toLocalDateKey = (d) => {
+      const yr = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const dy = String(d.getDate()).padStart(2, '0');
+      return `${yr}-${mo}-${dy}`;
+    };
+    const todayKey = toLocalDateKey(new Date());
+    const todayOrders = (orders || []).filter((o) => {
+      const status = String(o.orderStatus || o.fulfillment || '').toLowerCase();
+      if (status.includes('cancel')) return false;
+      const rawDate = o.createdAt || o.date || '';
+      if (!rawDate) return false;
+      if (String(rawDate).slice(0, 10) === todayKey) return true;
+      const parsed = new Date(rawDate);
+      return !isNaN(parsed.getTime()) && toLocalDateKey(parsed) === todayKey;
+    });
+
+    let cashSales = 0;
+    let upiSales = 0;
+    let cardSales = 0;
+    let otherSales = 0;
+
+    todayOrders.forEach((o) => {
+      const amt = parseFloat(o.paidAmount ?? o.total ?? 0) || 0;
+      const pm = String(o.paymentMethod || '').toLowerCase();
+      if (pm.includes('cash') || pm.includes('cod')) {
+        cashSales += amt;
+      } else if (pm.includes('upi') || pm.includes('qr') || pm.includes('gpay') || pm.includes('phonepe') || pm.includes('paytm') || pm.includes('online')) {
+        upiSales += amt;
+      } else if (pm.includes('card') || pm.includes('swipe') || pm.includes('pos')) {
+        cardSales += amt;
+      } else {
+        otherSales += amt;
+      }
+    });
+
+    const todayExpenses = (expenses || []).reduce((sum, e) => {
+      const rawDate = e.date || e.createdAt || '';
+      if (!rawDate) return sum;
+      if (String(rawDate).slice(0, 10) === todayKey) {
+        return sum + (parseFloat(e.amount) || 0);
+      }
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime()) && toLocalDateKey(parsed) === todayKey) {
+        return sum + (parseFloat(e.amount) || 0);
+      }
+      return sum;
+    }, 0);
+
+    const openingFloat = parseFloat(shiftData.openingFloat || 0) || 0;
+    const pettyCashOut = parseFloat(shiftData.pettyCashOut || 0) || todayExpenses;
+    const resolvedCashier =
+      (shiftData.cashier && shiftData.cashier !== 'Store Manager' && shiftData.cashier) ||
+      (currentUser?.name && !['Store Administrator', 'Store Merchant'].includes(currentUser.name) ? currentUser.name : '') ||
+      storeSettings?.owner_name ||
+      currentUser?.name ||
+      'Store Admin';
+
+    return {
+      ...shiftData,
+      cashier: resolvedCashier,
+      openingFloat,
+      cashSales,
+      upiSales,
+      cardSales,
+      otherSales,
+      pettyCashOut,
+      expectedCashInDrawer: Math.max(0, openingFloat + cashSales - pettyCashOut),
+      totalShiftCollection: cashSales + upiSales + cardSales + otherSales,
+      billsCount: todayOrders.length
+    };
+  }, [shiftData, orders, expenses, currentUser, storeSettings]);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
@@ -1043,6 +1161,7 @@ export function ErpProvider({ children }) {
       couponDiscount: parseFloat(billData.couponDiscount || 0),
       fulfillment: 'Completed (Handover)',
       date: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+      createdAt: new Date().toISOString(),
       items: processedItems,
       costTotal,
       grossProfit,
@@ -1545,7 +1664,8 @@ export function ErpProvider({ children }) {
         shippingProviders,
         toggleShipping,
         fallbackPolicy,
-        shiftData,
+        shiftData: computedShiftData,
+        setShiftData,
 
         // UI State
         isDarkMode,

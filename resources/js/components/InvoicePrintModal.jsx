@@ -224,9 +224,16 @@ export default function InvoicePrintModal({ invoice, onClose }) {
   // Active items list: use real items, or if simulation enabled, inject extra products
   const activeItems = useMemo(() => {
     const baseItems = invoice.items && invoice.items.length > 0 ? invoice.items : [
-      { name: 'Cotton Full Sleeve Formal Shirt', variant: 'Blue / 40', barcode: '8901234001', hsn: '6205', qty: 2, price: 1199.00, gst: '5%', gstRate: 5 },
-      { name: 'Slim Fit Denim Jeans', variant: 'Dark Blue / 32', barcode: '8901234002', hsn: '6203', qty: 1, price: 1899.00, gst: '12%', gstRate: 12 },
-      { name: 'Classic Pure Leather Belt', variant: 'Black / M', barcode: '8901234003', hsn: '4203', qty: 1, price: 699.00, gst: '18%', gstRate: 18 }
+      {
+        name: invoice.orderNumber ? `Order #${invoice.orderNumber}` : 'Retail Bill Summary',
+        variant: invoice.channel || 'Counter Sale',
+        barcode: invoice.id || '-',
+        hsn: '9999',
+        qty: 1,
+        price: parseFloat(invoice.subtotal || invoice.total || 0),
+        gst: `${invoice.gstTotal ? 'Tax Incl.' : '0%'}`,
+        gstRate: 0
+      }
     ];
 
     if (simulationCount === 15) {
@@ -272,9 +279,9 @@ export default function InvoicePrintModal({ invoice, onClose }) {
   const awbNumber = invoice.awbNumber || invoice.awb || '';
 
   // Store Brand Details
-  const displayStoreName = storeSettings?.store_name || storeSettings?.storeName || storeName || 'Ramesh Fashion & Retail';
-  const displayGstin = storeSettings?.gst_number || storeSettings?.gstin || '08AABCR1290M1Z5';
-  const displayPhone = storeSettings?.contact_phone || storeSettings?.phone || '+91 98290 00192';
+  const displayStoreName = storeSettings?.store_name || storeSettings?.storeName || storeName || 'Shoppy Store';
+  const displayGstin = storeSettings?.gst_number || storeSettings?.gstin || 'Not Configured';
+  const displayPhone = storeSettings?.contact_phone || storeSettings?.phone || '';
 
   // =========================================================================
   // A4 AUTO / MANAGED PAGINATION ALGORITHM

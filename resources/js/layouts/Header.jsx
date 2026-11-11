@@ -35,6 +35,8 @@ export default function Header() {
     storeName,
     storeSettings,
     updateStoreSettings,
+    products,
+    orders,
     currentUser,
     setIsICardOpen,
     setIsProfileModalOpen,
@@ -59,26 +61,46 @@ export default function Header() {
     try {
       const saved = localStorage.getItem('shoppy_store_branding');
       return saved ? JSON.parse(saved) : {
-        storeName: storeName || 'Store',
-        tagline: storeSettings?.meta_title || 'Retail & Multi-Tenant SaaS',
-        ownerName: currentUser?.name || storeSettings?.owner_name || 'Ramesh Sundaram',
-        phone: storeSettings?.contact_phone || '+91 98290 00192',
-        gstin: storeSettings?.gst_number || '08AABCR1290M1Z5',
+        storeName: storeName || 'Shoppy Store',
+        tagline: storeSettings?.meta_title || 'Retail & Storefront Operations',
+        ownerName: currentUser?.name || storeSettings?.owner_name || 'Store Owner',
+        phone: storeSettings?.contact_phone || '',
+        gstin: storeSettings?.gst_number || '',
         themeColor: storeSettings?.theme_color || '#00a2c7',
         footerNote: storeSettings?.footer_copyright || 'Thank you for shopping with us! Visit again.'
       };
     } catch (e) {
       return {
-        storeName: storeName || 'Store',
-        tagline: 'Retail & Multi-Tenant SaaS',
-        ownerName: 'Store Owner',
-        phone: '+91 98290 00192',
-        gstin: '08AABCR1290M1Z5',
+        storeName: storeName || 'Shoppy Store',
+        tagline: 'Retail & Storefront Operations',
+        ownerName: currentUser?.name || storeSettings?.owner_name || 'Store Owner',
+        phone: storeSettings?.contact_phone || '',
+        gstin: storeSettings?.gst_number || '',
         themeColor: '#00a2c7',
         footerNote: 'Thank you for shopping with us! Visit again.'
       };
     }
   });
+
+  const liveGstin = storeSettings?.gst_number || branding.gstin || '';
+
+  const notificationStats = useMemo(() => {
+    const lowStockCount = (products || []).filter((p) => {
+      const stock = parseFloat(p.stock ?? 0) || 0;
+      const threshold = parseFloat(p.reorderLevel ?? 5) || 5;
+      return stock <= threshold;
+    }).length;
+    const pendingOnlineCount = (orders || []).filter((o) => {
+      const ch = String(o.channelType || o.channel || '').toLowerCase();
+      const st = String(o.orderStatus || o.fulfillment || '').toLowerCase();
+      return (ch.includes('online') || ch.includes('web') || ch.includes('ecom')) && (st.includes('new') || st.includes('pending') || st.includes('process'));
+    }).length;
+    return {
+      lowStockCount,
+      pendingOnlineCount,
+      totalAlerts: lowStockCount + pendingOnlineCount
+    };
+  }, [products, orders]);
 
   const handleSaveBranding = (e) => {
     e.preventDefault();
@@ -168,13 +190,13 @@ export default function Header() {
 
           <div className="flex items-center gap-2">
             <h1 className="text-base font-semibold text-slate-800 dark:text-white tracking-tight">
-              {storeName} ERP
+              {storeName}
             </h1>
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] border border-cyan-200 dark:border-cyan-800">
               {shopCode}
             </span>
             <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-              <ShieldCheck className="w-3 h-3" /> Dedicated DB: {activeStore?.database_name || `DB-${shopCode}`}
+              <ShieldCheck className="w-3 h-3" /> Dedicated DB: {storeSettings?.database_name || activeStore?.database_name || `DB-${shopCode}`}
             </span>
           </div>
         </div>
@@ -203,13 +225,24 @@ export default function Header() {
           {/* Notification Bell */}
           <div className="relative">
             <button
-              onClick={() => showToast('4 Low-stock alerts and 2 new storefront orders pending')}
+              onClick={() => {
+                if (notificationStats.totalAlerts > 0) {
+                  showToast(
+                    `${notificationStats.lowStockCount} low/out-of-stock SKU alerts · ${notificationStats.pendingOnlineCount} pending storefront orders`
+                  );
+                } else {
+                  showToast('All clear — no low-stock alerts or pending storefront orders');
+                }
+              }}
               className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition relative"
+              title="Store Alerts & Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white bg-rose-500 rounded-full px-1 shadow-sm">
-                4
-              </span>
+              {notificationStats.totalAlerts > 0 && (
+                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white bg-rose-500 rounded-full px-1 shadow-sm">
+                  {notificationStats.totalAlerts > 99 ? '99+' : notificationStats.totalAlerts}
+                </span>
+              )}
             </button>
           </div>
 
@@ -354,9 +387,19 @@ export default function Header() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             Tenant DB: Isolated
           </span>
-          <span className="hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-            GSTIN: {branding.gstin}
-          </span>
+          {liveGstin ? (
+            <span className="hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono">
+              GSTIN: {liveGstin}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate('/shop-admin/settings')}
+              className="hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition cursor-pointer"
+            >
+              GSTIN: Not Configured
+            </button>
+          )}
         </div>
       </div>
 

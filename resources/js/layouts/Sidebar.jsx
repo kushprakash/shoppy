@@ -383,17 +383,12 @@ export default function Sidebar() {
             <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-[#008ba3] via-[#00a8cc] to-[#10b981] flex items-center justify-center text-white shadow-sm shrink-0">
               <Store className="w-5 h-5" />
             </div>
-            <div className="leading-none min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-base font-extrabold text-white tracking-tight truncate max-w-[130px]" title={storeName || 'Store'}>
-                  {(storeName || 'Store').split(' ')[0] || 'Store'}
-                </span>
-                <span className="text-[11px] font-black uppercase text-[#00a2c7] tracking-wider shrink-0">
-                  ERP
-                </span>
+            <div className="leading-tight min-w-0 flex-1">
+              <div className="text-xs font-extrabold text-white tracking-tight truncate" title={storeName || 'Shoppy Store'}>
+                {storeName || 'Shoppy Store'}
               </div>
-              <p className="text-[8.5px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5 truncate" title={storeName || 'Store'}>
-                {storeName || 'Store'}
+              <p className="text-[10px] font-semibold text-[#38bdf8] uppercase tracking-wider mt-0.5 truncate font-mono">
+                {shopCode ? `ID: ${shopCode}` : 'Store Portal'}
               </p>
             </div>
           </div>

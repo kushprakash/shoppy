@@ -141,30 +141,53 @@ class TenantErpApiController extends Controller
             ];
         }
 
-        // 3. Products (From tenant DB `products` table)
+        // 3. Products (From tenant DB `products` table with categories, variants & inventory)
         $products = [];
         if ($hasTenantDb) {
             try {
-                $dbProducts = DB::connection('tenant')->table('products')->where('is_active', true)->get();
-                $variants = DB::connection('tenant')->table('product_variants')->get()->groupBy('product_id');
-                $inventory = DB::connection('tenant')->table('inventory')->get()->keyBy('product_id');
+                $dbProducts = DB::connection('tenant')->table('products')
+                    ->leftJoin('business_categories', 'products.business_category_id', '=', 'business_categories.id')
+                    ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+                    ->where('products.is_active', true)
+                    ->select(
+                        'products.*',
+                        'business_categories.name as business_category_name',
+                        'categories.name as category_name'
+                    )
+                    ->orderBy('products.id', 'desc')
+                    ->get();
 
-                $products = $dbProducts->map(function ($p) use ($variants, $inventory) {
-                    $stockQty = isset($inventory[$p->id]) ? (float) $inventory[$p->id]->quantity : 0;
-                    $pVariants = isset($variants[$p->id]) ? $variants[$p->id]->map(function ($v) {
+                $variants = DB::connection('tenant')->table('product_variants')->get()->groupBy('product_id');
+                $inventoryRows = DB::connection('tenant')->table('inventory')->get();
+                $inventoryByProduct = $inventoryRows->groupBy('product_id');
+                $inventoryByVariant = $inventoryRows->whereNotNull('variant_id')->keyBy('variant_id');
+
+                $products = $dbProducts->map(function ($p) use ($variants, $inventoryByProduct, $inventoryByVariant) {
+                    $invRows = $inventoryByProduct->get($p->id, collect());
+                    $stockQty = (float) $invRows->sum('quantity');
+                    $reorderLevel = (float) ($invRows->first()->low_stock_threshold ?? 5);
+
+                    $pVariants = isset($variants[$p->id]) ? $variants[$p->id]->map(function ($v) use ($inventoryByVariant) {
+                        $attrs = !empty($v->attributes) ? (json_decode($v->attributes, true) ?: []) : [];
+                        $vInv = $inventoryByVariant->get($v->id);
                         return [
                             'id' => 'v-' . $v->id,
-                            'size' => $v->variant_name,
-                            'color' => 'Standard',
+                            'db_id' => $v->id,
+                            'size' => $attrs['Size'] ?? $attrs['size'] ?? $v->variant_name,
+                            'color' => $attrs['Color'] ?? $attrs['color'] ?? 'Standard',
+                            'colorHex' => $attrs['ColorHex'] ?? '#64748b',
+                            'variantName' => $v->variant_name,
                             'sku' => $v->sku,
                             'barcode' => $v->barcode,
                             'sellingPrice' => (float) $v->selling_price,
                             'mrp' => (float) $v->mrp,
                             'purchasePrice' => (float) $v->purchase_price,
-                            'stock' => 0,
+                            'stock' => $vInv ? (float) $vInv->quantity : 0,
                             'isActive' => (bool) $v->is_active,
                         ];
                     })->toArray() : [];
+
+                    $catName = $p->category_name ?: ($p->business_category_name ?: 'General Retail');
 
                     return [
                         'id' => 'PRD-' . $p->id,
@@ -172,7 +195,8 @@ class TenantErpApiController extends Controller
                         'name' => $p->name,
                         'sku' => $p->sku,
                         'barcode' => $p->barcode,
-                        'category' => 'Retail Goods',
+                        'category' => $catName,
+                        'topCategoryName' => $p->business_category_name ?: $catName,
                         'sellingPrice' => (float) $p->selling_price,
                         'mrp' => (float) $p->mrp,
                         'purchasePrice' => (float) $p->purchase_price,
@@ -180,8 +204,10 @@ class TenantErpApiController extends Controller
                         'hsnCode' => $p->hsn_code,
                         'unit' => $p->unit ?: 'pcs',
                         'stock' => $stockQty,
-                        'status' => $stockQty > 5 ? 'In Stock' : ($stockQty > 0 ? 'Low Stock' : 'Out of Stock'),
+                        'reorderLevel' => $reorderLevel,
+                        'status' => $stockQty <= 0 ? 'Out of Stock' : ($stockQty <= $reorderLevel ? 'Low Stock' : 'In Stock'),
                         'variants' => $pVariants,
+                        'variantCount' => count($pVariants),
                     ];
                 })->toArray();
             } catch (\Throwable $e) {}
@@ -191,9 +217,21 @@ class TenantErpApiController extends Controller
         $orders = [];
         if ($hasTenantDb) {
             try {
-                $dbOrders = DB::connection('tenant')->table('orders')->orderBy('id', 'desc')->limit(50)->get();
+                $dbOrders = DB::connection('tenant')->table('orders')
+                    ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
+                    ->select(
+                        'orders.*',
+                        'customers.name as customer_name',
+                        'customers.phone as customer_phone'
+                    )
+                    ->orderBy('orders.id', 'desc')
+                    ->limit(100)
+                    ->get();
+
                 $orderIds = $dbOrders->pluck('id')->toArray();
-                $orderItems = DB::connection('tenant')->table('order_items')->whereIn('order_id', $orderIds)->get()->groupBy('order_id');
+                $orderItems = empty($orderIds)
+                    ? collect()
+                    : DB::connection('tenant')->table('order_items')->whereIn('order_id', $orderIds)->get()->groupBy('order_id');
 
                 $orders = $dbOrders->map(function ($o) use ($orderItems) {
                     $items = isset($orderItems[$o->id]) ? $orderItems[$o->id]->map(function ($it) {
@@ -202,23 +240,61 @@ class TenantErpApiController extends Controller
                             'name' => $it->product_name,
                             'qty' => (float) $it->quantity,
                             'price' => (float) $it->unit_price,
+                            'gstRate' => (float) ($it->tax_rate ?? 0),
                             'total' => (float) $it->total_price,
                         ];
                     })->toArray() : [];
 
+                    $channelRaw = strtolower((string) ($o->channel ?? 'pos'));
+                    $isOnline = in_array($channelRaw, ['online', 'storefront', 'web', 'ecommerce'], true);
+
                     return [
                         'id' => $o->order_number,
                         'orderNumber' => $o->order_number,
+                        'customerName' => $o->customer_name ?: 'Walk-in Customer',
+                        'phone' => $o->customer_phone ?: '',
                         'total' => (float) $o->grand_total,
                         'subtotal' => (float) $o->subtotal,
-                        'paymentStatus' => $o->payment_status,
-                        'orderStatus' => $o->order_status,
-                        'paymentMethod' => $o->payment_method,
-                        'channel' => $o->channel,
+                        'gstTotal' => (float) ($o->tax_total ?? 0),
+                        'discountTotal' => (float) ($o->discount_total ?? 0),
+                        'shippingCharge' => (float) ($o->shipping_charge ?? 0),
+                        'paymentStatus' => ucfirst((string) ($o->payment_status ?: 'paid')),
+                        'orderStatus' => ucfirst((string) ($o->order_status ?: 'completed')),
+                        'fulfillment' => ucfirst((string) ($o->order_status ?: 'completed')),
+                        'paymentMethod' => strtoupper((string) ($o->payment_method ?: 'cash')),
+                        'channel' => $isOnline ? 'Online Store' : 'POS Counter',
+                        'channelType' => $isOnline ? 'online' : 'offline',
                         'items' => $items,
-                        'date' => substr($o->created_at, 0, 16),
+                        'date' => substr((string) $o->created_at, 0, 16),
+                        'createdAt' => (string) $o->created_at,
                     ];
                 })->toArray();
+            } catch (\Throwable $e) {}
+        }
+
+        // 4b. Active Shift & Tenant Key-Value Settings
+        $activeShift = null;
+        $tenantSettingsMap = [];
+        if ($hasTenantDb) {
+            try {
+                $tenantSettingsMap = DB::connection('tenant')->table('settings')->pluck('value', 'key')->toArray();
+            } catch (\Throwable $e) {}
+            try {
+                $shiftRow = DB::connection('tenant')->table('pos_shifts')
+                    ->leftJoin('users', 'pos_shifts.user_id', '=', 'users.id')
+                    ->where('pos_shifts.status', 'open')
+                    ->orderBy('pos_shifts.id', 'desc')
+                    ->select('pos_shifts.*', 'users.name as cashier_name')
+                    ->first();
+                if ($shiftRow) {
+                    $activeShift = [
+                        'shiftId' => 'SHIFT #' . $shiftRow->id,
+                        'cashier' => $shiftRow->cashier_name ?: ($shopSettings['owner_name'] ?? ($shop->owner_name ?? 'Store Admin')),
+                        'openedAt' => $shiftRow->opened_at ? date('h:i A', strtotime($shiftRow->opened_at)) : null,
+                        'openingFloat' => (float) ($shiftRow->opening_cash ?? 0),
+                        'status' => $shiftRow->status,
+                    ];
+                }
             } catch (\Throwable $e) {}
         }
 
@@ -335,9 +411,17 @@ class TenantErpApiController extends Controller
             'data' => [
                 'shop' => [
                     'code' => $shopCode,
-                    'name' => $shop->name ?? 'Shoppy Store',
-                    'owner_name' => $shop->owner_name ?? 'Store Merchant',
-                    'owner_phone' => $shop->owner_phone ?? '',
+                    'database_name' => $dbName,
+                    'name' => $shopSettings['store_name'] ?? ($shop->name ?? 'Shoppy Store'),
+                    'owner_name' => $shopSettings['owner_name'] ?? ($shop->owner_name ?? 'Store Merchant'),
+                    'owner_phone' => $shopSettings['contact_phone'] ?? ($shop->owner_phone ?? ''),
+                    'gst_number' => $shopSettings['gst_number'] ?? ($tenantSettingsMap['gst_number'] ?? ($shop->gstin ?? '')),
+                    'contact_address' => $shopSettings['contact_address'] ?? '',
+                    'logo' => $shopSettings['logo'] ?? '',
+                    'favicon' => $shopSettings['favicon'] ?? '',
+                    'theme_color' => $shopSettings['theme_color'] ?? '#00a2c7',
+                    'meta_title' => $shopSettings['meta_title'] ?? '',
+                    'footer_copyright' => $shopSettings['footer_copyright'] ?? '',
                     'plan_name' => $shopSettings['plan_name'] ?? 'Yearly Package',
                     'plan_id' => $shopSettings['plan_id'] ?? 'yearly-package',
                     'billing_cycle' => $shopSettings['billing_cycle'] ?? 'yearly',
@@ -345,6 +429,7 @@ class TenantErpApiController extends Controller
                     'has_ecommerce' => isset($shopSettings['has_ecommerce']) ? (bool) $shopSettings['has_ecommerce'] : true,
                     'status' => $shop->status ?? 'active',
                 ],
+                'activeShift' => $activeShift,
                 'roles' => $roles,
                 'branches' => $branches,
                 'topCategories' => $topCategories,
@@ -422,6 +507,48 @@ class TenantErpApiController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Save product variants if provided
+        $savedVariants = [];
+        $variantsInput = $request->input('variants', []);
+        if (is_array($variantsInput)) {
+            foreach ($variantsInput as $idx => $v) {
+                $vSku = $v['sku'] ?? ($sku . '-V' . ($idx + 1));
+                $vBarcode = $v['barcode'] ?? $vSku;
+                $vName = $v['variantName'] ?? trim(($v['color'] ?? '') . ' ' . ($v['size'] ?? '')) ?: ('Variant ' . ($idx + 1));
+                $vId = DB::connection('tenant')->table('product_variants')->insertGetId([
+                    'product_id' => $productId,
+                    'sku' => $vSku,
+                    'barcode' => $vBarcode,
+                    'variant_name' => $vName,
+                    'attributes' => json_encode([
+                        'Size' => $v['size'] ?? null,
+                        'Color' => $v['color'] ?? null,
+                        'ColorHex' => $v['colorHex'] ?? null,
+                    ]),
+                    'additional_price' => 0,
+                    'purchase_price' => (float) ($v['purchasePrice'] ?? ($data['purchasePrice'] ?: 0)),
+                    'selling_price' => (float) ($v['sellingPrice'] ?? $data['sellingPrice']),
+                    'mrp' => (float) ($v['mrp'] ?? ($data['mrp'] ?: $data['sellingPrice'])),
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $savedVariants[] = [
+                    'id' => 'v-' . $vId,
+                    'db_id' => $vId,
+                    'size' => $v['size'] ?? $vName,
+                    'color' => $v['color'] ?? 'Standard',
+                    'colorHex' => $v['colorHex'] ?? '#64748b',
+                    'sku' => $vSku,
+                    'barcode' => $vBarcode,
+                    'sellingPrice' => (float) ($v['sellingPrice'] ?? $data['sellingPrice']),
+                    'mrp' => (float) ($v['mrp'] ?? ($data['mrp'] ?: $data['sellingPrice'])),
+                    'purchasePrice' => (float) ($v['purchasePrice'] ?? ($data['purchasePrice'] ?: 0)),
+                    'stock' => (float) ($v['stock'] ?? 0),
+                ];
+            }
+        }
+
         // Add inventory
         $wh = DB::connection('tenant')->table('warehouses')->first();
         if ($wh) {
@@ -441,6 +568,8 @@ class TenantErpApiController extends Controller
                 'sku' => $sku,
                 'sellingPrice' => $data['sellingPrice'],
                 'stock' => $data['stock'] ?: 0,
+                'variants' => $savedVariants,
+                'variantCount' => count($savedVariants),
             ]
         ]);
     }
