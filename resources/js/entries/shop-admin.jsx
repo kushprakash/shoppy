@@ -85,9 +85,21 @@ const INITIAL_BRANCHES = [];
 // ============================================================================
 
 export default function ShopAdmin() {
-  const [shopCode, setShopCode] = useState(
-    document.getElementById('root')?.dataset?.shopCode || localStorage.getItem('shoppy_active_store_code') || ''
-  );
+  const [shopCode, setShopCode] = useState(() => {
+    const urlCode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('code') : null;
+    if (urlCode) {
+      try {
+        localStorage.setItem('shoppy_active_store_code', urlCode);
+        document.cookie = `shoppy_active_store=${urlCode}; path=/; max-age=86400`;
+      } catch (e) {}
+      return urlCode;
+    }
+    return (
+      (typeof document !== 'undefined' ? document.getElementById('root')?.dataset?.shopCode : '') ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('shoppy_active_store_code') : '') ||
+      ''
+    );
+  });
 
   const activeStore = useMemo(() => {
     try {

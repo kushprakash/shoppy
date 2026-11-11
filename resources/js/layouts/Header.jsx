@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useErp } from '../context/ErpContext';
 import {
@@ -43,6 +43,16 @@ export default function Header() {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isBrandingOpen, setIsBrandingOpen] = useState(false);
+
+  // Active Store from localStorage
+  const activeStore = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('shoppy_active_store');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  }, []);
 
   // Store Branding State (saved to localStorage)
   const [branding, setBranding] = useState(() => {
