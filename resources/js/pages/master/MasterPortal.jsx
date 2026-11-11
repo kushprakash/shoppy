@@ -59,7 +59,8 @@ import {
   Eye,
   Edit3,
   Award,
-  Image
+  Image,
+  Upload
 } from 'lucide-react';
 import subscriptionService, { resolveRibbonStyle, extractHexFromRibbonBg } from '../../services/subscriptionService';
 import SuperAdminAgentsTab from '../../components/agent/SuperAdminAgentsTab';
@@ -956,10 +957,30 @@ export default function MasterPortal() {
   });
 
   // Save Website CMS Settings Handler (Persists to MySQL table 'website_settings')
+  const [uploadingCmsAsset, setUploadingCmsAsset] = useState(null);
+
   const handleSaveCmsSettings = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     await subscriptionService.updateWebsiteSettings(websiteCms);
-    showToast('Website CMS & Branding saved to MySQL and synced to public site!');
+    showToast('Website CMS, Logos, Favicon, SEO & WhatsApp settings saved to MySQL!');
+  };
+
+  const handleUploadCmsAsset = async (e, type) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setUploadingCmsAsset(type);
+    const res = await subscriptionService.uploadPlatformAsset(file, type);
+    setUploadingCmsAsset(null);
+
+    if (res && res.success && res.url) {
+      const settingKey = res.setting_key || (type === 'favicon' ? 'favicon_url' : type);
+      setWebsiteCms((prev) => ({ ...prev, [settingKey]: res.url }));
+      showToast('Image uploaded and published to landing page!');
+    } else {
+      showToast(res?.message || 'Failed to upload image.');
+    }
   };
 
   // Update Lead Status Handler
@@ -3275,7 +3296,289 @@ export default function MasterPortal() {
 
               {/* Form Cards Grid */}
               <form onSubmit={handleSaveCmsSettings} className="space-y-6">
-                {/* Section 1: Corporate Entity & Enexa IT Solutions Branding */}
+                {/* Section 0: Brand Logos, Browser Favicon & Social Share Banner */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <Image className="w-5 h-5 text-[#00a2c7]" />
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                      Brand Logo, Footer Logo, Browser Favicon &amp; OG Share Image
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      {
+                        key: 'site_logo',
+                        type: 'site_logo',
+                        label: 'Header Site Logo',
+                        hint: 'Transparent PNG/SVG/WEBP (~40px height recommended)',
+                        previewBg: 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-700'
+                      },
+                      {
+                        key: 'footer_logo',
+                        type: 'footer_logo',
+                        label: 'Footer Logo (Light / White Variant)',
+                        hint: 'Used inside dark footer (falls back to Header Logo)',
+                        previewBg: 'bg-slate-900 border-slate-700'
+                      },
+                      {
+                        key: 'favicon_url',
+                        type: 'favicon',
+                        label: 'Browser Favicon Icon',
+                        hint: 'Square 32x32 or 64x64 PNG, ICO, or SVG icon',
+                        previewBg: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      },
+                      {
+                        key: 'og_image',
+                        type: 'og_image',
+                        label: 'SEO / Social OpenGraph Image',
+                        hint: '1200x630 PNG/JPG shown when sharing link on WhatsApp',
+                        previewBg: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      }
+                    ].map((asset) => {
+                      const val = websiteCms[asset.key] || '';
+                      const isUploading = uploadingCmsAsset === asset.type;
+                      return (
+                        <div
+                          key={asset.key}
+                          className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-xs font-bold text-slate-800 dark:text-white block">
+                                {asset.label}
+                              </span>
+                              <span className="text-[10px] text-slate-400">{asset.hint}</span>
+                            </div>
+
+                            {val && (
+                              <button
+                                type="button"
+                                onClick={() => setWebsiteCms({ ...websiteCms, [asset.key]: '' })}
+                                className="text-[10px] font-bold text-rose-500 hover:underline shrink-0 cursor-pointer"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+
+                          <div className={`h-16 rounded-xl border px-3 flex items-center justify-center overflow-hidden ${asset.previewBg}`}>
+                            {val ? (
+                              <img
+                                src={val}
+                                alt={asset.label}
+                                className={`${asset.type === 'favicon' ? 'w-9 h-9 object-contain' : 'max-h-12 w-auto max-w-full object-contain'}`}
+                              />
+                            ) : (
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                Default Shoppy fallback active
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="px-3 py-2 rounded-xl bg-[#00a2c7] hover:bg-[#008ba3] text-white text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer">
+                              {isUploading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/x-icon,.ico"
+                                onChange={(e) => handleUploadCmsAsset(e, asset.type)}
+                                disabled={isUploading}
+                                className="hidden"
+                              />
+                            </label>
+
+                            <input
+                              type="text"
+                              value={val}
+                              onChange={(e) => setWebsiteCms({ ...websiteCms, [asset.key]: e.target.value })}
+                              placeholder="/uploads/branding/... or https://..."
+                              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section 1: SEO Meta Title, Description & Keywords */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <Search className="w-5 h-5 text-indigo-500" />
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                      Landing Page SEO, Meta Title &amp; Browser Tab Configuration
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        SEO Meta Title (&lt;title&gt;)
+                      </label>
+                      <input
+                        type="text"
+                        value={websiteCms.meta_title || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, meta_title: e.target.value })}
+                        placeholder="Shoppy ERP — GST Billing, Retail POS & E-Commerce Software | Enexa IT"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        SEO Meta Keywords (comma separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={websiteCms.meta_keywords || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, meta_keywords: e.target.value })}
+                        placeholder="GST billing software, POS billing software, retail ERP, Shoppy ERP"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        SEO Meta Description
+                      </label>
+                      <span className="text-[10px] text-slate-400">
+                        {(websiteCms.meta_description || '').length} chars
+                      </span>
+                    </div>
+                    <textarea
+                      rows="2"
+                      value={websiteCms.meta_description || ''}
+                      onChange={(e) => setWebsiteCms({ ...websiteCms, meta_description: e.target.value })}
+                      placeholder="India's trusted high-speed POS counter billing software, GST tax invoicing & online storefront platform..."
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  {/* Live Google Search Snippet Preview */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Search Engine Snippet Preview</span>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      {websiteCms.favicon_url && (
+                        <img src={websiteCms.favicon_url} alt="Favicon" className="w-4 h-4 rounded-xs object-contain" />
+                      )}
+                      <span>https://{websiteCms.official_domain || 'shoppy.live'}</span>
+                    </div>
+                    <p className="text-sm font-bold text-indigo-600 dark:text-cyan-400 truncate">
+                      {websiteCms.meta_title || websiteCms.brand_title || 'Shoppy ERP — Enexa IT Solutions Private Limited'}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                      {websiteCms.meta_description || websiteCms.brand_tagline}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Section 2: Floating WhatsApp Chat Button & Social Media Links */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-[#25D366]" />
+                      <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                        Right-Bottom WhatsApp Message Icon &amp; Social Profiles
+                      </h3>
+                    </div>
+
+                    <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={String(websiteCms.whatsapp_enabled ?? '1') !== '0'}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, whatsapp_enabled: e.target.checked ? '1' : '0' })}
+                        className="w-4 h-4 rounded accent-[#25D366]"
+                      />
+                      <span>Show Floating WhatsApp Icon</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        WhatsApp Number (Default: 9546042639)
+                      </label>
+                      <input
+                        type="text"
+                        value={websiteCms.whatsapp_number ?? '9546042639'}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, whatsapp_number: e.target.value })}
+                        placeholder="9546042639"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Pre-filled WhatsApp Welcome Message
+                      </label>
+                      <input
+                        type="text"
+                        value={websiteCms.whatsapp_message ?? ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, whatsapp_message: e.target.value })}
+                        placeholder="Hello Enexa Team, I would like to know more about Shoppy ERP billing software."
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Facebook URL
+                      </label>
+                      <input
+                        type="url"
+                        value={websiteCms.facebook_url || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, facebook_url: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Instagram URL
+                      </label>
+                      <input
+                        type="url"
+                        value={websiteCms.instagram_url || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, instagram_url: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        LinkedIn URL
+                      </label>
+                      <input
+                        type="url"
+                        value={websiteCms.linkedin_url || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, linkedin_url: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        YouTube URL
+                      </label>
+                      <input
+                        type="url"
+                        value={websiteCms.youtube_url || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, youtube_url: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Corporate Entity & Enexa IT Solutions Branding */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
                   <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                     <Building2 className="w-5 h-5 text-[#00a2c7]" />
@@ -3381,7 +3684,7 @@ export default function MasterPortal() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                           Brand Platform Title
@@ -3390,6 +3693,18 @@ export default function MasterPortal() {
                           type="text"
                           value={websiteCms.brand_title || ''}
                           onChange={(e) => setWebsiteCms({ ...websiteCms, brand_title: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Logo Subtext (e.g. Powered by Enexa IT)
+                        </label>
+                        <input
+                          type="text"
+                          value={websiteCms.brand_subtext || ''}
+                          onChange={(e) => setWebsiteCms({ ...websiteCms, brand_subtext: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                         />
                       </div>
@@ -3406,6 +3721,18 @@ export default function MasterPortal() {
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Footer About / Company Summary
+                      </label>
+                      <textarea
+                        rows="2"
+                        value={websiteCms.footer_description || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, footer_description: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -3418,7 +3745,7 @@ export default function MasterPortal() {
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                         Support Hotline Phone
@@ -3445,12 +3772,25 @@ export default function MasterPortal() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Sales & Demo Email
+                        Sales &amp; Demo Email
                       </label>
                       <input
                         type="email"
                         value={websiteCms.sales_email || ''}
                         onChange={(e) => setWebsiteCms({ ...websiteCms, sales_email: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Operating / Support Hours
+                      </label>
+                      <input
+                        type="text"
+                        value={websiteCms.support_hours || ''}
+                        onChange={(e) => setWebsiteCms({ ...websiteCms, support_hours: e.target.value })}
+                        placeholder="Mon-Fri: 9:00 AM - 6:00 PM IST"
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                       />
                     </div>
@@ -3818,7 +4158,19 @@ export default function MasterPortal() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBrandingModalOpen(false);
+                    setActiveTab('cms');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Globe className="w-3.5 h-3.5 text-[#00a2c7]" />
+                  <span>Logo, Favicon, SEO &amp; WhatsApp CMS</span>
+                </button>
+                <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setIsBrandingModalOpen(false)}
@@ -3833,6 +4185,7 @@ export default function MasterPortal() {
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Save Platform Settings</span>
                 </button>
+                </div>
               </div>
             </form>
           </div>

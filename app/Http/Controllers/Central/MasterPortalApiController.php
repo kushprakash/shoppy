@@ -860,26 +860,45 @@ class MasterPortalApiController extends Controller
     }
 
     /**
-     * Get Website Settings & Enexa IT Solutions Branding
+     * Build merged website settings with canonical platform defaults.
      */
-    public function getWebsiteSettings(): JsonResponse
+    private function resolvedWebsiteSettings(): array
     {
-        $settings = DB::connection('mysql')->table('website_settings')->pluck('value', 'key')->toArray();
+        $settings = Schema::connection('mysql')->hasTable('website_settings')
+            ? DB::connection('mysql')->table('website_settings')->pluck('value', 'key')->toArray()
+            : [];
 
-        // Ensure defaults if any missing
         $defaults = [
             'company_name' => 'Enexa IT Solutions Private Limited',
             'powered_by' => 'Enexa IT Solutions Private Limited',
             'website' => 'https://www.enexa.in',
-            'official_domain' => 'www.enexa.in',
-            'brand_title' => 'Shoppy ERP & Retail Omnichannel Platform',
+            'official_domain' => 'shoppy.live',
+            'brand_title' => 'Shoppy ERP — Enexa IT Solutions Private Limited',
+            'brand_subtext' => 'Powered by Enexa IT',
             'brand_tagline' => 'Next-Generation POS Billing, GST Compliance & Omnichannel Digital Commerce for Indian Retailers',
-            'support_phone' => '+91 98290 00192',
-            'support_email' => 'info@enexa.in',
-            'sales_email' => 'sales@enexa.in',
-            'corporate_address' => 'Enexa IT Solutions Private Limited, IT Park, Tech Zone, Jaipur, Rajasthan - 302020',
+            'header_notice' => '',
+            'site_logo' => '',
+            'footer_logo' => '',
+            'favicon_url' => '/favicon.png',
+            'meta_title' => 'Shoppy ERP — GST Billing, Retail POS & E-Commerce Software | Enexa IT',
+            'meta_description' => "India's trusted high-speed POS counter billing software, GST tax invoicing (B2B/B2C), WhatsApp invoice sharing & omnichannel online storefront platform by Enexa IT Solutions Private Limited.",
+            'meta_keywords' => 'GST billing software, POS billing software, retail ERP, WhatsApp invoicing, online storefront, Shoppy ERP, Enexa IT Solutions',
+            'og_image' => '',
+            'support_phone' => '+91 9546042639',
+            'support_email' => 'contact@enexa.in',
+            'sales_email' => 'contact@enexa.in',
+            'corporate_address' => 'Yadav Nagar Near Hero Honda Agency, Bhagwanpur, Muzaffarpur, Bihar - 842001',
+            'support_hours' => 'Mon-Fri: 9:00 AM - 6:00 PM IST',
             'company_gstin' => '08AABCE1290M1Z5',
             'company_cin' => 'U72900RJ2021PTC075482',
+            'whatsapp_number' => '9546042639',
+            'whatsapp_message' => 'Hello Enexa Team, I would like to know more about Shoppy ERP billing software.',
+            'whatsapp_enabled' => '1',
+            'footer_description' => "India's trusted GST billing software, lightning-fast retail POS counter terminal, WhatsApp e-invoicing, and omnichannel e-commerce cloud ERP by Enexa IT Solutions Private Limited.",
+            'facebook_url' => 'https://facebook.com/enexait',
+            'instagram_url' => 'https://instagram.com/enexait',
+            'linkedin_url' => 'https://linkedin.com/company/enexait',
+            'youtube_url' => 'https://youtube.com/@enexait',
             'hero_banners' => json_encode([]),
         ];
 
@@ -888,9 +907,17 @@ class MasterPortalApiController extends Controller
             $merged['hero_banners'] = json_decode($merged['hero_banners'], true) ?: [];
         }
 
+        return $merged;
+    }
+
+    /**
+     * Get Website Settings & Enexa IT Solutions Branding
+     */
+    public function getWebsiteSettings(): JsonResponse
+    {
         return response()->json([
             'success' => true,
-            'data' => $merged,
+            'data' => $this->resolvedWebsiteSettings(),
         ]);
     }
 
@@ -902,7 +929,10 @@ class MasterPortalApiController extends Controller
         $data = $request->all();
 
         foreach ($data as $key => $val) {
-            $valueToStore = is_array($val) ? json_encode($val) : (string) $val;
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+            $valueToStore = is_array($val) ? json_encode($val) : (string) ($val ?? '');
 
             DB::connection('mysql')->table('website_settings')->updateOrInsert(
                 ['key' => $key],
@@ -913,6 +943,52 @@ class MasterPortalApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Platform settings and branding updated in database!',
+            'data' => $this->resolvedWebsiteSettings(),
+        ]);
+    }
+
+    /**
+     * Upload Platform Branding Asset (Site Logo, Footer Logo, Favicon, OG Image)
+     */
+    public function uploadBrandingAsset(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,webp,ico|max:5120',
+            'type' => 'nullable|string|in:site_logo,footer_logo,favicon,og_image',
+        ]);
+
+        $file = $request->file('image');
+        $type = $request->input('type', 'site_logo');
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'png');
+        $filename = 'platform_' . $type . '_' . time() . '_' . Str::random(6) . '.' . $extension;
+
+        $targetPath = public_path('uploads/branding');
+        if (!file_exists($targetPath)) {
+            mkdir($targetPath, 0755, true);
+        }
+
+        $file->move($targetPath, $filename);
+        $url = '/uploads/branding/' . $filename;
+
+        $settingKey = match ($type) {
+            'favicon' => 'favicon_url',
+            'footer_logo' => 'footer_logo',
+            'og_image' => 'og_image',
+            default => 'site_logo',
+        };
+
+        if (Schema::connection('mysql')->hasTable('website_settings')) {
+            DB::connection('mysql')->table('website_settings')->updateOrInsert(
+                ['key' => $settingKey],
+                ['value' => $url, 'updated_at' => now()]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'url' => $url,
+            'setting_key' => $settingKey,
+            'message' => 'Asset uploaded and linked in database!',
         ]);
     }
 

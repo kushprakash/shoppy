@@ -97,13 +97,79 @@ const YoutubeIcon = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
+const WhatsAppBrandIcon = ({ className = "w-7 h-7" }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+    <path d="M19.11 17.205c-.372 0-1.088 1.39-1.518 1.39a.63.63 0 0 1-.315-.1c-.802-.402-1.504-.817-2.163-1.447-.545-.516-1.146-1.29-1.46-1.963a.426.426 0 0 1-.073-.215c0-.33.99-.945.99-1.49 0-.143-.73-2.09-.832-2.335-.143-.372-.214-.487-.6-.487-.187 0-.36-.043-.53-.043-.302 0-.53.115-.746.315-.688.645-1.032 1.318-1.06 2.264v.114c-.015.99.472 1.977 1.017 2.78 1.23 1.82 2.506 3.41 4.554 4.34.616.287 2.035.888 2.722.888.817 0 2.15-.515 2.478-1.318.13-.33.244-.73.244-1.088 0-.058 0-.144-.03-.215-.1-.172-2.434-1.39-2.678-1.39zm-2.908 7.593c-1.747 0-3.48-.53-4.942-1.49L7.793 24.41l1.132-3.337a8.955 8.955 0 0 1-1.72-5.272c0-4.955 4.04-8.995 8.997-8.995S25.2 10.845 25.2 15.8c0 4.958-4.04 8.998-8.998 8.998zm0-19.798c-5.96 0-10.8 4.842-10.8 10.8 0 1.964.53 3.898 1.546 5.574L5 27.176l5.974-1.92a10.807 10.807 0 0 0 16.03-9.455c0-5.958-4.842-10.8-10.802-10.8z" />
+  </svg>
+);
+
+const buildWhatsappUrl = (phoneRaw, messageRaw) => {
+  const digits = String(phoneRaw || '9546042639').replace(/[^0-9]/g, '') || '9546042639';
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  const text = (messageRaw || '').trim();
+  return text
+    ? `https://wa.me/${normalized}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/${normalized}`;
+};
+
+const upsertMetaTag = (attrName, attrVal, content) => {
+  if (content === undefined || content === null) return;
+  let el = document.querySelector(`meta[${attrName}="${attrVal}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attrName, attrVal);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', String(content));
+};
+
+const formatTelHref = (phoneRaw) => {
+  const cleaned = String(phoneRaw || '+919546042639').replace(/[^0-9+]/g, '');
+  return `tel:${cleaned || '+919546042639'}`;
+};
+
+const BrandLogoMark = ({ settings, variant = 'header' }) => {
+  const isFooter = variant === 'footer';
+  const isDrawer = variant === 'drawer';
+  const logoUrl = (isFooter ? (settings?.footer_logo || settings?.site_logo) : settings?.site_logo) || '';
+
+  if (logoUrl.trim()) {
+    return (
+      <img
+        src={logoUrl.trim()}
+        alt={settings?.brand_title || 'Shoppy ERP'}
+        className={`${isDrawer ? 'h-9' : 'h-10'} w-auto max-w-[190px] object-contain rounded-lg`}
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <div
+        className={`${isDrawer ? 'w-9 h-9' : 'w-10 h-10'} rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20`}
+      >
+        <Receipt className="w-5 h-5 stroke-[2.3]" />
+      </div>
+      <div>
+        <span
+          className={`${isDrawer ? 'text-base' : 'text-xl'} font-bold tracking-tight block leading-tight ${
+            isFooter ? 'text-white' : 'text-slate-900'
+          }`}
+        >
+          Shoppy<span className={isFooter ? 'text-[#38BDF8]' : 'text-[#0EA5E9]'}>ERP</span>
+        </span>
+        <span
+          className={`${isFooter ? 'text-[11px] font-medium text-slate-400' : 'text-[10px] font-semibold text-slate-500 tracking-wide'} block -mt-0.5`}
+        >
+          {settings?.brand_subtext || 'Powered by Enexa IT'}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export default function LandingPage({ defaultPage = 'home' }) {
   const navigate = useNavigate();
-
-  // Set website title as requested: Shoppy ERP — Enexa IT Solutions Private Limited
-  useEffect(() => {
-    document.title = 'Shoppy ERP — Enexa IT Solutions Private Limited';
-  }, []);
 
   // Determine initial active page from URL path or prop
   const getInitialPage = () => {
@@ -124,16 +190,80 @@ export default function LandingPage({ defaultPage = 'home' }) {
     company_name: 'Enexa IT Solutions Private Limited',
     powered_by: 'Enexa IT Solutions Private Limited',
     website: 'https://www.enexa.in',
-    official_domain: 'www.enexa.in',
-    brand_title: 'Shoppy ERP & Retail Omnichannel Platform',
+    official_domain: 'shoppy.live',
+    brand_title: 'Shoppy ERP — Enexa IT Solutions Private Limited',
+    brand_subtext: 'Powered by Enexa IT',
     brand_tagline: 'Next-Generation POS Billing, GST Compliance & Omnichannel Digital Commerce for Indian Retailers',
+    site_logo: '',
+    footer_logo: '',
+    favicon_url: '/favicon.png',
+    meta_title: 'Shoppy ERP — GST Billing, Retail POS & E-Commerce Software | Enexa IT',
+    meta_description: "India's trusted high-speed POS counter billing software, GST tax invoicing (B2B/B2C), WhatsApp invoice sharing & omnichannel online storefront platform by Enexa IT Solutions Private Limited.",
+    meta_keywords: 'GST billing software, POS billing software, retail ERP, WhatsApp invoicing, online storefront, Shoppy ERP, Enexa IT Solutions',
+    og_image: '',
     support_phone: '+91 9546042639',
     support_email: 'contact@enexa.in',
     sales_email: 'contact@enexa.in',
-    corporate_address: 'Bhagwanpur, Muzaffarpur, Bihar 842001',
+    corporate_address: 'Yadav Nagar Near Hero Honda Agency, Bhagwanpur, Muzaffarpur, Bihar - 842001',
+    support_hours: 'Mon-Fri: 9:00 AM - 6:00 PM IST',
     company_gstin: '08AABCE1290M1Z5',
-    company_cin: 'U72900RJ2021PTC075482'
+    company_cin: 'U72900RJ2021PTC075482',
+    whatsapp_number: '9546042639',
+    whatsapp_message: 'Hello Enexa Team, I would like to know more about Shoppy ERP billing software.',
+    whatsapp_enabled: '1',
+    footer_description: "India's trusted GST billing software, lightning-fast retail POS counter terminal, WhatsApp e-invoicing, and omnichannel e-commerce cloud ERP by Enexa IT Solutions Private Limited.",
+    facebook_url: 'https://facebook.com/enexait',
+    instagram_url: 'https://instagram.com/enexait',
+    linkedin_url: 'https://linkedin.com/company/enexait',
+    youtube_url: 'https://youtube.com/@enexait'
   });
+
+  // Dynamically sync Page Meta Title, Description, Keywords, OpenGraph & Favicon from Master CMS Settings
+  useEffect(() => {
+    const baseTitle = (settings.meta_title || settings.brand_title || 'Shoppy ERP — Enexa IT Solutions Private Limited').trim();
+    const pageLabels = {
+      about: 'About Us',
+      services: 'Services & Modules',
+      pricing: 'Pricing & Packages',
+      blog: 'Blog & Insights',
+      contact: 'Contact Us',
+      store: 'Store Login',
+      'privacy-policy': 'Privacy Policy',
+      'return-policy': 'Refund Policy',
+      'terms-of-service': 'Terms of Service'
+    };
+    const subLabel = pageLabels[currentPage];
+    const resolvedTitle = subLabel ? `${subLabel} — ${baseTitle}` : baseTitle;
+
+    document.title = resolvedTitle;
+    if (settings.meta_description) {
+      upsertMetaTag('name', 'description', settings.meta_description);
+      upsertMetaTag('property', 'og:description', settings.meta_description);
+    }
+    if (settings.meta_keywords) {
+      upsertMetaTag('name', 'keywords', settings.meta_keywords);
+    }
+    upsertMetaTag('property', 'og:title', resolvedTitle);
+    const resolvedOgImage = settings.og_image || settings.site_logo || '';
+    if (resolvedOgImage) {
+      upsertMetaTag('property', 'og:image', resolvedOgImage);
+    }
+
+    const favHref = (settings.favicon_url || '').trim();
+    if (favHref) {
+      let favEl = document.getElementById('dynamic-favicon') || document.querySelector('link[rel="icon"]');
+      if (!favEl) {
+        favEl = document.createElement('link');
+        favEl.id = 'dynamic-favicon';
+        favEl.rel = 'icon';
+        document.head.appendChild(favEl);
+      }
+      favEl.href = favHref;
+
+      const appleEl = document.getElementById('dynamic-apple-icon') || document.querySelector('link[rel="apple-touch-icon"]');
+      if (appleEl) appleEl.href = favHref;
+    }
+  }, [settings, currentPage]);
 
   // Category tab & billing cycle for pricing view
   const [selectedCategoryTab, setSelectedCategoryTab] = useState('business');
@@ -1153,18 +1283,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
               <Menu className="w-5 h-5" />
             </button>
 
-            <div onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer select-none">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-                <Receipt className="w-5 h-5 stroke-[2.3]" />
-              </div>
-              <div>
-                <span className="text-xl font-bold text-slate-900 tracking-tight block leading-tight">
-                  Shoppy<span className="text-[#0EA5E9]">ERP</span>
-                </span>
-                <span className="text-[10px] font-semibold text-slate-500 tracking-wide block -mt-0.5">
-                  Powered by Enexa IT
-                </span>
-              </div>
+            <div onClick={() => navigateTo('home')} className="cursor-pointer select-none">
+              <BrandLogoMark settings={settings} variant="header" />
             </div>
           </div>
 
@@ -1253,19 +1373,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
           <div className="relative w-80 max-w-[85%] bg-white h-full shadow-2xl flex flex-col justify-between z-10">
             <div className="overflow-y-auto">
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white">
-                    <Receipt className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-base text-slate-900 block leading-tight">
-                      Shoppy<span className="text-[#0EA5E9]">ERP</span>
-                    </span>
-                    <span className="text-[10px] font-medium text-slate-500">
-                      Powered by Enexa IT Solutions
-                    </span>
-                  </div>
-                </div>
+                <BrandLogoMark settings={settings} variant="drawer" />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
@@ -3194,8 +3302,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">PHONE</span>
-                          <a href="tel:+919546042639" className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
-                            +91 9546042639
+                          <a href={formatTelHref(settings.support_phone)} className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
+                            {settings.support_phone || '+91 9546042639'}
                           </a>
                         </div>
                       </div>
@@ -3207,8 +3315,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">EMAIL</span>
-                          <a href="mailto:contact@enexa.in" className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
-                            contact@enexa.in
+                          <a href={`mailto:${settings.support_email || 'contact@enexa.in'}`} className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
+                            {settings.support_email || 'contact@enexa.in'}
                           </a>
                         </div>
                       </div>
@@ -3220,8 +3328,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">WHATSAPP</span>
-                          <a href="https://wa.me/919546042639" target="_blank" rel="noreferrer" className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition">
-                            Chat with us
+                          <a
+                            href={buildWhatsappUrl(settings.whatsapp_number || '9546042639', settings.whatsapp_message)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-semibold text-slate-800 dark:text-slate-200 hover:text-[#0095d9] transition"
+                          >
+                            Chat on WhatsApp ({settings.whatsapp_number || '9546042639'})
                           </a>
                         </div>
                       </div>
@@ -3234,7 +3347,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">OFFICE</span>
                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">
-                            Bhagwanpur, Muzaffarpur, Bihar 842001
+                            {settings.corporate_address || 'Bhagwanpur, Muzaffarpur, Bihar 842001'}
                           </p>
                         </div>
                       </div>
@@ -3246,7 +3359,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <h3 className="text-base font-bold text-white">Follow Us</h3>
                     <div className="flex items-center gap-3">
                       <a
-                        href="https://facebook.com/enexait"
+                        href={settings.facebook_url || 'https://facebook.com/enexait'}
                         target="_blank"
                         rel="noreferrer"
                         aria-label="Facebook"
@@ -3255,7 +3368,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         <FacebookIcon className="w-4 h-4" />
                       </a>
                       <a
-                        href="https://instagram.com/enexait"
+                        href={settings.instagram_url || 'https://instagram.com/enexait'}
                         target="_blank"
                         rel="noreferrer"
                         aria-label="Instagram"
@@ -3264,7 +3377,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         <InstagramIcon className="w-4 h-4" />
                       </a>
                       <a
-                        href="https://linkedin.com/company/enexait"
+                        href={settings.linkedin_url || 'https://linkedin.com/company/enexait'}
                         target="_blank"
                         rel="noreferrer"
                         aria-label="LinkedIn"
@@ -3273,7 +3386,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         <LinkedinIcon className="w-4 h-4" />
                       </a>
                       <a
-                        href="https://youtube.com/@enexait"
+                        href={settings.youtube_url || 'https://youtube.com/@enexait'}
                         target="_blank"
                         rel="noreferrer"
                         aria-label="YouTube"
@@ -3282,13 +3395,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         <YoutubeIcon className="w-4 h-4" />
                       </a>
                       <a
-                        href="https://wa.me/919546042639"
+                        href={buildWhatsappUrl(settings.whatsapp_number || '9546042639', settings.whatsapp_message)}
                         target="_blank"
                         rel="noreferrer"
                         aria-label="WhatsApp"
                         className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition backdrop-blur-xs"
                       >
-                        <MessageCircle className="w-4 h-4 fill-white" />
+                        <WhatsAppBrandIcon className="w-5 h-5" />
                       </a>
                     </div>
                   </div>
@@ -3296,7 +3409,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   {/* Card 3: Operating Hours */}
                   <div className="bg-[#fffbeb] dark:bg-amber-950/20 border border-[#fef3c7] dark:border-amber-900/30 rounded-[20px] p-4 flex items-center gap-3 text-amber-900 dark:text-amber-200 text-sm font-medium">
                     <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>Mon-Fri: 9:00 AM - 6:00 PM IST</span>
+                    <span>{settings.support_hours || 'Mon-Fri: 9:00 AM - 6:00 PM IST'}</span>
                   </div>
                 </div>
               </div>
@@ -4110,28 +4223,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 text-sm">
             {/* Col 1: Brand + About + Social Buttons (4 cols) */}
             <div className="lg:col-span-4 space-y-4">
-              <div onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer select-none">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-                  <Receipt className="w-5 h-5 stroke-[2.3]" />
-                </div>
-                <div>
-                  <span className="text-xl font-bold tracking-tight text-white block leading-tight">
-                    Shoppy<span className="text-[#38BDF8]">ERP</span>
-                  </span>
-                  <span className="text-[11px] font-medium text-slate-400 block -mt-0.5">
-                    Powered by Enexa IT Solutions
-                  </span>
-                </div>
+              <div onClick={() => navigateTo('home')} className="cursor-pointer select-none inline-block">
+                <BrandLogoMark settings={settings} variant="footer" />
               </div>
 
               <p className="text-slate-400 leading-relaxed text-xs sm:text-sm max-w-sm">
-                India&apos;s trusted GST billing software, lightning-fast retail POS counter terminal, WhatsApp e-invoicing, and omnichannel e-commerce cloud ERP by Enexa IT Solutions Private Limited.
+                {settings.footer_description ||
+                  "India's trusted GST billing software, lightning-fast retail POS counter terminal, WhatsApp e-invoicing, and omnichannel e-commerce cloud ERP by Enexa IT Solutions Private Limited."}
               </p>
 
               {/* Social Links matching enexa.in */}
               <div className="flex items-center gap-2.5 pt-1">
                 <a
-                  href="https://www.enexa.in"
+                  href={settings.website || 'https://www.enexa.in'}
                   target="_blank"
                   rel="noreferrer"
                   className="enexa-social-btn"
@@ -4140,27 +4244,27 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   <Globe className="w-4 h-4" />
                 </a>
                 <a
-                  href="mailto:contact@enexa.in"
+                  href={`mailto:${settings.support_email || 'contact@enexa.in'}`}
                   className="enexa-social-btn"
                   title="Email Support"
                 >
                   <Mail className="w-4 h-4" />
                 </a>
                 <a
-                  href="tel:+919546042639"
+                  href={formatTelHref(settings.support_phone)}
                   className="enexa-social-btn"
                   title="Call Helpline"
                 >
                   <Phone className="w-4 h-4" />
                 </a>
                 <a
-                  href="https://wa.me/919546042639"
+                  href={buildWhatsappUrl(settings.whatsapp_number || '9546042639', settings.whatsapp_message)}
                   target="_blank"
                   rel="noreferrer"
                   className="enexa-social-btn"
                   title="WhatsApp Support"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <WhatsAppBrandIcon className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -4197,20 +4301,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <li className="flex items-start gap-2.5">
                   <MapPin className="w-4 h-4 text-[#38BDF8] shrink-0 mt-0.5" />
                   <span>
-                    {settings.company_address ||
+                    {settings.corporate_address ||
+                      settings.company_address ||
                       'Yadav Nagar Near Hero Honda Agency, Bhagwanpur, Muzaffarpur, Bihar - 842001'}
                   </span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <Phone className="w-4 h-4 text-[#38BDF8] shrink-0" />
-                  <a href="tel:+919546042639" className="hover:text-[#38BDF8] transition">
-                    +91 95460 42639
+                  <a href={formatTelHref(settings.support_phone)} className="hover:text-[#38BDF8] transition">
+                    {settings.support_phone || '+91 95460 42639'}
                   </a>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <Mail className="w-4 h-4 text-[#38BDF8] shrink-0" />
-                  <a href="mailto:contact@enexa.in" className="hover:text-[#38BDF8] transition">
-                    contact@enexa.in
+                  <a href={`mailto:${settings.support_email || 'contact@enexa.in'}`} className="hover:text-[#38BDF8] transition">
+                    {settings.support_email || 'contact@enexa.in'}
                   </a>
                 </li>
               </ul>
@@ -4226,7 +4331,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
           <div className="border-t border-slate-800/80 mt-12 pt-7 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
             <p className="text-center sm:text-left">
               © 2026{' '}
-              <a href="https://www.enexa.in" target="_blank" rel="noreferrer" className="text-white font-semibold hover:text-[#38BDF8] transition">
+              <a href={settings.website || 'https://www.enexa.in'} target="_blank" rel="noreferrer" className="text-white font-semibold hover:text-[#38BDF8] transition">
                 {settings.company_name || 'Enexa IT Solutions Private Limited'}
               </a>
               . All rights reserved.
@@ -4249,17 +4354,22 @@ export default function LandingPage({ defaultPage = 'home' }) {
         </div>
       </footer>
 
-      {/* Floating Circular WhatsApp Chat Button matching enexa.in */}
-      <a
-        href="https://wa.me/919546042639?text=Hello%20Enexa%20Team%2C%20I%20would%20like%20to%20know%20more%20about%20Shoppy%20ERP%20billing%20software."
-        target="_blank"
-        rel="noreferrer"
-        className="enexa-whatsapp-float"
-        title="Chat on WhatsApp"
-        aria-label="Chat on WhatsApp"
-      >
-        <MessageCircle className="w-7 h-7 fill-current" />
-      </a>
+      {/* Floating Circular WhatsApp Chat Button (Right Bottom, Configurable in Master CMS) */}
+      {String(settings.whatsapp_enabled ?? '1') !== '0' && (
+        <a
+          href={buildWhatsappUrl(settings.whatsapp_number || '9546042639', settings.whatsapp_message || 'Hello Enexa Team, I would like to know more about Shoppy ERP billing software.')}
+          target="_blank"
+          rel="noreferrer"
+          className="enexa-whatsapp-float group"
+          title={`Chat on WhatsApp (${settings.whatsapp_number || '9546042639'})`}
+          aria-label="Chat on WhatsApp"
+        >
+          <WhatsAppBrandIcon className="w-7 h-7" />
+          <span className="hidden md:block absolute right-16 bg-slate-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none">
+            WhatsApp Support ({settings.whatsapp_number || '9546042639'})
+          </span>
+        </a>
+      )}
     </div>
   );
 }

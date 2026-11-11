@@ -6,11 +6,22 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ $title ?? 'Shoppy ERP — Enexa IT Solutions Private Limited' }}</title>
+    <meta name="description" id="dynamic-meta-description" content="{{ $metaDescription ?? "India's trusted GST billing software, high-speed retail POS counter terminal, WhatsApp invoicing & omnichannel e-commerce cloud ERP by Enexa IT Solutions." }}">
+    <meta name="keywords" id="dynamic-meta-keywords" content="{{ $metaKeywords ?? 'GST billing software, POS billing software, retail ERP, WhatsApp invoicing, online storefront, Shoppy ERP, Enexa IT Solutions' }}">
+
+    <!-- Open Graph Meta -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" id="dynamic-og-title" content="{{ $title ?? 'Shoppy ERP — Enexa IT Solutions Private Limited' }}">
+    <meta property="og:description" id="dynamic-og-description" content="{{ $metaDescription ?? "India's trusted GST billing software, high-speed retail POS counter terminal, WhatsApp invoicing & omnichannel e-commerce cloud ERP by Enexa IT Solutions." }}">
+    @if(!empty($ogImage))
+    <meta property="og:image" id="dynamic-og-image" content="{{ $ogImage }}">
+    @else
+    <meta property="og:image" id="dynamic-og-image" content="">
+    @endif
 
     <!-- App Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=1">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=1">
+    <link rel="icon" id="dynamic-favicon" href="{{ !empty($faviconUrl) ? $faviconUrl : '/favicon.png?v=1' }}">
+    <link rel="apple-touch-icon" id="dynamic-apple-icon" href="{{ !empty($faviconUrl) ? $faviconUrl : '/apple-touch-icon.png?v=1' }}">
 
     <!-- Google Fonts: Outfit & Inter & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

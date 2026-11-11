@@ -31,6 +31,7 @@ Route::prefix('master')->group(function () {
     // Platform Branding & CMS Settings (Enexa IT Solutions Private Limited)
     Route::get('/settings', [MasterPortalApiController::class, 'getWebsiteSettings']);
     Route::post('/settings', [MasterPortalApiController::class, 'updateWebsiteSettings']);
+    Route::post('/settings/upload-asset', [MasterPortalApiController::class, 'uploadBrandingAsset']);
 
     // Contact Leads & Inquiries
     Route::get('/leads', [MasterPortalApiController::class, 'getContactInquiries']);

@@ -514,9 +514,23 @@ class SubscriptionService {
       company_name: 'Enexa IT Solutions Private Limited',
       powered_by: 'Enexa IT Solutions Private Limited',
       website: 'https://www.enexa.in',
-      official_domain: 'www.enexa.in',
+      official_domain: 'shoppy.live',
+      brand_title: 'Shoppy ERP — Enexa IT Solutions Private Limited',
+      brand_subtext: 'Powered by Enexa IT',
+      meta_title: 'Shoppy ERP — GST Billing, Retail POS & E-Commerce Software | Enexa IT',
+      meta_description: "India's trusted high-speed POS counter billing software, GST tax invoicing (B2B/B2C), WhatsApp invoice sharing & omnichannel online storefront platform by Enexa IT Solutions Private Limited.",
+      meta_keywords: 'GST billing software, POS billing software, retail ERP, WhatsApp invoicing, online storefront, Shoppy ERP, Enexa IT Solutions',
+      site_logo: '',
+      footer_logo: '',
+      favicon_url: '/favicon.png',
+      og_image: '',
       support_phone: '+91 9546042639',
-      support_email: 'contact@enexa.in'
+      support_email: 'contact@enexa.in',
+      sales_email: 'contact@enexa.in',
+      whatsapp_number: '9546042639',
+      whatsapp_message: 'Hello Enexa Team, I would like to know more about Shoppy ERP billing software.',
+      whatsapp_enabled: '1',
+      support_hours: 'Mon-Fri: 9:00 AM - 6:00 PM IST'
     };
   }
 
@@ -526,13 +540,53 @@ class SubscriptionService {
     this.saveState(state);
 
     try {
-      await fetch('/api/master/settings', {
+      const res = await fetch('/api/master/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(newSettings)
       });
-      this.syncFromBackend();
-    } catch (e) {}
+      const json = await res.json();
+      if (json && json.data) {
+        const updated = { ...this.getState(), settings: json.data };
+        this.saveState(updated);
+      } else {
+        await this.syncFromBackend(false);
+      }
+      return json;
+    } catch (e) {
+      return { success: false };
+    }
+  }
+
+  async uploadPlatformAsset(file, type = 'site_logo') {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', type);
+
+    const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
+    const headers = { 'Accept': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['X-Master-Token'] = token;
+    }
+
+    try {
+      const res = await fetch('/api/master/settings/upload-asset', {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.url) {
+        const key = json.setting_key || (type === 'favicon' ? 'favicon_url' : type);
+        const state = this.getState();
+        state.settings = { ...(state.settings || {}), [key]: json.url };
+        this.saveState(state);
+      }
+      return json;
+    } catch (e) {
+      return { success: false, message: 'Asset upload failed. Please try again.' };
+    }
   }
 
   getBlogs() {

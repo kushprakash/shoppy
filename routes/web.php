@@ -3,6 +3,29 @@
 use App\Support\StoreToken;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+$loadWebsiteMeta = function (): array {
+    $defaults = [
+        'meta_title' => 'Shoppy ERP — GST Billing, Retail POS & E-Commerce Software | Enexa IT',
+        'meta_description' => "India's trusted high-speed POS counter billing software, GST tax invoicing (B2B/B2C), WhatsApp invoice sharing & omnichannel online storefront platform by Enexa IT Solutions Private Limited.",
+        'meta_keywords' => 'GST billing software, POS billing software, retail ERP, WhatsApp invoicing, online storefront, Shoppy ERP, Enexa IT Solutions',
+        'favicon_url' => '/favicon.png?v=1',
+        'og_image' => '',
+        'site_logo' => '',
+    ];
+
+    try {
+        if (Schema::connection('mysql')->hasTable('website_settings')) {
+            $rows = DB::connection('mysql')->table('website_settings')->pluck('value', 'key')->toArray();
+            return array_merge($defaults, array_filter($rows, fn ($v) => $v !== null && $v !== ''));
+        }
+    } catch (\Throwable $e) {
+        // Fallback silently when central DB is unreachable during early boot
+    }
+
+    return $defaults;
+};
 
 $resolveWebShopCode = function (): string {
     $req = request();
@@ -73,13 +96,15 @@ Route::get('/banking-portal', function () {
 });
 
 // Super Admin Master Portal (Multi-tenant, Subscription Master, All Shops List)
-Route::get('/master/{any?}', function () {
+Route::get('/master/{any?}', function () use ($loadWebsiteMeta) {
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
+    $seo = $loadWebsiteMeta();
     return response()
         ->view('app', [
             'entry' => 'app',
             'title' => 'Shoppy Super Admin — Master SaaS Portal',
+            'faviconUrl' => $seo['favicon_url'],
             'shopCode' => 'MASTER-ROOT',
             'htmlClass' => $isDark ? 'h-full bg-slate-950 text-slate-100 dark' : 'h-full bg-[#f8fafc] text-slate-800',
             'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100' : 'min-h-full flex flex-col bg-[#f8fafc] text-slate-800',
@@ -88,14 +113,16 @@ Route::get('/master/{any?}', function () {
 })->where('any', '.*');
 
 // Merchant Store Login Portal (http://domain/store)
-Route::get('/store', function () {
+Route::get('/store', function () use ($loadWebsiteMeta) {
     $code = strtoupper(trim((string) (request()->query('code') ?: request()->query('shop_code') ?: '')));
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
+    $seo = $loadWebsiteMeta();
     return response()
         ->view('app', [
             'entry' => 'app',
             'title' => 'Merchant Store Login — Shoppy ERP',
+            'faviconUrl' => $seo['favicon_url'],
             'shopCode' => $code,
             'htmlClass' => $isDark ? 'h-full bg-slate-950 text-slate-100 dark' : 'h-full bg-[#f4f7fa] text-slate-800',
             'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white' : 'min-h-full flex flex-col bg-[#f4f7fa] text-slate-800 selection:bg-cyan-500 selection:text-white',
@@ -157,14 +184,19 @@ Route::get('/invoice-mail-send', [\App\Http\Controllers\Central\PaytmController:
 
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)
 // Handles direct URLs: /shop-admin, /shop-admin/products, /shop-admin/orders, /shop-admin/inventory, etc.
-Route::get('/{any}', function () use ($resolveWebShopCode) {
+Route::get('/{any}', function () use ($resolveWebShopCode, $loadWebsiteMeta) {
     $shopCode = $resolveWebShopCode();
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
+    $seo = $loadWebsiteMeta();
     return response()
         ->view('app', [
             'entry' => 'app',
-            'title' => 'Shoppy ERP — Enexa IT Solutions Private Limited',
+            'title' => $seo['meta_title'],
+            'metaDescription' => $seo['meta_description'],
+            'metaKeywords' => $seo['meta_keywords'],
+            'ogImage' => $seo['og_image'] ?: $seo['site_logo'],
+            'faviconUrl' => $seo['favicon_url'],
             'shopCode' => $shopCode,
             'htmlClass' => $isDark ? 'h-full bg-slate-950 text-slate-100 dark' : 'h-full bg-[#f4f7fa] text-slate-800',
             'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white' : 'min-h-full flex flex-col bg-[#f4f7fa] text-slate-800 selection:bg-cyan-500 selection:text-white',
