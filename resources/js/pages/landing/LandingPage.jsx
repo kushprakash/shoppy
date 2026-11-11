@@ -4187,7 +4187,6 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">WhatsApp Invoices &amp; UPI QR</button></li>
                 <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">Online Storefront &amp; Couriers</button></li>
                 <li><button onClick={() => navigateTo('store')} className="enexa-footer-link cursor-pointer">Store Merchant Login</button></li>
-                <li><button onClick={() => navigate('/master')} className="enexa-footer-link cursor-pointer">Super Admin Desk</button></li>
               </ul>
             </div>
 
