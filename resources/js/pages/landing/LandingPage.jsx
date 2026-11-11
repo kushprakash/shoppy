@@ -154,14 +154,14 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
   // Enexa-style Hero Typewriter & Scroll Header State
   const TYPED_PHRASES = [
-    'GST Billing Software',
-    'High-Speed Retail POS',
-    'WhatsApp Smart Bills',
-    'Online Storefronts',
-    'Barcode Inventory ERP'
+    'GST Billing',
+    'Retail POS',
+    'Smart Invoices',
+    'Web Storefronts',
+    'Stock Control'
   ];
   const [typedPhraseIdx, setTypedPhraseIdx] = useState(0);
-  const [typedCharCount, setTypedCharCount] = useState(20);
+  const [typedCharCount, setTypedCharCount] = useState(11);
   const [isTypedDeleting, setIsTypedDeleting] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
@@ -1141,7 +1141,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
       {/* 1. ENEXA SIGNATURE STICKY GLASS HEADER                               */}
       {/* =================================================================== */}
       <header className={`enexa-header ${headerScrolled ? 'scrolled' : ''}`}>
-        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+        <div className="w-full max-w-[1440px] mx-auto h-full px-5 sm:px-10 lg:px-16 flex items-center justify-between gap-4">
           {/* Left: Mobile Drawer Trigger + Brand Logo */}
           <div className="flex items-center gap-3">
             <button
@@ -1397,18 +1397,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 />
               </svg>
 
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-                  {/* Left Content (~54%) */}
-                  <div className="lg:col-span-6 space-y-6 text-left">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/85 border border-sky-200/80 shadow-xs text-xs font-semibold text-slate-700">
-                      <span className="w-2 h-2 rounded-full bg-[#0EA5E9]" />
-                      <span>Powered by Enexa IT Solutions Private Limited</span>
-                    </div>
-
+              <div className="w-full max-w-[1440px] mx-auto px-5 sm:px-10 lg:px-16 relative z-10">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+                  {/* Left Content (~50%) */}
+                  <div className="lg:col-span-6 space-y-5 text-left">
                     <h1 className="enexa-hero-title">
                       Elevating <br />
-                      The Experience of Modern <br />
+                      Your Modern{' '}
                       <span className="text-[#0EA5E9]">
                         {TYPED_PHRASES[typedPhraseIdx % TYPED_PHRASES.length].slice(0, typedCharCount)}
                       </span>
@@ -1417,7 +1412,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
                     <p className="text-base sm:text-lg text-[#475569] leading-relaxed max-w-xl">
                       {settings.hero_subtitle ||
-                        'Your Best Retail Billing Software awaits you! Discover groundbreaking sub-50ms POS billing, automated WhatsApp GST invoices, barcode printing, and online storefronts tailored to your retail business.'}
+                        'Your Best Retail Billing & POS Provider awaits you! Discover as we bring groundbreaking sub-50ms billing, WhatsApp GST invoices, and store automation tailored to your business needs.'}
                     </p>
 
                     <div className="flex flex-wrap items-center gap-3.5 pt-1">
@@ -1440,19 +1435,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <div>
                       <button
                         onClick={() => navigateTo('services')}
-                        className="text-sm font-semibold text-[#0EA5E9] hover:text-[#0284C7] inline-flex items-center gap-1.5 transition cursor-pointer group"
+                        className="text-xs sm:text-sm font-semibold text-[#0EA5E9] hover:text-[#0284C7] inline-flex items-center gap-1.5 transition cursor-pointer group"
                       >
-                        <span>Start Store Setup In Under 5 Minutes</span>
+                        <span>Start Store Setup in Under 5 Minutes</span>
                         <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Right Isometric Billing Visual (~46%) */}
-                  <div className="lg:col-span-6 flex items-center justify-center">
-                    <div className="enexa-hero-visual-wrap w-full max-w-[560px]">
+                  {/* Right Transparent Isometric Billing Visual (~50%) */}
+                  <div className="lg:col-span-6 flex items-center justify-center lg:justify-end">
+                    <div className="enexa-hero-visual-wrap w-full max-w-[510px]">
                       <img
-                        src="/images/landing/hero-billing-iso.jpg"
+                        src="/images/landing/hero-billing-iso.png"
                         alt="Shoppy ERP Billing Software, Thermal Receipt Printer, Barcode Scanner & UPI QR"
                         className="enexa-hero-visual-img"
                       />
@@ -1585,12 +1580,12 @@ export default function LandingPage({ defaultPage = 'home' }) {
             {/* ============================================================= */}
             <section className="enexa-section-api py-20">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                  {/* Left: Interactive Live Billing Preview Terminal */}
-                  <div className="lg:col-span-5">
-                    <div className="bg-white rounded-2xl border border-sky-100 shadow-xl shadow-sky-900/5 overflow-hidden">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
+                  {/* Left: Interactive Live Billing Preview Terminal (Equal Width + Equal Height) */}
+                  <div className="lg:col-span-6 flex">
+                    <div className="w-full h-full bg-white rounded-2xl border border-sky-100 shadow-xl shadow-sky-900/5 overflow-hidden flex flex-col justify-between">
                       {/* Header bar */}
-                      <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+                      <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2 text-xs font-semibold">
                           <Store className="w-4 h-4 text-[#38BDF8]" />
                           <span>Live Billing Suite Preview</span>
@@ -1616,86 +1611,120 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         </div>
                       </div>
 
-                      <div className="p-5 space-y-3.5">
+                      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-4">
                         {heroPreviewTab === 'invoice' && (
-                          <>
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                              <div>
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-[#0EA5E9]">Tax Invoice #INV-0842</p>
-                                <p className="text-sm font-bold text-slate-900">Counter #1 • 12 Nov, 04:18 PM</p>
-                              </div>
-                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
-                                GST VERIFIED
-                              </span>
-                            </div>
-                            <div className="space-y-2.5 text-xs">
-                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                          <div className="space-y-3.5 flex-1 flex flex-col justify-between">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <div>
-                                  <p className="font-semibold text-slate-900">Premium Formal Shirt (XL)</p>
-                                  <p className="text-[11px] text-slate-500 font-mono">HSN 6205 • Barcode 8901234001</p>
+                                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0EA5E9]">Tax Invoice #INV-0842</p>
+                                  <p className="text-sm font-bold text-slate-900">Counter #1 • 12 Nov, 04:18 PM</p>
                                 </div>
-                                <span className="font-mono font-bold text-slate-900">₹ 1,299.00</span>
+                                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
+                                  GST VERIFIED
+                                </span>
                               </div>
-                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                                <div>
-                                  <p className="font-semibold text-slate-900">Wireless Optical Mouse</p>
-                                  <p className="text-[11px] text-slate-500 font-mono">HSN 8471 • 18% GST Incl.</p>
+                              <div className="space-y-2.5 text-xs">
+                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">Premium Formal Shirt (XL)</p>
+                                    <p className="text-[11px] text-slate-500 font-mono">HSN 6205 • Barcode 8901234001</p>
+                                  </div>
+                                  <span className="font-mono font-bold text-slate-900">₹ 1,299.00</span>
                                 </div>
-                                <span className="font-mono font-bold text-slate-900">₹ 649.00</span>
+                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">Wireless Optical Mouse</p>
+                                    <p className="text-[11px] text-slate-500 font-mono">HSN 8471 • 18% GST Incl.</p>
+                                  </div>
+                                  <span className="font-mono font-bold text-slate-900">₹ 649.00</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                  <div>
+                                    <p className="font-semibold text-slate-900">Organic Cold-Pressed Oil (1L)</p>
+                                    <p className="text-[11px] text-slate-500 font-mono">HSN 1509 • 5% GST • Batch B04</p>
+                                  </div>
+                                  <span className="font-mono font-bold text-slate-900">₹ 350.00</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="pt-2 border-t border-dashed border-slate-200 flex items-center justify-between text-xs">
-                              <span className="text-slate-500 font-medium">CGST + SGST (Auto-Split)</span>
-                              <span className="font-bold text-slate-800">₹ 214.00 GST</span>
+
+                            <div className="space-y-3 pt-2 border-t border-dashed border-slate-200">
+                              <div className="grid grid-cols-2 gap-2.5 text-xs">
+                                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                                  <span className="text-[10px] text-slate-500 block">Tax Breakup</span>
+                                  <span className="font-bold text-slate-800">CGST + SGST: ₹231.50</span>
+                                </div>
+                                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                                  <span className="text-[10px] text-slate-500 block">Hardware Bridge</span>
+                                  <span className="font-bold text-emerald-700">Thermal + Scanner OK</span>
+                                </div>
+                              </div>
+                              <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-700">Grand Total Paid (UPI QR)</span>
+                                <span className="text-lg font-extrabold text-[#0284C7]">₹ 2,298.00</span>
+                              </div>
                             </div>
-                            <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-700">Grand Total Paid (UPI QR)</span>
-                              <span className="text-lg font-extrabold text-[#0284C7]">₹ 1,948.00</span>
-                            </div>
-                          </>
+                          </div>
                         )}
 
                         {heroPreviewTab === 'thermal' && (
-                          <div className="bg-slate-50 rounded-xl p-4 font-mono text-[11px] text-slate-800 border border-slate-200 space-y-2">
-                            <div className="text-center border-b border-dashed border-slate-300 pb-2">
-                              <p className="font-bold text-xs">SHARMA SUPERMART &amp; RETAIL</p>
-                              <p className="text-[10px] text-slate-500">GSTIN: 08AABCS1429B1Z • 80MM ESC/POS</p>
+                          <div className="bg-slate-50 rounded-xl p-5 font-mono text-[11px] text-slate-800 border border-slate-200 space-y-2.5 flex-1 flex flex-col justify-between">
+                            <div className="space-y-2.5">
+                              <div className="text-center border-b border-dashed border-slate-300 pb-2.5">
+                                <p className="font-bold text-xs">SHARMA SUPERMART &amp; RETAIL</p>
+                                <p className="text-[10px] text-slate-500">GSTIN: 08AABCS1429B1Z • 80MM ESC/POS</p>
+                              </div>
+                              <div className="flex justify-between"><span>1x Basmati Rice 5kg</span><span>₹540.00</span></div>
+                              <div className="flex justify-between"><span>2x Cold Pressed Oil</span><span>₹420.00</span></div>
+                              <div className="flex justify-between"><span>1x Cotton T-Shirt (L)</span><span>₹699.00</span></div>
+                              <div className="flex justify-between text-slate-500"><span>CGST (2.5%) + SGST (2.5%)</span><span>₹82.95</span></div>
                             </div>
-                            <div className="flex justify-between"><span>1x Basmati Rice 5kg</span><span>₹540.00</span></div>
-                            <div className="flex justify-between"><span>2x Cold Pressed Oil</span><span>₹420.00</span></div>
-                            <div className="border-t border-dashed border-slate-300 pt-2 flex justify-between font-bold text-xs">
-                              <span>TOTAL BILL</span>
-                              <span>₹960.00</span>
-                            </div>
-                            <div className="pt-2 flex items-center justify-between text-[10px] text-emerald-700 font-sans font-semibold">
-                              <span>✓ Auto-Cut &amp; Cash Drawer Kicked</span>
-                              <span>38ms</span>
+                            <div className="space-y-2 pt-2 border-t border-dashed border-slate-300">
+                              <div className="flex justify-between font-bold text-xs">
+                                <span>TOTAL BILL (PAID UPI)</span>
+                                <span>₹1,659.00</span>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] text-emerald-700 font-sans font-semibold">
+                                <span>✓ Auto-Cut &amp; Cash Drawer Kicked</span>
+                                <span>38ms Print Speed</span>
+                              </div>
                             </div>
                           </div>
                         )}
 
                         {heroPreviewTab === 'whatsapp' && (
-                          <div className="space-y-3">
-                            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                                  <MessageCircle className="w-4 h-4" />
-                                  WhatsApp Digital Bill Delivered
-                                </span>
-                                <span className="text-[10px] font-bold text-emerald-700">✓✓ Read</span>
+                          <div className="space-y-3.5 flex-1 flex flex-col justify-between">
+                            <div className="space-y-3">
+                              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                                    <MessageCircle className="w-4 h-4" />
+                                    WhatsApp Digital Bill Delivered
+                                  </span>
+                                  <span className="text-[10px] font-bold text-emerald-700">✓✓ Read</span>
+                                </div>
+                                <p className="text-xs text-emerald-900 leading-relaxed">
+                                  Dear Customer, thank you for shopping! Download your GST Invoice PDF (#INV-0842) for ₹2,298.00 or pay balance via attached dynamic UPI QR.
+                                </p>
                               </div>
-                              <p className="text-xs text-emerald-900 leading-relaxed">
-                                Dear Customer, thank you for shopping! Download your GST Invoice PDF (#INV-0842) for ₹1,948.00 or pay balance via UPI QR.
-                              </p>
+                              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                                <span className="font-medium text-slate-600">Owner Daily Shift Z-Report</span>
+                                <span className="px-2 py-0.5 rounded bg-sky-100 text-[#0284C7] font-bold text-[10px]">Auto Sent 10 PM</span>
+                              </div>
+                              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                                <span className="font-medium text-slate-600">Payment Reminder &amp; Udhar Link</span>
+                                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold text-[10px]">98% Delivery Rate</span>
+                              </div>
                             </div>
-                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
-                              <span className="font-medium text-slate-600">Owner Daily Shift Z-Report</span>
-                              <span className="px-2 py-0.5 rounded bg-sky-100 text-[#0284C7] font-bold text-[10px]">Auto Sent 10 PM</span>
+                            <div className="p-3 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-between text-xs">
+                              <span className="font-semibold text-slate-700">Official Meta Cloud API Status</span>
+                              <span className="font-bold text-emerald-700">CONNECTED 24x7</span>
                             </div>
                           </div>
                         )}
 
-                        <div className="pt-1">
+                        <div className="pt-1 mt-auto">
                           <a
                             href="/pos-terminal"
                             target="_blank"
@@ -1711,8 +1740,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     </div>
                   </div>
 
-                  {/* Right: Headline + 6 Feature Tiles matching enexa.in */}
-                  <div className="lg:col-span-7 space-y-6">
+                  {/* Right: Headline + 6 Feature Tiles matching left column width & height */}
+                  <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
                     <div className="space-y-2.5">
                       <span className="enexa-pill-badge">
                         <Printer className="w-3.5 h-3.5" />
@@ -1721,7 +1750,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       <h2 className="enexa-section-title">
                         Get Reliable Speed on Counter Billing, Barcodes &amp; GST Invoices
                       </h2>
-                      <p className="text-slate-600 text-sm sm:text-base max-w-2xl">
+                      <p className="text-slate-600 text-sm sm:text-base">
                         Plug-and-play support for thermal printers, barcode guns, electronic weighing scales, and instant online payment collection.
                       </p>
                     </div>
@@ -1780,7 +1809,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       })}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                    <div className="flex flex-wrap items-center gap-3.5 pt-1">
                       <button onClick={() => navigateTo('services')} className="enexa-btn-primary">
                         <span>Explore All Modules</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1959,57 +1988,59 @@ export default function LandingPage({ defaultPage = 'home' }) {
             {/* ============================================================= */}
             <section className="py-20 bg-white">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                  {/* Left Content */}
-                  <div className="lg:col-span-6 space-y-6">
-                    <span className="enexa-pill-badge !bg-amber-50 !text-amber-700 !border-amber-200">
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Complete Retail Suite</span>
-                    </span>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch">
+                  {/* Left Content (Equal Width + Equal Height) */}
+                  <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
+                    <div className="space-y-5">
+                      <span className="enexa-pill-badge !bg-amber-50 !text-amber-700 !border-amber-200">
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Complete Retail Suite</span>
+                      </span>
 
-                    <h2 className="enexa-section-title">
-                      Launch Your Own Branded Storefront &amp; POS ERP in Minutes
-                    </h2>
+                      <h2 className="enexa-section-title">
+                        Launch Your Own Branded Storefront &amp; POS ERP in Minutes
+                      </h2>
 
-                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                      Not just billing — empower your retail shop or supermarket chain with an omnichannel online portal at <span className="font-mono text-xs font-semibold text-[#0284C7]">shoppy.live/{'{storeCode}'}</span> synced seamlessly with live counter inventory.
-                    </p>
+                      <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                        Not just billing — empower your retail shop or supermarket chain with an omnichannel online portal at <span className="font-mono text-xs font-semibold text-[#0284C7]">shoppy.live/{'{storeCode}'}</span> synced seamlessly with live counter inventory.
+                      </p>
 
-                    {/* 2 Stat Highlight Cards matching enexa.in */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="enexa-stat-card">
-                        <div className="text-2xl sm:text-3xl font-extrabold text-[#0EA5E9]">5 Min</div>
-                        <div className="text-xs font-semibold text-slate-600 mt-0.5">Automated DB Activation</div>
+                      {/* 2 Stat Highlight Cards matching enexa.in */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="enexa-stat-card">
+                          <div className="text-2xl sm:text-3xl font-extrabold text-[#0EA5E9]">5 Min</div>
+                          <div className="text-xs font-semibold text-slate-600 mt-0.5">Automated DB Activation</div>
+                        </div>
+                        <div className="enexa-stat-card">
+                          <div className="text-2xl sm:text-3xl font-extrabold text-[#F59E0B]">99.9%</div>
+                          <div className="text-xs font-semibold text-slate-600 mt-0.5">Cloud Uptime &amp; Daily Backups</div>
+                        </div>
                       </div>
-                      <div className="enexa-stat-card">
-                        <div className="text-2xl sm:text-3xl font-extrabold text-[#F59E0B]">99.9%</div>
-                        <div className="text-xs font-semibold text-slate-600 mt-0.5">Cloud Uptime &amp; Daily Backups</div>
+
+                      {/* 8 Feature Chips matching enexa.in B2B grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {[
+                          { icon: Globe, label: 'Online Store' },
+                          { icon: Boxes, label: 'Multi-Branch' },
+                          { icon: Truck, label: 'Courier AWB' },
+                          { icon: Users, label: 'Staff & Payroll' },
+                          { icon: BarChart3, label: 'Live P&L' },
+                          { icon: ShieldCheck, label: 'GST Filings' },
+                          { icon: QrCode, label: 'Dynamic UPI' },
+                          { icon: Headphones, label: '24x7 Desk' }
+                        ].map((chip, idx) => {
+                          const Icon = chip.icon;
+                          return (
+                            <div key={idx} className="enexa-feature-chip">
+                              <Icon className="w-4 h-4 text-[#0EA5E9] shrink-0" />
+                              <span className="truncate text-xs">{chip.label}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* 8 Feature Chips matching enexa.in B2B grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                      {[
-                        { icon: Globe, label: 'Online Store' },
-                        { icon: Boxes, label: 'Multi-Branch' },
-                        { icon: Truck, label: 'Courier AWB' },
-                        { icon: Users, label: 'Staff & Payroll' },
-                        { icon: BarChart3, label: 'Live P&L' },
-                        { icon: ShieldCheck, label: 'GST Filings' },
-                        { icon: QrCode, label: 'Dynamic UPI' },
-                        { icon: Headphones, label: '24x7 Desk' }
-                      ].map((chip, idx) => {
-                        const Icon = chip.icon;
-                        return (
-                          <div key={idx} className="enexa-feature-chip">
-                            <Icon className="w-4 h-4 text-[#0EA5E9] shrink-0" />
-                            <span className="truncate text-xs">{chip.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3.5 pt-2">
+                    <div className="flex flex-wrap items-center gap-3.5 pt-1">
                       <button onClick={() => handleStartOnboarding()} className="enexa-btn-primary">
                         <span>Start Your Store Today</span>
                         <ArrowRight className="w-4 h-4" />
@@ -2020,62 +2051,93 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     </div>
                   </div>
 
-                  {/* Right Architecture Mockup Card with Floating Badges */}
-                  <div className="lg:col-span-6 relative">
-                    <div className="relative bg-gradient-to-br from-slate-50 to-sky-50/70 rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xl shadow-sky-900/5">
+                  {/* Right Architecture Mockup Card (Equal Width + Equal Height) */}
+                  <div className="lg:col-span-6 flex relative">
+                    <div className="w-full h-full flex flex-col relative bg-gradient-to-br from-slate-50 to-sky-50/70 rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-xl shadow-sky-900/5">
                       {/* Floating Badge Top Right */}
-                      <div className="enexa-floating-badge hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-emerald-200 shadow-lg text-xs font-bold text-slate-800 absolute -top-4 right-6">
+                      <div className="enexa-floating-badge hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-emerald-200 shadow-lg text-xs font-bold text-slate-800 absolute -top-4 right-6 z-10">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                         <span>Isolated Tenant DB Ready</span>
                       </div>
 
-                      {/* Mockup Window */}
-                      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                      {/* Mockup Window stretched cleanly to match left column height */}
+                      <div className="flex-1 flex flex-col justify-between bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div>
+                          <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                            </div>
+                            <span className="text-[11px] font-mono text-slate-500 bg-white px-3 py-0.5 rounded-md border border-slate-200">
+                              shoppy.live/store-erp
+                            </span>
+                            <span className="text-[10px] font-bold text-[#0EA5E9]">LIVE</span>
                           </div>
-                          <span className="text-[11px] font-mono text-slate-500 bg-white px-3 py-0.5 rounded-md border border-slate-200">
-                            shoppy.live/store-erp
-                          </span>
-                          <span className="text-[10px] font-bold text-[#0EA5E9]">LIVE</span>
+
+                          <div className="p-5 space-y-4">
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="p-3 rounded-xl bg-sky-50 border border-sky-100">
+                                <span className="text-[10px] font-semibold text-slate-500 block">Today&apos;s POS</span>
+                                <span className="text-base font-extrabold text-[#0284C7]">₹48,250</span>
+                              </div>
+                              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                                <span className="text-[10px] font-semibold text-slate-500 block">Web Orders</span>
+                                <span className="text-base font-extrabold text-emerald-700">14 Synced</span>
+                              </div>
+                              <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
+                                <span className="text-[10px] font-semibold text-slate-500 block">Stock SKUs</span>
+                                <span className="text-base font-extrabold text-amber-700">1,840+</span>
+                              </div>
+                            </div>
+
+                            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                              <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                                <span>Auto-Sync Counter ↔ Web Storefront</span>
+                                <span className="text-emerald-600 font-bold">Real-Time</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                                <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-[#0EA5E9] to-[#10B981]" />
+                              </div>
+                              <p className="text-[11px] text-slate-500">
+                                Barcode billed at Counter #1 immediately updates available quantity on your public web storefront.
+                              </p>
+                            </div>
+
+                            {/* Live Unified Activity Feed */}
+                            <div className="space-y-2">
+                              <div className="p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="w-2 h-2 rounded-full bg-[#0EA5E9]" />
+                                  <div>
+                                    <p className="font-semibold text-slate-800">POS Counter #1 • #INV-0842</p>
+                                    <p className="text-[10px] text-slate-500">Stock Auto-Deducted • WhatsApp Sent</p>
+                                  </div>
+                                </div>
+                                <span className="font-mono font-bold text-slate-900">₹2,298</span>
+                              </div>
+                              <div className="p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                  <div>
+                                    <p className="font-semibold text-slate-800">Web Store Order • #WEB-119</p>
+                                    <p className="text-[10px] text-slate-500">Razorpay Paid • Courier AWB Ready</p>
+                                  </div>
+                                </div>
+                                <span className="font-mono font-bold text-emerald-700">₹1,450</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="p-5 space-y-4">
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="p-3 rounded-xl bg-sky-50 border border-sky-100">
-                              <span className="text-[10px] font-semibold text-slate-500 block">Today&apos;s POS</span>
-                              <span className="text-base font-extrabold text-[#0284C7]">₹48,250</span>
-                            </div>
-                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                              <span className="text-[10px] font-semibold text-slate-500 block">Web Orders</span>
-                              <span className="text-base font-extrabold text-emerald-700">14 Synced</span>
-                            </div>
-                            <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
-                              <span className="text-[10px] font-semibold text-slate-500 block">Stock SKUs</span>
-                              <span className="text-base font-extrabold text-amber-700">1,840+</span>
-                            </div>
-                          </div>
-
-                          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                            <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                              <span>Auto-Sync Counter ↔ Web Storefront</span>
-                              <span className="text-emerald-600 font-bold">Real-Time</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                              <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-[#0EA5E9] to-[#10B981]" />
-                            </div>
-                            <p className="text-[11px] text-slate-500">
-                              Barcode billed at Counter #1 immediately updates available quantity on your public web storefront.
-                            </p>
-                          </div>
+                        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-slate-600">Dedicated Cloud Database: Active</span>
+                          <span className="font-bold text-[#0284C7]">99.9% SLA Synced</span>
                         </div>
                       </div>
 
                       {/* Floating Badge Bottom Left */}
-                      <div className="enexa-floating-badge-delayed hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-sky-200 shadow-lg text-xs font-bold text-slate-800 absolute -bottom-4 left-6">
+                      <div className="enexa-floating-badge-delayed hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white border border-sky-200 shadow-lg text-xs font-bold text-slate-800 absolute -bottom-4 left-6 z-10">
                         <ShieldCheck className="w-4 h-4 text-[#0EA5E9]" />
                         <span>Zero Data Mixing Guarantee</span>
                       </div>

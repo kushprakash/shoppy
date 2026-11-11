@@ -140,45 +140,43 @@
   transform: translateX(3px);
 }
 
-/* Hero Section (Exact match to https://enexa.in/) */
+/* Hero Section (Exact match to #FFF9F2 / https://enexa.in/) */
 .enexa-hero {
   position: relative;
   overflow: hidden;
+  width: 100%;
   background: linear-gradient(
     135deg,
-    rgba(255, 238, 218, 0.55) 0%,
-    rgba(255, 224, 188, 0.45) 55%,
-    rgba(255, 249, 242, 0.95) 100%
+    #FFF9F2 0%,
+    #FFF7EE 50%,
+    #FFFBF6 100%
   );
-  padding: 4.5rem 0 5rem;
+  padding: 2rem 0 2.25rem;
 }
 
 @media (min-width: 1024px) {
   .enexa-hero {
-    min-height: calc(100vh - 78px);
-    display: flex;
-    align-items: center;
-    padding: 3.5rem 0 4.5rem;
+    padding: 2.5rem 0 2.75rem;
   }
 }
 
 .enexa-hero-dots {
   position: absolute;
-  top: 2.25rem;
-  left: 4.5%;
-  width: 150px;
-  height: 150px;
+  top: 1.5rem;
+  left: 3.5%;
+  width: 145px;
+  height: 145px;
   border-radius: 9999px;
-  background-image: radial-gradient(rgba(14, 165, 233, 0.22) 1.6px, transparent 1.6px);
+  background-image: radial-gradient(rgba(14, 165, 233, 0.2) 1.5px, transparent 1.5px);
   background-size: 16px 16px;
   opacity: 0.85;
   pointer-events: none;
 }
 
 .enexa-hero-title {
-  font-size: clamp(2.15rem, 4.1vw, 3.35rem);
+  font-size: clamp(2.1rem, 3.6vw, 3.1rem);
   font-weight: 700;
-  line-height: 1.18;
+  line-height: 1.22;
   letter-spacing: -0.025em;
   color: #1E293B;
 }
@@ -198,15 +196,12 @@
 
 .enexa-hero-visual-wrap {
   position: relative;
-  border-radius: 1.5rem;
-  overflow: hidden;
 }
 
 .enexa-hero-visual-img {
   width: 100%;
   height: auto;
   display: block;
-  mix-blend-mode: multiply;
 }
 
 /* Section Alternating Backgrounds */
