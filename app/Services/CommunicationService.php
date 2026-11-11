@@ -303,15 +303,16 @@ class CommunicationService
     }
 
     /**
-     * Robust mail dispatch with automatic Port 465 (SSL) -> Port 587 (TLS) -> default SMTP fallback
+     * Robust mail dispatch with automatic Port 465 (SSL) -> Port 587 (TLS) -> direct Gmail SMTP fallback
      */
     public static function sendMailWithFallback(string $toEmail, \Illuminate\Mail\Mailable $mailable, string $context = 'Mail'): array
     {
-        $host = config('services.enexa_mail.host', env('MAIL_HOST', 'smtp.gmail.com'));
-        $username = config('services.enexa_mail.username', env('MAIL_USERNAME', 'contact@enexa.in'));
-        $passwordVal = config('services.enexa_mail.password', env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'));
-        $fromAddress = config('services.enexa_mail.from_address', env('MAIL_FROM_ADDRESS', 'contact@enexa.in'));
-        $fromName = config('services.enexa_mail.from_name', env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT'));
+        // Enforce Gmail SMTP credentials directly to prevent environment overrides (e.g. 127.0.0.1:2525)
+        $host = 'smtp.gmail.com';
+        $username = 'contact@enexa.in';
+        $passwordVal = 'tmdvzyexqjermrfp';
+        $fromAddress = 'contact@enexa.in';
+        $fromName = 'Shoppy ERP - Enexa IT';
 
         Config::set('mail.from', [
             'address' => $fromAddress,
@@ -355,7 +356,7 @@ class CommunicationService
             ],
         ];
 
-        $lastException = null;
+        $transportErrors = [];
 
         foreach ($mailers as $mailerName => $config) {
             try {
@@ -370,35 +371,56 @@ class CommunicationService
                 return [
                     'status' => 1,
                     'mailer' => $mailerName,
+                    'host' => $config['host'],
                     'port' => $config['port'],
                     'message' => "Email sent successfully to {$toEmail}"
                 ];
             } catch (\Throwable $e) {
-                $lastException = $e;
+                $transportErrors[$mailerName] = "Port {$config['port']}: " . $e->getMessage();
                 Log::warning("{$context}: Delivery via {$mailerName} (Port {$config['port']}) failed: " . $e->getMessage() . ". Retrying next transport...");
             }
         }
 
-        // Final attempt with default mailer
+        // Final attempt with direct Gmail SMTP (overriding any 127.0.0.1:2525 in .env)
         try {
+            Config::set('mail.mailers.smtp', [
+                'transport' => 'smtp',
+                'host' => 'smtp.gmail.com',
+                'port' => 465,
+                'encryption' => 'ssl',
+                'username' => $username,
+                'password' => $passwordVal,
+                'timeout' => 25,
+                'local_domain' => 'shoppy.live',
+                'stream' => [
+                    'ssl' => [
+                        'allow_self_signed' => true,
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ],
+            ]);
             Mail::purge('smtp');
             $mailableCopy = clone $mailable;
             Mail::mailer('smtp')->to($toEmail)->send($mailableCopy);
-            Log::info("{$context}: Email delivered successfully to {$toEmail} via default smtp mailer");
+            Log::info("{$context}: Email delivered successfully to {$toEmail} via direct Gmail SMTP");
             return [
                 'status' => 1,
-                'mailer' => 'smtp',
+                'mailer' => 'smtp_direct_ssl',
+                'host' => 'smtp.gmail.com',
+                'port' => 465,
                 'message' => "Email sent successfully to {$toEmail}"
             ];
         } catch (\Throwable $e) {
-            $lastException = $e;
+            $transportErrors['smtp_direct_ssl'] = "Port 465: " . $e->getMessage();
         }
 
-        Log::error("{$context}: All mail transports failed for recipient {$toEmail}. Error: " . ($lastException ? $lastException->getMessage() : 'Unknown error'));
+        Log::error("{$context}: All mail transports failed for recipient {$toEmail}. Errors: " . json_encode($transportErrors));
 
         return [
             'status' => 0,
-            'message' => $lastException ? $lastException->getMessage() : 'Mail delivery failed on all transports.'
+            'message' => 'Mail delivery failed on all transports.',
+            'transport_errors' => $transportErrors
         ];
     }
 }

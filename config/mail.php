@@ -39,15 +39,15 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            'scheme' => null,
             'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', 'smtp.gmail.com'),
-            'port' => (int) env('MAIL_PORT', 587),
-            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-            'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
-            'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
+            'host' => 'smtp.gmail.com',
+            'port' => 465,
+            'encryption' => 'ssl',
+            'username' => 'contact@enexa.in',
+            'password' => 'tmdvzyexqjermrfp',
             'timeout' => 25,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', 'shoppy.live'),
+            'local_domain' => 'shoppy.live',
             'stream' => [
                 'ssl' => [
                     'allow_self_signed' => true,
