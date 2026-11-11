@@ -54,6 +54,9 @@ class MasterPortalApiController extends Controller
                     $basePrice = 4500;
                 }
 
+                $badgeText = $plan->badge !== null ? trim((string) $plan->badge) : '';
+                $ribbonBg = trim((string) ($plan->ribbon_bg ?? '')) ?: 'bg-[#008ba3]';
+
                 return [
                     'id' => $plan->code,
                     'db_id' => $plan->id,
@@ -61,10 +64,11 @@ class MasterPortalApiController extends Controller
                     'code' => $plan->code,
                     'shortName' => $plan->short_name ?: 'STANDARD',
                     'category' => $plan->category ?: 'business',
-                    'badge' => $plan->badge ?: 'Plan',
-                    'ribbonBg' => $plan->ribbon_bg ?: 'bg-[#008ba3]',
+                    'badge' => $badgeText,
+                    'ribbonBg' => $ribbonBg,
+                    'ribbon_bg' => $ribbonBg,
                     'buttonText' => $plan->button_text ?: 'SIGN UP NOW',
-                    'buttonBg' => ($plan->ribbon_bg ?: 'bg-[#008ba3]') . ' text-white',
+                    'buttonBg' => $ribbonBg . ' text-white',
                     'hasWhatsappOption' => (bool) $plan->has_whatsapp,
                     'hasEcommerce' => (bool) $plan->has_ecommerce,
                     'subtext' => $plan->subtext ?: 'Complete ERP & E-Commerce',
@@ -204,12 +208,29 @@ class MasterPortalApiController extends Controller
             $monthlyPrice = (float)$cycles['half_yearly']['offer'];
         }
 
+        $newBadge = $request->exists('badge')
+            ? (trim((string) ($request->input('badge') ?? '')) ?: null)
+            : $plan->badge;
+        $newRibbonBg = ($request->exists('ribbonBg') || $request->exists('ribbon_bg'))
+            ? (trim((string) ($request->input('ribbonBg') ?? $request->input('ribbon_bg') ?? '')) ?: 'bg-[#008ba3]')
+            : $plan->ribbon_bg;
+
+        if ($request->exists('badge')) {
+            $activeCycleKey = 'yearly';
+            if (str_contains($plan->code, 'monthly')) $activeCycleKey = 'monthly';
+            elseif (str_contains($plan->code, 'quarterly')) $activeCycleKey = 'quarterly';
+            elseif (str_contains($plan->code, 'half-yearly') || str_contains($plan->code, 'half_yearly')) $activeCycleKey = 'half_yearly';
+            if (isset($cycles[$activeCycleKey]) && is_array($cycles[$activeCycleKey])) {
+                $cycles[$activeCycleKey]['ribbonText'] = $newBadge ?? '';
+            }
+        }
+
         $updateData = [
             'name' => $request->input('name', $plan->name),
             'short_name' => $request->input('shortName', $request->input('short_name', $plan->short_name)),
-            'badge' => $request->input('badge', $plan->badge),
+            'badge' => $newBadge,
             'category' => $request->input('category', $plan->category),
-            'ribbon_bg' => $request->input('ribbonBg', $request->input('ribbon_bg', $plan->ribbon_bg)),
+            'ribbon_bg' => $newRibbonBg,
             'button_text' => $request->input('buttonText', $request->input('button_text', $plan->button_text)),
             'subtext' => $request->input('subtext', $plan->subtext),
             'has_whatsapp' => $hasWhatsapp,

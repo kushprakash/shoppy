@@ -58,7 +58,7 @@ import {
   Copy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import subscriptionService from '../../services/subscriptionService';
+import subscriptionService, { resolveRibbonStyle } from '../../services/subscriptionService';
 import StoreRenewalModal from '../../components/StoreRenewalModal';
 import ForgotPasswordModal from '../../components/ForgotPasswordModal';
 import { setStoreAuthSession } from '../../utils/storeAuth';
@@ -324,12 +324,15 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
     loadData();
 
-    // Fetch fresh from backend API
-    fetch('/api/public/landing-data')
+    // Fetch fresh from backend API (bypass browser cache so DB changes reflect immediately)
+    fetch('/api/public/landing-data', { cache: 'no-store' })
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {
-          if (json.plans && json.plans.length > 0) setPlans(json.plans);
+          if (json.plans && json.plans.length > 0) {
+            setPlans(json.plans);
+            subscriptionService.cachePlansFromApi(json.plans);
+          }
           if (json.settings) setSettings((prev) => ({ ...prev, ...json.settings }));
           if (json.blogs && json.blogs.length > 0) setBlogs(json.blogs);
           if (json.gst_states && json.gst_states.length > 0) setGstStates(json.gst_states);
@@ -1564,6 +1567,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
                 {plans.slice(0, 4).map((plan) => {
                   const priceInfo = getPrice(plan);
+                  const ribbonStyle = priceInfo.ribbonStyle || resolveRibbonStyle(plan.ribbonBg || plan.ribbon_bg);
 
                   return (
                     <div
@@ -1574,8 +1578,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       {priceInfo.ribbonText && (
                         <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
                           <div
-                            className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${plan.ribbonBg || 'bg-[#008ba3]'
-                              }`}
+                            style={ribbonStyle.style}
+                            className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${ribbonStyle.className}`}
                           >
                             {priceInfo.ribbonText}
                           </div>
@@ -2084,6 +2088,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
               {plans.map((plan) => {
                 const priceInfo = getPrice(plan);
+                const ribbonStyle = priceInfo.ribbonStyle || resolveRibbonStyle(plan.ribbonBg || plan.ribbon_bg);
 
                 return (
                   <div
@@ -2093,8 +2098,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     {priceInfo.ribbonText && (
                       <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
                         <div
-                          className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${plan.ribbonBg || 'bg-[#008ba3]'
-                            }`}
+                          style={ribbonStyle.style}
+                          className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase py-1 text-center w-36 top-5 -right-9 shadow-md ${ribbonStyle.className}`}
                         >
                           {priceInfo.ribbonText}
                         </div>

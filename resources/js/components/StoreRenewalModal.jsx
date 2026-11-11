@@ -21,7 +21,7 @@ import {
   Smartphone,
   ExternalLink
 } from 'lucide-react';
-import subscriptionService from '../services/subscriptionService';
+import subscriptionService, { resolveRibbonStyle } from '../services/subscriptionService';
 
 export default function StoreRenewalModal({
   isOpen,
@@ -431,6 +431,8 @@ export default function StoreRenewalModal({
                 {plans.map((p) => {
                   const isSelected = selectedPlanId === p.id;
                   const price = subscriptionService.calculatePrice(p, p.billingCycle, addWhatsapp);
+                  const ribbonStyle = price.ribbonStyle || resolveRibbonStyle(p.ribbonBg || p.ribbon_bg);
+                  const badgeLabel = price.ribbonText !== undefined ? price.ribbonText : p.badge;
 
                   return (
                     <div
@@ -442,9 +444,12 @@ export default function StoreRenewalModal({
                           : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
                       }`}
                     >
-                      {p.badge && (
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-extrabold text-white mb-2 self-start ${p.ribbonBg || 'bg-[#008ba3]'}`}>
-                          {p.badge}
+                      {badgeLabel && (
+                        <span
+                          style={ribbonStyle.style}
+                          className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-extrabold text-white mb-2 self-start ${ribbonStyle.className}`}
+                        >
+                          {badgeLabel}
                         </span>
                       )}
                       <div>

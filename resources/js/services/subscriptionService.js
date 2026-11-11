@@ -4,6 +4,116 @@
 
 const STORAGE_KEY = 'shoppy_master_saas_data_v15_packages';
 
+const TAILWIND_COLOR_MAP = {
+  slate: { 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617' },
+  gray: { 400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151', 800: '#1f2937', 900: '#111827', 950: '#030712' },
+  zinc: { 400: '#a1a1aa', 500: '#71717a', 600: '#52525b', 700: '#3f3f46', 800: '#27272a', 900: '#18181b', 950: '#09090b' },
+  red: { 400: '#f87171', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', 800: '#991b1b', 900: '#7f1d1d', 950: '#450a0a' },
+  orange: { 400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c', 800: '#9a3412', 900: '#7c2d12', 950: '#431407' },
+  amber: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f', 950: '#451a03' },
+  yellow: { 400: '#facc15', 500: '#eab308', 600: '#ca8a04', 700: '#a16207', 800: '#854d0e', 900: '#713f12', 950: '#422006' },
+  lime: { 400: '#a3e635', 500: '#84cc16', 600: '#65a30d', 700: '#4d7c0f', 800: '#3f6212', 900: '#365314', 950: '#1a2e05' },
+  green: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16' },
+  emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b', 950: '#022c22' },
+  teal: { 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a', 950: '#042f2e' },
+  cyan: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2', 700: '#0e7490', 800: '#155e75', 900: '#164e63', 950: '#083344' },
+  sky: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e', 950: '#082f49' },
+  blue: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a', 950: '#172554' },
+  indigo: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' },
+  violet: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95', 950: '#2e1065' },
+  purple: { 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87', 950: '#3b0764' },
+  fuchsia: { 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75', 950: '#4a044e' },
+  pink: { 400: '#f472b6', 500: '#ec4899', 600: '#db2777', 700: '#be185d', 800: '#9d174d', 900: '#831843', 950: '#500724' },
+  rose: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337', 950: '#4c0519' }
+};
+
+function resolveTailwindColorToken(token) {
+  if (!token) return null;
+  const bracketMatch = token.match(/^\[([^\]]+)\]$/);
+  if (bracketMatch) return bracketMatch[1].replace(/_/g, ' ');
+  if (token === 'black') return '#000000';
+  if (token === 'white') return '#ffffff';
+  const paletteMatch = token.match(/^([a-z]+)-(\d{2,3})$/i);
+  if (paletteMatch) {
+    const [, colorName, shade] = paletteMatch;
+    return TAILWIND_COLOR_MAP[colorName.toLowerCase()]?.[shade] || null;
+  }
+  return null;
+}
+
+/**
+ * Resolve DB `ribbon_bg` value (e.g. `bg-[#6b21a8]`, `#ff5500`, `bg-rose-600`, `linear-gradient(...)`)
+ * into runtime-safe `{ className, style }` so colors changed in MySQL apply immediately without rebuilding Tailwind.
+ */
+export function resolveRibbonStyle(ribbonBg, fallbackColor = '#008ba3') {
+  const raw = typeof ribbonBg === 'string' ? ribbonBg.trim() : '';
+  if (!raw) {
+    return { className: 'bg-[#008ba3]', style: { backgroundColor: fallbackColor } };
+  }
+
+  // Raw CSS gradient
+  if (/^(linear|radial|conic)-gradient\(/i.test(raw)) {
+    return { className: '', style: { background: raw } };
+  }
+
+  // Raw CSS color (#hex, rgb(), hsl())
+  if (/^(#[0-9a-f]{3,8}|rgba?\(|hsla?\()/i.test(raw)) {
+    return { className: '', style: { backgroundColor: raw } };
+  }
+
+  // Tailwind arbitrary bg-[...]
+  const arbitraryBg = raw.match(/\bbg-\[([^\]]+)\]/i);
+  if (arbitraryBg) {
+    const cssVal = arbitraryBg[1].replace(/_/g, ' ').trim();
+    const isGradient = /gradient\(/i.test(cssVal);
+    return {
+      className: raw,
+      style: isGradient ? { background: cssVal } : { backgroundColor: cssVal }
+    };
+  }
+
+  // Tailwind gradient classes: from-... to-...
+  const fromMatch = raw.match(/\bfrom-([^\s]+)/i);
+  const toMatch = raw.match(/\bto-([^\s]+)/i);
+  if (fromMatch && toMatch) {
+    const fromCss = resolveTailwindColorToken(fromMatch[1]);
+    const toCss = resolveTailwindColorToken(toMatch[1]);
+    if (fromCss && toCss) {
+      return {
+        className: raw,
+        style: { background: `linear-gradient(to right, ${fromCss}, ${toCss})` }
+      };
+    }
+  }
+
+  // Standard Tailwind utility class like bg-rose-600
+  const namedBgMatch = raw.match(/\bbg-([a-z0-9-]+)\b/i);
+  if (namedBgMatch) {
+    const resolved = resolveTailwindColorToken(namedBgMatch[1]);
+    if (resolved) {
+      return { className: raw, style: { backgroundColor: resolved } };
+    }
+    return { className: raw, style: {} };
+  }
+
+  // Plain single-word CSS color name (e.g. "crimson", "navy", "teal")
+  if (/^[a-z]+$/i.test(raw)) {
+    return { className: '', style: { backgroundColor: raw } };
+  }
+
+  return { className: raw, style: { backgroundColor: fallbackColor } };
+}
+
+export function extractHexFromRibbonBg(ribbonBg, fallback = '#008ba3') {
+  const { style } = resolveRibbonStyle(ribbonBg, fallback);
+  const bg = style?.backgroundColor || '';
+  if (/^#[0-9a-f]{6}$/i.test(bg)) return bg;
+  if (/^#[0-9a-f]{3}$/i.test(bg)) {
+    return '#' + bg.slice(1).split('').map((c) => c + c).join('');
+  }
+  return fallback;
+}
+
 export const COMMON_ALL_FEATURES = [
   'High-Speed GST Billing Software (Thermal, A4 Auto C/F & B/F, Dot-Matrix 1-Page Medical Tear-off)',
   'Comprehensive Store Management (Multi-Branch Inventory, Stock Ledger, Cashier Shifts & Z-Report)',
@@ -154,12 +264,11 @@ class SubscriptionService {
           blogs: []
         });
       } else {
-        // Strictly verify that only the 4 official packages exist
+        // Reset only clearly corrupt or legacy Enterprise placeholder plans
         const parsed = JSON.parse(existing);
-        const validCodes = ['monthly-package', 'quarterly-package', 'half-yearly-package', 'yearly-package'];
         const isCorrupt = !Array.isArray(parsed.plans) ||
-          parsed.plans.length !== 4 ||
-          parsed.plans.some(p => !validCodes.includes(p.code || p.id) || (p.name && p.name.includes('Enterprise Plan')));
+          parsed.plans.length === 0 ||
+          parsed.plans.some(p => p.name && p.name.includes('Enterprise Plan'));
         if (isCorrupt) {
           parsed.plans = DEFAULT_PLANS;
           this.saveState(parsed);
@@ -170,11 +279,20 @@ class SubscriptionService {
     }
   }
 
+  cachePlansFromApi(apiPlans) {
+    if (!Array.isArray(apiPlans) || apiPlans.length === 0) return;
+    try {
+      const state = this.getState();
+      state.plans = apiPlans;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+
   // Live Sync from Laravel MySQL APIs
   async syncFromBackend() {
     try {
       // 1. Fetch live plans from MySQL
-      const plansRes = await fetch('/api/master/plans');
+      const plansRes = await fetch('/api/master/plans', { cache: 'no-store' });
       if (plansRes.ok) {
         const plansJson = await plansRes.json();
         if (plansJson.success && Array.isArray(plansJson.data) && plansJson.data.length > 0) {
@@ -185,7 +303,7 @@ class SubscriptionService {
       }
 
       // 2. Fetch live stores from MySQL
-      const storesRes = await fetch('/api/master/stores');
+      const storesRes = await fetch('/api/master/stores', { cache: 'no-store' });
       if (storesRes.ok) {
         const storesJson = await storesRes.json();
         if (storesJson.success && Array.isArray(storesJson.data)) {
@@ -196,7 +314,7 @@ class SubscriptionService {
       }
 
       // 3. Fetch website settings (Enexa IT Solutions branding)
-      const settingsRes = await fetch('/api/master/settings');
+      const settingsRes = await fetch('/api/master/settings', { cache: 'no-store' });
       if (settingsRes.ok) {
         const settingsJson = await settingsRes.json();
         if (settingsJson.success && settingsJson.data) {
@@ -207,7 +325,7 @@ class SubscriptionService {
       }
 
       // 4. Fetch blogs
-      const blogsRes = await fetch('/api/blogs');
+      const blogsRes = await fetch('/api/blogs', { cache: 'no-store' });
       if (blogsRes.ok) {
         const blogsJson = await blogsRes.json();
         if (blogsJson.success && Array.isArray(blogsJson.data)) {
@@ -562,11 +680,23 @@ class SubscriptionService {
     const regularPrice = regularBase + (useWhatsapp ? (monthlyWhatsappRate * months) : 0);
     const offPercent = regularPrice > finalOffer ? Math.round(((regularPrice - finalOffer) / regularPrice) * 100) : 0;
 
-    let ribbonText = 'POPULAR';
-    if (months === 1) ribbonText = 'STARTER';
-    if (months === 3) ribbonText = 'SAVE ₹500 • 17% OFF';
-    if (months === 6) ribbonText = 'SAVE ₹1,500 • 25% OFF';
-    if (months === 12) ribbonText = 'BEST VALUE • SAVE ₹4,000';
+    const hasExplicitBadge = plan.badge !== undefined && plan.badge !== null;
+    const explicitBadge = hasExplicitBadge ? String(plan.badge).trim() : null;
+
+    let ribbonText = '';
+    if (hasExplicitBadge) {
+      ribbonText = explicitBadge;
+    } else if (cycleData && typeof cycleData.ribbonText === 'string' && cycleData.ribbonText.trim() !== '') {
+      ribbonText = cycleData.ribbonText.trim();
+    } else {
+      if (months === 1) ribbonText = 'STARTER';
+      else if (months === 3) ribbonText = 'SAVE ₹500 • 17% OFF';
+      else if (months === 6) ribbonText = 'SAVE ₹1,500 • 25% OFF';
+      else if (months === 12) ribbonText = 'BEST VALUE • SAVE ₹4,000';
+      else ribbonText = 'POPULAR';
+    }
+
+    const rawRibbonBg = plan.ribbonBg || plan.ribbon_bg || 'bg-[#008ba3]';
 
     return {
       offerPrice: finalOffer,
@@ -579,7 +709,9 @@ class SubscriptionService {
       months: months,
       whatsappAddon: whatsappAddon,
       hasWhatsapp: !!useWhatsapp,
-      ribbonText: ribbonText
+      ribbonText: ribbonText,
+      ribbonBg: rawRibbonBg,
+      ribbonStyle: resolveRibbonStyle(rawRibbonBg)
     };
   }
 

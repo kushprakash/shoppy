@@ -60,7 +60,7 @@ import {
   Award,
   Image
 } from 'lucide-react';
-import subscriptionService from '../../services/subscriptionService';
+import subscriptionService, { resolveRibbonStyle, extractHexFromRibbonBg } from '../../services/subscriptionService';
 import SuperAdminAgentsTab from '../../components/agent/SuperAdminAgentsTab';
 import AgentPortalView from '../../components/agent/AgentPortalView';
 
@@ -2416,6 +2416,7 @@ export default function MasterPortal() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
                 {plans.map((plan) => {
                   const priceInfo = getPlanPrice(plan);
+                  const ribbonStyle = priceInfo.ribbonStyle || resolveRibbonStyle(plan.ribbonBg || plan.ribbon_bg);
 
                   return (
                     <div
@@ -2423,15 +2424,16 @@ export default function MasterPortal() {
                       className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between overflow-hidden relative transition-all hover:border-[#00a2c7]"
                     >
                       {/* Top-Right Diagonal Ribbon */}
-                      <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
-                        <div
-                          className={`absolute transform rotate-45 text-white text-[9px] font-black tracking-widest py-1 text-center w-36 top-5 -right-9 shadow-md ${
-                            plan.ribbonBg || 'bg-[#008ba3]'
-                          }`}
-                        >
-                          {priceInfo.ribbonText}
+                      {priceInfo.ribbonText && (
+                        <div className="absolute top-0 right-0 w-28 h-28 overflow-hidden pointer-events-none z-10">
+                          <div
+                            style={ribbonStyle.style}
+                            className={`absolute transform rotate-45 text-white text-[9px] font-black uppercase tracking-widest py-1 text-center w-36 top-5 -right-9 shadow-md ${ribbonStyle.className}`}
+                          >
+                            {priceInfo.ribbonText}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="p-6">
                         {/* Plan Header */}
@@ -3711,29 +3713,52 @@ export default function MasterPortal() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Badge Tag (e.g. Save ₹500 • 17% OFF)
+                    Badge / Ribbon Text (e.g. Starter, Silver, Gold, Platinum)
                   </label>
                   <input
                     type="text"
                     value={editingPlan.badge || ''}
                     onChange={(e) => setEditingPlan({ ...editingPlan, badge: e.target.value })}
+                    placeholder="e.g. Platinum"
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Category Filter
+                    Ribbon Background Color (`ribbon_bg`)
                   </label>
-                  <select
-                    value={editingPlan.category || 'business'}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
-                  >
-                    <option value="business">Business Plans</option>
-                    <option value="personal">Personal Plans</option>
-                    <option value="addons">Add-on Packs & APIs</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={extractHexFromRibbonBg(editingPlan.ribbonBg || editingPlan.ribbon_bg)}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, ribbonBg: `bg-[${e.target.value}]` })}
+                      className="w-9 h-9 p-0.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0"
+                      title="Pick ribbon color"
+                    />
+                    <input
+                      type="text"
+                      value={editingPlan.ribbonBg || editingPlan.ribbon_bg || ''}
+                      onChange={(e) => setEditingPlan({ ...editingPlan, ribbonBg: e.target.value })}
+                      placeholder="bg-[#008ba3] or #0a3e7e"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-semibold"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Category Filter
+                </label>
+                <select
+                  value={editingPlan.category || 'business'}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, category: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+                >
+                  <option value="business">Business Plans</option>
+                  <option value="personal">Personal Plans</option>
+                  <option value="addons">Add-on Packs & APIs</option>
+                </select>
               </div>
 
               <div>
