@@ -147,17 +147,27 @@ class PaytmController extends Controller
         // Cache metadata for 6 hours
         Cache::put("paytm_order_{$orderId}", $metadata, now()->addHours(6));
 
-        // Insert pending payment ledger in subscription_payments
+        // Insert pending payment ledger in subscription_payments if shop already exists (renewal)
         try {
-            DB::connection('mysql')->table('subscription_payments')->insert([
-                'transaction_id' => $orderId,
-                'amount' => $totalAmount,
-                'status' => 'pending',
-                'payment_mode' => 'Paytm UPI Dynamic QR',
-                'metadata' => json_encode($metadata),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $existingShopId = null;
+            if ($type === 'renew' && !empty($validated['shop_code'])) {
+                $shopRow = DB::connection('mysql')->table('shops')->where('shop_code', strtoupper($validated['shop_code']))->first();
+                $existingShopId = $shopRow ? $shopRow->id : null;
+            }
+
+            if ($existingShopId) {
+                DB::connection('mysql')->table('subscription_payments')->insert([
+                    'shop_id' => $existingShopId,
+                    'transaction_id' => $orderId,
+                    'amount' => $totalAmount,
+                    'payment_method' => 'upi',
+                    'gateway' => 'paytm_upi',
+                    'status' => 'pending',
+                    'metadata' => json_encode($metadata),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         } catch (\Throwable $e) {
             Log::warning("Paytm initiate payment insert note: " . $e->getMessage());
         }
@@ -402,7 +412,88 @@ class PaytmController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // 2. Link Agent Referral & Commission if valid referral_code provided
+            // 2. Create Subscription Record
+            $planRecord = DB::connection('mysql')->table('subscription_plans')
+                ->where('code', $planId)
+                ->orWhere('id', is_numeric($planId) ? (int)$planId : 0)
+                ->first();
+            $planDbId = $planRecord ? $planRecord->id : 1;
+
+            $subscriptionId = DB::connection('mysql')->table('shop_subscriptions')->insertGetId([
+                'shop_id' => $shopId,
+                'plan_id' => $planDbId,
+                'licensed_categories' => json_encode(['all']),
+                'starts_at' => now(),
+                'expires_at' => $validUntil,
+                'grace_ends_at' => now()->addDays($planInfo['duration_days'] + 7)->format('Y-m-d H:i:s'),
+                'status' => 'active',
+                'auto_renew' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // 3. Insert or Update subscription_payments record (Definitive ledger entry)
+            $invoiceNo = 'INV-' . strtoupper($code) . '-0001';
+            $passbookMetadata = array_merge($metadata ?? [], [
+                'type' => 'onboard',
+                'invoice_no' => $invoiceNo,
+                'plan_name' => $planInfo['plan_name'],
+                'plan_code' => $planId,
+                'duration_days' => $planInfo['duration_days'],
+                'billing_cycle' => $cycle,
+                'valid_until' => $validUntil,
+                'amount_paid' => $planInfo['total_amount'],
+                'payment_date' => now()->toIso8601String(),
+                'payment_gateway' => 'Paytm UPI Dynamic QR',
+                'utr_number' => $utrNumber ?: ($paytmCheck['txn_id'] ?? null),
+            ]);
+
+            $existingPay = DB::connection('mysql')->table('subscription_payments')
+                ->where('transaction_id', $orderId)
+                ->first();
+
+            $paymentData = [
+                'shop_id' => $shopId,
+                'shop_subscription_id' => $subscriptionId,
+                'amount' => $planInfo['total_amount'],
+                'payment_method' => 'upi',
+                'gateway' => 'paytm_upi',
+                'transaction_id' => $orderId,
+                'status' => 'completed',
+                'metadata' => json_encode($passbookMetadata),
+                'updated_at' => now(),
+            ];
+
+            if ($existingPay) {
+                DB::connection('mysql')->table('subscription_payments')
+                    ->where('id', $existingPay->id)
+                    ->update($paymentData);
+                $paymentId = $existingPay->id;
+            } else {
+                $paymentData['created_at'] = now();
+                $paymentId = DB::connection('mysql')->table('subscription_payments')->insertGetId($paymentData);
+            }
+
+            // 4. Record Central SaaS Tax Invoice
+            try {
+                $taxableAmt = round($planInfo['total_amount'] / 1.18, 2);
+                $taxAmt = round($planInfo['total_amount'] - $taxableAmt, 2);
+
+                DB::connection('mysql')->table('saas_invoices')->insertOrIgnore([
+                    'shop_id' => $shopId,
+                    'subscription_payment_id' => $paymentId,
+                    'invoice_number' => $invoiceNo,
+                    'subtotal' => $taxableAmt,
+                    'tax_total' => $taxAmt,
+                    'grand_total' => $planInfo['total_amount'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning("saas_invoices insert note: " . $e->getMessage());
+            }
+
+            // 5. Link Agent Referral & Commission if valid referral_code provided
             if (!empty($referralCode)) {
                 $agent = DB::connection('mysql')->table('agents')->where('referral_code', strtoupper(trim($referralCode)))->first();
                 if ($agent) {
@@ -427,7 +518,7 @@ class PaytmController extends Controller
                         DB::connection('mysql')->table('agent_commissions')->insert([
                             'agent_id' => $agent->id,
                             'shop_id' => $shopId,
-                            'subscription_payment_id' => null,
+                            'subscription_payment_id' => $paymentId,
                             'commission_type' => 'signup',
                             'commission_amount' => $gross,
                             'tds_rate' => 5.00,
@@ -442,52 +533,6 @@ class PaytmController extends Controller
                     }
                 }
             }
-
-            // 3. Create Subscription Record
-            $planRecord = DB::connection('mysql')->table('subscription_plans')
-                ->where('code', $planId)
-                ->orWhere('id', is_numeric($planId) ? (int)$planId : 0)
-                ->first();
-            $planDbId = $planRecord ? $planRecord->id : 1;
-
-            $subscriptionId = DB::connection('mysql')->table('shop_subscriptions')->insertGetId([
-                'shop_id' => $shopId,
-                'plan_id' => $planDbId,
-                'licensed_categories' => json_encode(['all']),
-                'starts_at' => now(),
-                'expires_at' => $validUntil,
-                'grace_ends_at' => now()->addDays($planInfo['duration_days'] + 7)->format('Y-m-d H:i:s'),
-                'status' => 'active',
-                'auto_renew' => false,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // 4. Update subscription_payments record
-            $invoiceNo = 'INV-' . strtoupper($code) . '-0001';
-            $passbookMetadata = array_merge($metadata ?? [], [
-                'type' => 'onboard',
-                'invoice_no' => $invoiceNo,
-                'plan_name' => $planInfo['plan_name'],
-                'plan_code' => $planId,
-                'duration_days' => $planInfo['duration_days'],
-                'billing_cycle' => $cycle,
-                'valid_until' => $validUntil,
-                'amount_paid' => $planInfo['total_amount'],
-                'payment_date' => now()->toIso8601String(),
-                'payment_gateway' => 'Paytm UPI Dynamic QR',
-                'utr_number' => $utrNumber ?: ($paytmCheck['txn_id'] ?? null),
-            ]);
-
-            DB::connection('mysql')->table('subscription_payments')
-                ->where('transaction_id', $orderId)
-                ->update([
-                    'shop_id' => $shopId,
-                    'shop_subscription_id' => $subscriptionId,
-                    'status' => 'success',
-                    'metadata' => json_encode($passbookMetadata),
-                    'updated_at' => now()
-                ]);
 
             // 5. Provision isolated tenant database
             try {
@@ -685,14 +730,65 @@ class PaytmController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            // Update subscription_payments record
-            DB::connection('mysql')->table('subscription_payments')
+            // Update or insert subscription_payments record
+            $renewInvoiceNo = 'INV-REN-' . date('Ymd') . '-' . strtoupper(substr($orderId, -6));
+            $renewMetadata = array_merge($metadata ?? [], [
+                'type' => 'renew',
+                'invoice_no' => $renewInvoiceNo,
+                'plan_name' => $planInfo['plan_name'],
+                'plan_code' => $planId,
+                'duration_days' => $planInfo['duration_days'],
+                'billing_cycle' => $cycle,
+                'valid_until' => $newValidUntil,
+                'amount_paid' => $planInfo['total_amount'],
+                'payment_date' => now()->toIso8601String(),
+                'payment_gateway' => 'Paytm UPI Dynamic QR',
+                'utr_number' => $paytmCheck['txn_id'] ?? null,
+            ]);
+
+            $existingRenewPay = DB::connection('mysql')->table('subscription_payments')
                 ->where('transaction_id', $orderId)
-                ->update([
+                ->first();
+
+            $renewPayData = [
+                'shop_id' => $shop->id,
+                'amount' => $planInfo['total_amount'],
+                'payment_method' => 'upi',
+                'gateway' => 'paytm_upi',
+                'transaction_id' => $orderId,
+                'status' => 'completed',
+                'metadata' => json_encode($renewMetadata),
+                'updated_at' => now(),
+            ];
+
+            if ($existingRenewPay) {
+                DB::connection('mysql')->table('subscription_payments')
+                    ->where('id', $existingRenewPay->id)
+                    ->update($renewPayData);
+                $renewPaymentId = $existingRenewPay->id;
+            } else {
+                $renewPayData['created_at'] = now();
+                $renewPaymentId = DB::connection('mysql')->table('subscription_payments')->insertGetId($renewPayData);
+            }
+
+            // Record SaaS Invoice for renewal
+            try {
+                $taxableAmt = round($planInfo['total_amount'] / 1.18, 2);
+                $taxAmt = round($planInfo['total_amount'] - $taxableAmt, 2);
+
+                DB::connection('mysql')->table('saas_invoices')->insertOrIgnore([
                     'shop_id' => $shop->id,
-                    'status' => 'success',
-                    'updated_at' => now()
+                    'subscription_payment_id' => $renewPaymentId,
+                    'invoice_number' => $renewInvoiceNo,
+                    'subtotal' => $taxableAmt,
+                    'tax_total' => $taxAmt,
+                    'grand_total' => $planInfo['total_amount'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+            } catch (\Throwable $e) {
+                Log::warning("saas_invoices renewal insert note: " . $e->getMessage());
+            }
 
             // Dispatch Official GST Tax Invoice Email on Renewal
             try {
@@ -735,6 +831,166 @@ class PaytmController extends Controller
         }
 
         return response()->json(['success' => false, 'message' => 'Invalid transaction type.'], 400);
+    }
+
+    /**
+     * Diagnostic / Direct trigger to send Store Login Credentials email
+     * Matches exact same function call as signup onboarding
+     * URL: /credential-mail-send?shop_code=SP20261106150505&email=optional@gmail.com
+     */
+    public function sendCredentialMailByShopCode(Request $request): JsonResponse
+    {
+        $code = strtoupper(trim((string)($request->query('shop_code') ?: $request->input('shop_code'))));
+        if (empty($code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Shop code is required. Example: /credential-mail-send?shop_code=SP20261106150505'
+            ], 422);
+        }
+
+        $shop = DB::connection('mysql')->table('shops')->where('shop_code', $code)->first();
+        if (!$shop) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store not found with shop code: {$code}"
+            ], 404);
+        }
+
+        $settings = json_decode($shop->settings, true) ?: [];
+        $overrideEmail = trim((string)($request->query('email') ?: $request->input('email')));
+        $email = $overrideEmail ?: ($shop->owner_email ?: ($settings['contact_email'] ?? ''));
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Invalid or missing owner email for store {$code}. You can pass &email=yourname@gmail.com to override."
+            ], 422);
+        }
+
+        $ownerName = $shop->owner_name ?: ($settings['owner_name'] ?? 'Store Owner');
+        $storeName = $shop->name ?: 'Shoppy Store';
+        $validUntil = $settings['valid_until'] ?? now()->addDays(30)->format('Y-m-d');
+        $planName = $settings['plan_name'] ?? 'Monthly Package';
+        $password = $settings['terminal_password'] ?? 'admin123';
+        $mpin = '123456';
+
+        // Call exact same signup function
+        $result = CommunicationService::sendWelcomeEmail(
+            ownerName: $ownerName,
+            ownerEmail: $email,
+            storeCode: $code,
+            password: $password,
+            storeName: $storeName,
+            validUntil: $validUntil,
+            planName: $planName,
+            mpin: $mpin
+        );
+
+        $success = ($result['status'] ?? 0) === 1;
+
+        return response()->json([
+            'success' => $success,
+            'type' => 'welcome_credentials_mail',
+            'shop_code' => $code,
+            'store_name' => $storeName,
+            'owner_name' => $ownerName,
+            'recipient_email' => $email,
+            'password' => $password,
+            'mpin' => $mpin,
+            'valid_until' => $validUntil,
+            'plan_name' => $planName,
+            'mail_result' => $result,
+        ], $success ? 200 : 500);
+    }
+
+    /**
+     * Diagnostic / Direct trigger to send Official GST Tax Invoice email
+     * Matches exact same function call as signup onboarding
+     * URL: /invoice-mail-send?shop_code=SP20261106150505&email=optional@gmail.com
+     */
+    public function sendInvoiceMailByShopCode(Request $request): JsonResponse
+    {
+        $code = strtoupper(trim((string)($request->query('shop_code') ?: $request->input('shop_code'))));
+        if (empty($code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Shop code is required. Example: /invoice-mail-send?shop_code=SP20261106150505'
+            ], 422);
+        }
+
+        $shop = DB::connection('mysql')->table('shops')->where('shop_code', $code)->first();
+        if (!$shop) {
+            return response()->json([
+                'success' => false,
+                'message' => "Store not found with shop code: {$code}"
+            ], 404);
+        }
+
+        $settings = json_decode($shop->settings, true) ?: [];
+        $overrideEmail = trim((string)($request->query('email') ?: $request->input('email')));
+        $email = $overrideEmail ?: ($shop->owner_email ?: ($settings['contact_email'] ?? ''));
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Invalid or missing owner email for store {$code}. You can pass &email=yourname@gmail.com to override."
+            ], 422);
+        }
+
+        // Retrieve latest payment if exists
+        $payRecord = DB::connection('mysql')->table('subscription_payments')
+            ->where('shop_id', $shop->id)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $payMetadata = ($payRecord && !empty($payRecord->metadata)) ? json_decode($payRecord->metadata, true) : [];
+
+        $totalAmount = (float)($payRecord->amount ?? 1000.00);
+        $invoiceNumber = $payMetadata['invoice_no'] ?? ('INV-' . $code . '-0001');
+        $planName = $settings['plan_name'] ?? ($payMetadata['plan_name'] ?? 'Monthly Package');
+        $billingCycle = $settings['billing_cycle'] ?? ($payMetadata['billing_cycle'] ?? 'monthly');
+        $stateCode = $settings['state_code'] ?? '10';
+        $stateName = $settings['state_name'] ?? 'BIHAR';
+        $ownerPhone = $shop->owner_phone ?: ($settings['contact_phone'] ?? '9546042639');
+        $transactionId = $payRecord->transaction_id ?? ($settings['last_transaction_id'] ?? ('PTM_' . time()));
+        $validUntil = $settings['valid_until'] ?? now()->addDays(30)->format('Y-m-d');
+        $ownerName = $shop->owner_name ?: ($settings['owner_name'] ?? 'Store Owner');
+        $storeName = $shop->name ?: 'Shoppy Store';
+
+        // Call exact same signup function
+        $result = CommunicationService::sendGstInvoiceEmail(
+            ownerName: $ownerName,
+            ownerEmail: $email,
+            storeCode: $code,
+            storeName: $storeName,
+            totalAmount: $totalAmount,
+            invoiceNumber: $invoiceNumber,
+            planName: $planName,
+            billingCycle: $billingCycle,
+            stateCode: $stateCode,
+            stateName: $stateName,
+            ownerPhone: $ownerPhone,
+            transactionId: $transactionId,
+            validUntil: $validUntil
+        );
+
+        $success = ($result['status'] ?? 0) === 1;
+
+        return response()->json([
+            'success' => $success,
+            'type' => 'gst_tax_invoice_mail',
+            'shop_code' => $code,
+            'store_name' => $storeName,
+            'owner_name' => $ownerName,
+            'recipient_email' => $email,
+            'invoice_number' => $invoiceNumber,
+            'total_amount' => $totalAmount,
+            'state_code' => $stateCode,
+            'state_name' => $stateName,
+            'transaction_id' => $transactionId,
+            'valid_until' => $validUntil,
+            'mail_result' => $result,
+        ], $success ? 200 : 500);
     }
 }
 

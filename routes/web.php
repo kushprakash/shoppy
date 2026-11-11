@@ -135,6 +135,10 @@ Route::get('/{storeCode}', function ($storeCode) {
 // PayU Web Callback handler for external browser redirects
 Route::match(['get', 'post'], '/payu/callback/{result}', [\App\Http\Controllers\Central\PayUController::class, 'handleCallback']);
 
+// Direct Mail Trigger URLs for Store Credentials and GST Invoice
+Route::get('/credential-mail-send', [\App\Http\Controllers\Central\PaytmController::class, 'sendCredentialMailByShopCode']);
+Route::get('/invoice-mail-send', [\App\Http\Controllers\Central\PaytmController::class, 'sendInvoiceMailByShopCode']);
+
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)
 // Handles direct URLs: /shop-admin, /shop-admin/products, /shop-admin/orders, /shop-admin/inventory, etc.
 Route::get('/{any}', function () {

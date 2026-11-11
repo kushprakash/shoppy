@@ -170,3 +170,7 @@ Route::prefix('tenant/subscription')->group(function () {
     Route::get('/passbook', [\App\Http\Controllers\Central\PayUController::class, 'getPassbook']);
     Route::get('/status', [\App\Http\Controllers\Central\PayUController::class, 'getSubscriptionStatus']);
 });
+
+// Direct Mail Trigger Routes
+Route::get('/credential-mail-send', [\App\Http\Controllers\Central\PaytmController::class, 'sendCredentialMailByShopCode']);
+Route::get('/invoice-mail-send', [\App\Http\Controllers\Central\PaytmController::class, 'sendInvoiceMailByShopCode']);
