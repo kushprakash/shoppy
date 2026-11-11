@@ -88,84 +88,36 @@ class PaytmController extends Controller
         $totalAmount = (float)$planInfo['total_amount'];
         $formattedAmount = number_format($totalAmount, 2, '.', '');
 
-        // Generate distinct Order ID: PTM_ + timestamp + 6-random
-        $orderId = 'PTM_' . time() . '_' . strtoupper(Str::random(6));
 
         // Merchant Credentials
         $vpa = config('services.paytm.upi', 'paytm.s1lcife@pty');
         $mid = config('services.paytm.key', 'oMLHAD02125387471881');
-        $merchantKey = config('services.paytm.salt');
+        $paytmSign = config('services.paytm.salt', 'AAuN7izDWN5cb8A5scnUiNME+LkZqI2DWgkXlN1McoP6WZABa/KkFTiLvuPRP6/nWK8BPg/rPhb+u4QMrUEX10UsANTDbJaALcSM9b8Wk218X+55T/zOzb7xoiB+BcX8yYuYayELImXJHIgL/c7nkAnHrwUCmbM97nRbCVVRvU0ku3Tr');
         $merchantName = 'Shoppy ERP';
 
         $storeDisplayName = $type === 'onboard' ? ($request->input('name') ?: 'New Store') : ($request->input('shop_code'));
         $note = "Shoppy ERP - " . Str::limit($storeDisplayName, 25, '');
 
-        // ================================================================
-        // Step A: Create Order on Paytm V3 Gateway (so status check works)
-        // ================================================================
-        $txnToken = null;
-        try {
-            $paytmBody = [
-                "requestType" => "Payment",
-                "mid" => $mid,
-                "websiteName" => "DEFAULT",
-                "orderId" => $orderId,
-                "txnAmount" => [
-                    "value" => $formattedAmount,
-                    "currency" => "INR",
-                ],
-                "userInfo" => [
-                    "custId" => "CUST_" . preg_replace('/[^0-9]/', '', (string)$request->input('owner_phone', '0000000000')),
-                ],
-                "callbackUrl" => url('/api/paytm/callback'),
-            ];
+        $txnid = "PG" . rand(111, 999) . time();
+        $orderId = 'PTM_' . time() . '_' . strtoupper(Str::random(6));
 
-            $checksum = PaytmChecksum::generateSignature(json_encode($paytmBody, JSON_UNESCAPED_SLASHES), $merchantKey);
+        // Paytm App Intent (Deep link directly to Paytm cash wallet payment with sign)
+        $paytmIntent = "paytmmp://cash_wallet?pa=" . rawurlencode($vpa) .
+            "&pn=" . rawurlencode("INDIA") .
+            "&am=" . $formattedAmount .
+            "&cu=INR" .
+            "&tn=" . rawurlencode($txnid) .
+            "&tr=" . rawurlencode($orderId) .
+            "&mc=4722" .
+            "&sign=" . rawurlencode($paytmSign) .
+            "&featuretype=money_transfer";
 
-            $paytmPayload = json_encode([
-                "body" => $paytmBody,
-                "head" => [
-                    "signature" => $checksum,
-                ],
-            ], JSON_UNESCAPED_SLASHES);
-
-            $initUrl = "https://securegw.paytm.in/theia/api/v1/initiateTransaction?mid={$mid}&orderId={$orderId}";
-
-            $ch = curl_init($initUrl);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $paytmPayload);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-
-            $initResponse = curl_exec($ch);
-            $initErr = curl_error($ch);
-            curl_close($ch);
-
-            Log::info("Paytm initiateTransaction [{$orderId}]: response = {$initResponse}, curl_err = {$initErr}");
-
-            if (!$initErr && $initResponse) {
-                $initResult = json_decode($initResponse, true);
-                $initStatus = $initResult['body']['resultInfo']['resultStatus'] ?? '';
-                if ($initStatus === 'S') {
-                    $txnToken = $initResult['body']['txnToken'] ?? null;
-                    Log::info("Paytm order created successfully [{$orderId}]: txnToken obtained");
-                } else {
-                    Log::warning("Paytm initiateTransaction [{$orderId}]: status={$initStatus}, msg=" . ($initResult['body']['resultInfo']['resultMsg'] ?? 'unknown'));
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::error("Paytm initiateTransaction error [{$orderId}]: " . $e->getMessage());
-        }
-
-        // ================================================================
-        // Step B: Generate UPI Intent & QR (works with or without gateway)
-        // ================================================================
-        $encodedNote = urlencode($note);
-
-        // Standard NPCI UPI Intent Link (Deep-links to GPay, PhonePe, Paytm, BHIM)
-        $upiIntentUrl = "upi://pay?pa={$vpa}&pn=" . urlencode($merchantName) . "&tr={$orderId}&am={$formattedAmount}&cu=INR&tn={$encodedNote}&mc=5411";
+        // Standard Universal NPCI UPI Intent Link (Deep-links to GPay, PhonePe, BHIM, Paytm, CRED)
+        $upiIntentUrl = "upi://pay?pa=" . rawurlencode($vpa) .
+            "&pn=" . rawurlencode("INDIA") .
+            "&am=" . $formattedAmount .
+            "&tn=" . rawurlencode($txnid) .
+            "&tr=" . rawurlencode($orderId);
 
         // Dynamic QR image generator endpoint
         $qrImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=" . urlencode($upiIntentUrl);
@@ -173,6 +125,7 @@ class PaytmController extends Controller
         // Prepare metadata
         $metadata = [
             'type' => $type,
+            'txnid' => $txnid,
             'order_id' => $orderId,
             'plan_id' => $planCode,
             'plan_name' => $planInfo['plan_name'],
@@ -189,7 +142,6 @@ class PaytmController extends Controller
             'referral_code' => $request->input('referral_code') ?: null,
             'shop_code' => $request->input('shop_code') ?: null,
             'gateway' => 'paytm_upi',
-            'txn_token' => $txnToken,
         ];
 
         // Cache metadata for 6 hours
@@ -219,17 +171,17 @@ class PaytmController extends Controller
             'mid' => $mid,
             'merchant_name' => $merchantName,
             'plan_name' => $planInfo['plan_name'],
+            'paytm_intent' => $paytmIntent,
             'upi_intent_url' => $upiIntentUrl,
             'qr_image_url' => $qrImageUrl,
-            'txn_token' => $txnToken,
             'metadata' => $metadata,
             'message' => 'Paytm UPI QR & Intent generated successfully. Scan with any UPI app to pay.'
         ]);
     }
 
     /**
-     * Check Order Status from Paytm Gateway V3 API
-     * Falls back to local DB check if gateway fails (checksum mismatch etc.)
+     * Check Order Status from Paytm Gateway API
+     * Falls back to local DB check if gateway fails
      */
     public function checkOrderStatus(Request $request): JsonResponse
     {
@@ -238,7 +190,7 @@ class PaytmController extends Controller
             return response()->json(['success' => false, 'message' => 'Order ID is required.'], 422);
         }
 
-        // Try Paytm V3 Gateway first
+        // Try Paytm Gateway first (No checksum required)
         $res = $this->queryPaytmOrderStatus($orderId);
 
         // If Paytm Gateway confirms success, return immediately
@@ -247,7 +199,6 @@ class PaytmController extends Controller
         }
 
         // Fallback: Check local subscription_payments table
-        // (in case payment was received but gateway status check has issues)
         try {
             $payRow = DB::connection('mysql')->table('subscription_payments')
                 ->where('transaction_id', $orderId)
@@ -269,56 +220,64 @@ class PaytmController extends Controller
     }
 
     /**
-     * Internal Query to Paytm V3 Gateway Order Status API
+     * Internal Query to Paytm Gateway Order Status API (No Checksum required)
+     * Matches Cashbez status check implementation
      */
     protected function queryPaytmOrderStatus(string $orderId): array
     {
         $mid = config('services.paytm.key', 'oMLHAD02125387471881');
-     
 
         try {
-
-            // Prepare Status Check Request
+            // Prepare Status Check Request (No checksum needed)
             $jsonData = json_encode(["MID" => $mid, "ORDERID" => $orderId]);
             $url = "https://securegw.paytm.in/order/status?JsonData=" . urlencode($jsonData);
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Consider true for prod
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
             $response = curl_exec($ch);
-            
-            if (curl_errno($ch)) {
-                Log::error("Paytm cURL Error: " . curl_error($ch));
-                curl_close($ch);
-                return response()->json(['status' => 0, 'message' => 'Payment Verification Failed (Network)']);
-            }
+            $curlErr = curl_error($ch);
             curl_close($ch);
 
-          
+            Log::info("Paytm queryOrderStatus [{$orderId}]: response = {$response}, curl_err = {$curlErr}");
 
-            if (!$err && $response) {
-          
-             
+            if ($curlErr) {
+                return [
+                    'success' => false,
+                    'status' => 'PENDING',
+                    'order_id' => $orderId,
+                    'message' => 'Network error checking payment status.'
+                ];
+            }
+
+            if ($response) {
                 $responseArray = json_decode($response, true);
 
-                if ($responseArray && isset($responseArray['STATUS']) && $responseArray['STATUS'] === "TXN_SUCCESS") {
+                if ($responseArray && isset($responseArray['STATUS']) && $responseArray['STATUS'] === 'TXN_SUCCESS') {
                     return [
                         'success' => true,
                         'status' => 'TXN_SUCCESS',
                         'order_id' => $orderId,
-                        'txn_id' => $responseArray['BANKTXNID'] ?? $responseArray['TXNID'] ?? null,
-                        'bank_txn_id' => $responseArray['BANKTXNID'] ?? $responseArray['TXNID'] ?? null,
+                        'txn_id' => $responseArray['BANKTXNID'] ?? ($responseArray['TXNID'] ?? null),
+                        'bank_txn_id' => $responseArray['BANKTXNID'] ?? ($responseArray['TXNID'] ?? null),
                         'amount' => $responseArray['TXNAMOUNT'] ?? null,
                         'message' => 'Transaction verified successfully via Paytm!'
                     ];
                 }
 
+                $respCode = (string)($responseArray['RESPCODE'] ?? '');
+                $statusStr = (string)($responseArray['STATUS'] ?? 'PENDING');
+                $respMsg = $responseArray['RESPMSG'] ?? 'Payment pending.';
+
                 return [
                     'success' => false,
-                    'status' => $resultStatus ?: 'PENDING',
+                    'status' => $statusStr ?: 'PENDING',
                     'order_id' => $orderId,
-                    'message' => $resultInfo['resultMsg'] ?? 'Payment pending.'
+                    'resp_code' => $respCode,
+                    'message' => $respMsg
                 ];
             }
         } catch (\Throwable $e) {
