@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
 use App\Support\StoreToken;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MasterPortalApiController extends Controller
@@ -270,40 +272,386 @@ class MasterPortalApiController extends Controller
     }
 
     /**
+     * Resolve plan price for a billing cycle from subscription_plans row.
+     */
+    private function resolvePlanCyclePrice(?object $plan, string $cycle): float
+    {
+        if (!$plan) {
+            return 0.0;
+        }
+
+        $cycleKey = strtolower(str_replace('-', '_', $cycle ?: 'yearly'));
+        $cycles = json_decode($plan->cycles ?? '{}', true) ?: [];
+
+        if (isset($cycles[$cycleKey]['offer']) && (float) $cycles[$cycleKey]['offer'] > 0) {
+            return (float) $cycles[$cycleKey]['offer'];
+        }
+
+        return match ($cycleKey) {
+            'monthly' => (float) ($plan->monthly_price ?? 0),
+            'quarterly' => (float) (($plan->monthly_price ?? 0) * 3),
+            'half_yearly' => (float) (($plan->monthly_price ?? 0) * 6),
+            default => (float) ($plan->annual_price ?? (($plan->monthly_price ?? 0) * 12)),
+        };
+    }
+
+    /**
+     * Load all non-deleted shops enriched with real subscription expiry, plan metadata, and computed dues.
+     */
+    private function buildResolvedStoresList(): array
+    {
+        $conn = DB::connection('mysql');
+        $schema = Schema::connection('mysql');
+
+        $plans = $schema->hasTable('subscription_plans')
+            ? $conn->table('subscription_plans')->orderBy('sort_order')->orderBy('id')->get()
+            : collect();
+        $plansById = $plans->keyBy('id');
+        $plansByCode = $plans->keyBy('code');
+
+        $latestSubsByShop = collect();
+        if ($schema->hasTable('shop_subscriptions')) {
+            $latestSubsByShop = $conn->table('shop_subscriptions')
+                ->orderBy('id', 'desc')
+                ->get()
+                ->unique('shop_id')
+                ->keyBy('shop_id');
+        }
+
+        $shops = $conn->table('shops')
+            ->whereNull('deleted_at')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $stores = [];
+        $todayStart = now()->startOfDay();
+
+        foreach ($shops as $shop) {
+            $settings = json_decode($shop->settings ?? '{}', true) ?: [];
+            $latestSub = $latestSubsByShop->get($shop->id);
+
+            $plan = null;
+            if (!empty($settings['plan_id']) && $plansByCode->has($settings['plan_id'])) {
+                $plan = $plansByCode->get($settings['plan_id']);
+            } elseif ($latestSub && !empty($latestSub->plan_id) && $plansById->has($latestSub->plan_id)) {
+                $plan = $plansById->get($latestSub->plan_id);
+            }
+
+            $planCode = $plan ? $plan->code : ($settings['plan_id'] ?? 'unassigned');
+            $planName = $plan ? $plan->name : ($settings['plan_name'] ?? 'Custom Plan');
+            $billingCycle = $settings['billing_cycle'] ?? 'yearly';
+
+            $validUntil = null;
+            if ($latestSub && !empty($latestSub->expires_at)) {
+                $validUntil = Carbon::parse($latestSub->expires_at)->format('Y-m-d');
+            } elseif (!empty($settings['valid_until'])) {
+                $validUntil = (string) $settings['valid_until'];
+            }
+
+            $rawStatus = strtolower((string) ($shop->status ?: 'active'));
+            $effectiveStatus = $rawStatus ?: 'active';
+            if (!in_array($rawStatus, ['suspended', 'archived'], true) && $validUntil) {
+                try {
+                    $expiryDate = Carbon::parse($validUntil)->endOfDay();
+                    if ($expiryDate->lt($todayStart)) {
+                        $effectiveStatus = 'expired';
+                    } elseif ($expiryDate->lte(now()->copy()->addDays(7)->endOfDay())) {
+                        $effectiveStatus = 'expiring_soon';
+                    } else {
+                        $effectiveStatus = 'active';
+                    }
+                } catch (\Throwable $e) {
+                    // Preserve raw status if stored validity date cannot be parsed
+                }
+            }
+
+            $dueAmount = (float) ($settings['due_amount'] ?? 0);
+            if ($dueAmount <= 0 && $effectiveStatus === 'expired' && $plan) {
+                $dueAmount = $this->resolvePlanCyclePrice($plan, $billingCycle);
+            }
+
+            $hasEcommerce = isset($settings['has_ecommerce'])
+                ? (bool) $settings['has_ecommerce']
+                : ($plan ? (bool) $plan->has_ecommerce : true);
+
+            $whatsappMode = $settings['whatsapp_mode']
+                ?? (($plan && !empty($plan->has_whatsapp)) ? 'platform_number' : 'none');
+
+            $stores[] = [
+                'id' => $shop->id,
+                'shop_code' => $shop->shop_code,
+                'name' => $shop->name,
+                'owner_name' => $shop->owner_name,
+                'owner_phone' => $shop->owner_phone,
+                'owner_email' => $shop->owner_email,
+                'city' => $settings['city'] ?? '—',
+                'plan_id' => $planCode,
+                'plan_name' => $planName,
+                'plan_ribbon_bg' => $plan->ribbon_bg ?? 'bg-[#00a2c7]',
+                'billing_cycle' => $billingCycle,
+                'has_ecommerce' => $hasEcommerce,
+                'whatsapp_mode' => $whatsappMode,
+                'own_whatsapp' => $whatsappMode === 'own_number',
+                'database_name' => $shop->database_name,
+                'status' => $effectiveStatus,
+                'valid_until' => $validUntil,
+                'due_amount' => round($dueAmount, 2),
+                'cycle_amount' => round($this->resolvePlanCyclePrice($plan, $billingCycle), 2),
+                'created_at' => $shop->created_at ? substr((string) $shop->created_at, 0, 10) : null,
+            ];
+        }
+
+        return [$stores, $plans];
+    }
+
+    /**
      * Get All Stores from MySQL
      */
     public function getStores(): JsonResponse
     {
-        $stores = DB::connection('mysql')->table('shops')
-            ->orderBy('id', 'desc')
-            ->get()
-            ->map(function ($shop) {
-                $settings = json_decode($shop->settings, true) ?: [];
-
-                return [
-                    'id' => $shop->id,
-                    'shop_code' => $shop->shop_code,
-                    'name' => $shop->name,
-                    'owner_name' => $shop->owner_name,
-                    'owner_phone' => $shop->owner_phone,
-                    'owner_email' => $shop->owner_email,
-                    'city' => $settings['city'] ?? 'Jaipur, Rajasthan',
-                    'plan_id' => $settings['plan_id'] ?? 'gst-billing',
-                    'plan_name' => $settings['plan_name'] ?? 'GST Billing Software',
-                    'billing_cycle' => $settings['billing_cycle'] ?? 'yearly',
-                    'has_ecommerce' => isset($settings['has_ecommerce']) ? (bool) $settings['has_ecommerce'] : true,
-                    'whatsapp_mode' => $settings['whatsapp_mode'] ?? 'none',
-                    'database_name' => $shop->database_name,
-                    'status' => $shop->status ?: 'active',
-                    'valid_until' => $settings['valid_until'] ?? now()->addYear()->format('Y-m-d'),
-                    'due_amount' => (float) ($settings['due_amount'] ?? 0),
-                    'created_at' => substr($shop->created_at, 0, 10),
-                ];
-            });
+        [$stores] = $this->buildResolvedStoresList();
 
         return response()->json([
             'success' => true,
             'data' => $stores,
+        ]);
+    }
+
+    /**
+     * Get Real-Time Super Admin Dashboard Metrics & Recent Subscription Payments from MySQL
+     */
+    public function getDashboardStats(): JsonResponse
+    {
+        $conn = DB::connection('mysql');
+        $schema = Schema::connection('mysql');
+
+        [$stores, $plans] = $this->buildResolvedStoresList();
+
+        $totalStores = count($stores);
+        $ecommerceStores = 0;
+        $billingOnlyStores = 0;
+        $activeStores = 0;
+        $expiringStores = 0;
+        $expiredStores = 0;
+        $dueStoresCount = 0;
+        $totalDues = 0.0;
+        $isolatedDbsCount = 0;
+        $whatsappStoresCount = 0;
+        $estimatedMrr = 0.0;
+        $planBuckets = [];
+
+        foreach ($stores as $s) {
+            if ($s['has_ecommerce']) {
+                $ecommerceStores++;
+            } else {
+                $billingOnlyStores++;
+            }
+
+            if ($s['status'] === 'active') {
+                $activeStores++;
+            } elseif ($s['status'] === 'expiring_soon') {
+                $expiringStores++;
+            } elseif (in_array($s['status'], ['expired', 'suspended'], true)) {
+                $expiredStores++;
+            }
+
+            if ($s['due_amount'] > 0 || in_array($s['status'], ['expiring_soon', 'expired'], true)) {
+                $dueStoresCount++;
+            }
+            $totalDues += (float) $s['due_amount'];
+
+            if (!empty($s['database_name'])) {
+                $isolatedDbsCount++;
+            }
+            if (($s['whatsapp_mode'] ?? 'none') !== 'none') {
+                $whatsappStoresCount++;
+            }
+
+            // Active normalized MRR estimate based on assigned plan cycle
+            if (in_array($s['status'], ['active', 'expiring_soon'], true) && ($s['cycle_amount'] ?? 0) > 0) {
+                $divisor = match (strtolower((string) $s['billing_cycle'])) {
+                    'monthly' => 1,
+                    'quarterly' => 3,
+                    'half_yearly', 'half-yearly' => 6,
+                    default => 12,
+                };
+                $estimatedMrr += ($s['cycle_amount'] / $divisor);
+            }
+
+            $key = $s['plan_name'] ?: 'Custom Plan';
+            if (!isset($planBuckets[$key])) {
+                $planBuckets[$key] = [
+                    'code' => $s['plan_id'],
+                    'name' => $key,
+                    'count' => 0,
+                    'ribbon_bg' => $s['plan_ribbon_bg'] ?? 'bg-[#00a2c7]',
+                ];
+            }
+            $planBuckets[$key]['count']++;
+        }
+
+        $planShare = collect(array_values($planBuckets))
+            ->sortByDesc('count')
+            ->values()
+            ->map(function ($item) use ($totalStores) {
+                $item['percentage'] = $totalStores > 0 ? (int) round(($item['count'] / $totalStores) * 100) : 0;
+                return $item;
+            })
+            ->all();
+
+        // Subscription Revenue & Recent Payments from subscription_payments
+        $totalRevenue = 0.0;
+        $thisMonthRevenue = 0.0;
+        $lastMonthRevenue = 0.0;
+        $completedPaymentsCount = 0;
+        $pendingPaymentsCount = 0;
+        $recentPayments = [];
+
+        if ($schema->hasTable('subscription_payments')) {
+            $paidFilter = fn ($q) => $q->whereRaw("LOWER(COALESCE(status, '')) IN ('completed', 'success', 'paid')");
+
+            $totalRevenue = (float) $paidFilter($conn->table('subscription_payments'))->sum('amount');
+            $completedPaymentsCount = (int) $paidFilter($conn->table('subscription_payments'))->count();
+            $pendingPaymentsCount = (int) $conn->table('subscription_payments')
+                ->whereRaw("LOWER(COALESCE(status, '')) = 'pending'")
+                ->count();
+
+            $thisMonthStart = now()->startOfMonth();
+            $lastMonthStart = now()->copy()->subMonthNoOverflow()->startOfMonth();
+            $lastMonthEnd = now()->copy()->subMonthNoOverflow()->endOfMonth();
+
+            $thisMonthRevenue = (float) $paidFilter($conn->table('subscription_payments'))
+                ->where('created_at', '>=', $thisMonthStart)
+                ->sum('amount');
+
+            $lastMonthRevenue = (float) $paidFilter($conn->table('subscription_payments'))
+                ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+                ->sum('amount');
+
+            $rawPayments = $conn->table('subscription_payments as sp')
+                ->leftJoin('shops as sh', 'sp.shop_id', '=', 'sh.id')
+                ->select(
+                    'sp.id',
+                    'sp.shop_id',
+                    'sp.amount',
+                    'sp.payment_method',
+                    'sp.gateway',
+                    'sp.transaction_id',
+                    'sp.status',
+                    'sp.metadata',
+                    'sp.created_at',
+                    'sh.shop_code',
+                    'sh.name as shop_name'
+                )
+                ->orderBy('sp.id', 'desc')
+                ->limit(8)
+                ->get();
+
+            foreach ($rawPayments as $p) {
+                $meta = json_decode($p->metadata ?? '{}', true) ?: [];
+                $recentPayments[] = [
+                    'id' => $p->id,
+                    'shop_code' => $p->shop_code ?: ($meta['shop_code'] ?? 'ONBOARD'),
+                    'shop_name' => $p->shop_name ?: ($meta['shop_name'] ?? ($meta['store_name'] ?? 'Store Checkout')),
+                    'plan_name' => $meta['plan_name'] ?? ($meta['plan_id'] ?? null),
+                    'amount' => (float) $p->amount,
+                    'gateway' => $p->gateway ?: ($p->payment_method ?: 'Online'),
+                    'payment_method' => $p->payment_method ?: 'online',
+                    'transaction_id' => $p->transaction_id ?: ('TXN-' . $p->id),
+                    'status' => strtolower((string) ($p->status ?: 'pending')),
+                    'created_at' => $p->created_at ? Carbon::parse($p->created_at)->format('d M Y, h:i A') : null,
+                ];
+            }
+        }
+
+        $growthPercent = $lastMonthRevenue > 0
+            ? round((($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1)
+            : null;
+
+        // Leads stats (matches getContactInquiries priority: contacts then contact_inquiries)
+        $leadsTotal = 0;
+        $leadsNew = 0;
+        if ($schema->hasTable('contacts') && $conn->table('contacts')->exists()) {
+            $leadsTotal = (int) $conn->table('contacts')->count();
+            $leadsNew = (int) $conn->table('contacts')->where('status', 'new')->count();
+        } elseif ($schema->hasTable('contact_inquiries')) {
+            $leadsTotal = (int) $conn->table('contact_inquiries')->count();
+            $leadsNew = (int) $conn->table('contact_inquiries')->where('status', 'new')->count();
+        }
+
+        // Agents stats
+        $agentsTotal = 0;
+        $agentsActive = 0;
+        if ($schema->hasTable('agents')) {
+            $agentsTotal = (int) $conn->table('agents')->count();
+            $agentsActive = (int) $conn->table('agents')
+                ->whereIn('status', ['approved', 'active'])
+                ->count();
+        }
+
+        $blogsPublished = $schema->hasTable('blogs')
+            ? (int) $conn->table('blogs')->where('is_published', true)->count()
+            : 0;
+
+        // Payment gateway configuration status from server environment
+        $activeGateways = [];
+        if (!empty(config('services.payu.key')) && !empty(config('services.payu.salt'))) {
+            $activeGateways[] = 'PayU';
+        }
+        if (!empty(config('services.paytm.upi'))) {
+            $activeGateways[] = 'Paytm UPI';
+        }
+
+        $mailHost = (string) config('mail.mailers.smtp.host', '');
+        $smtpConfigured = $mailHost !== '' && $mailHost !== '127.0.0.1';
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'revenue' => [
+                    'total_revenue' => round($totalRevenue, 2),
+                    'this_month_revenue' => round($thisMonthRevenue, 2),
+                    'last_month_revenue' => round($lastMonthRevenue, 2),
+                    'estimated_mrr' => round($estimatedMrr, 2),
+                    'growth_percent' => $growthPercent,
+                    'completed_payments_count' => $completedPaymentsCount,
+                    'pending_payments_count' => $pendingPaymentsCount,
+                ],
+                'stores' => [
+                    'total' => $totalStores,
+                    'ecommerce' => $ecommerceStores,
+                    'billing_only' => $billingOnlyStores,
+                    'active' => $activeStores,
+                    'expiring_soon' => $expiringStores,
+                    'expired' => $expiredStores,
+                    'due_count' => $dueStoresCount,
+                    'total_dues' => round($totalDues, 2),
+                    'isolated_dbs' => $isolatedDbsCount,
+                    'whatsapp_enabled' => $whatsappStoresCount,
+                ],
+                'plans' => [
+                    'active_count' => $plans->where('is_active', true)->count(),
+                    'names' => $plans->where('is_active', true)->pluck('name')->values()->all(),
+                    'share' => $planShare,
+                ],
+                'operations' => [
+                    'leads_total' => $leadsTotal,
+                    'leads_new' => $leadsNew,
+                    'agents_total' => $agentsTotal,
+                    'agents_active' => $agentsActive,
+                    'blogs_published' => $blogsPublished,
+                ],
+                'infrastructure' => [
+                    'isolated_dbs_count' => $isolatedDbsCount,
+                    'total_stores' => $totalStores,
+                    'whatsapp_stores_count' => $whatsappStoresCount,
+                    'active_gateways' => $activeGateways,
+                    'gateways_count' => count($activeGateways),
+                    'smtp_configured' => $smtpConfigured,
+                    'smtp_host' => $mailHost ?: null,
+                ],
+                'recent_payments' => $recentPayments,
+            ],
         ]);
     }
 

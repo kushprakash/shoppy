@@ -289,53 +289,58 @@ class SubscriptionService {
   }
 
   // Live Sync from Laravel MySQL APIs
-  async syncFromBackend() {
+  async syncFromBackend(emit = true) {
     try {
-      // 1. Fetch live plans from MySQL
-      const plansRes = await fetch('/api/master/plans', { cache: 'no-store' });
-      if (plansRes.ok) {
+      const [plansRes, storesRes, settingsRes, blogsRes] = await Promise.all([
+        fetch('/api/master/plans', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/master/stores', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/master/settings', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/blogs', { cache: 'no-store' }).catch(() => null)
+      ]);
+
+      const nextState = { ...this.getState() };
+      let changed = false;
+
+      if (plansRes && plansRes.ok) {
         const plansJson = await plansRes.json();
         if (plansJson.success && Array.isArray(plansJson.data) && plansJson.data.length > 0) {
-          const state = this.getState();
-          state.plans = plansJson.data;
-          this.saveState(state);
+          nextState.plans = plansJson.data;
+          changed = true;
         }
       }
 
-      // 2. Fetch live stores from MySQL
-      const storesRes = await fetch('/api/master/stores', { cache: 'no-store' });
-      if (storesRes.ok) {
+      if (storesRes && storesRes.ok) {
         const storesJson = await storesRes.json();
         if (storesJson.success && Array.isArray(storesJson.data)) {
-          const state = this.getState();
-          state.stores = storesJson.data;
-          this.saveState(state);
+          nextState.stores = storesJson.data;
+          changed = true;
         }
       }
 
-      // 3. Fetch website settings (Enexa IT Solutions branding)
-      const settingsRes = await fetch('/api/master/settings', { cache: 'no-store' });
-      if (settingsRes.ok) {
+      if (settingsRes && settingsRes.ok) {
         const settingsJson = await settingsRes.json();
         if (settingsJson.success && settingsJson.data) {
-          const state = this.getState();
-          state.settings = settingsJson.data;
-          this.saveState(state);
+          nextState.settings = settingsJson.data;
+          changed = true;
         }
       }
 
-      // 4. Fetch blogs
-      const blogsRes = await fetch('/api/blogs', { cache: 'no-store' });
-      if (blogsRes.ok) {
+      if (blogsRes && blogsRes.ok) {
         const blogsJson = await blogsRes.json();
         if (blogsJson.success && Array.isArray(blogsJson.data)) {
-          const state = this.getState();
-          state.blogs = blogsJson.data;
-          this.saveState(state);
+          nextState.blogs = blogsJson.data;
+          changed = true;
         }
       }
+
+      if (changed) {
+        this.saveState(nextState, emit);
+      }
+
+      return nextState;
     } catch (err) {
       // Sync fallback
+      return this.getState();
     }
   }
 
@@ -361,11 +366,13 @@ class SubscriptionService {
     };
   }
 
-  saveState(newState) {
+  saveState(newState, emit = true) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-      // Dispatch storage event for cross-tab sync
-      window.dispatchEvent(new CustomEvent('shoppy:master_updated', { detail: newState }));
+      if (emit) {
+        // Dispatch storage event for cross-tab / listener sync
+        window.dispatchEvent(new CustomEvent('shoppy:master_updated', { detail: newState }));
+      }
     } catch (e) {}
   }
 
@@ -576,7 +583,7 @@ class SubscriptionService {
 
   async getLeads() {
     try {
-      const res = await fetch('/api/master/leads');
+      const res = await fetch('/api/master/leads', { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         return json.data || [];
@@ -585,6 +592,30 @@ class SubscriptionService {
       // Lead fetch fallback
     }
     return [];
+  }
+
+  async getDashboardStats() {
+    try {
+      const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
+      const headers = { 'Accept': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['X-Master-Token'] = token;
+      }
+      const res = await fetch('/api/master/dashboard-stats', {
+        cache: 'no-store',
+        headers
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return json.data;
+        }
+      }
+    } catch (e) {
+      // Stats fetch fallback
+    }
+    return null;
   }
 
   async updateLeadStatus(id, status) {

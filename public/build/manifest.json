@@ -8,8 +8,8 @@
       "_x-CqyPoaX0.js"
     ]
   },
-  "_StoreSettings-N6LLkSZ-.js": {
-    "file": "assets/StoreSettings-N6LLkSZ-.js",
+  "_StoreSettings-CkIu2oeq.js": {
+    "file": "assets/StoreSettings-CkIu2oeq.js",
     "name": "StoreSettings",
     "imports": [
       "_createLucideIcon-DibvqOt0.js",
@@ -136,14 +136,14 @@
     "isEntry": true
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-CGnUnFbW.js",
+    "file": "assets/app-DmvXuIwc.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
     "imports": [
       "_createLucideIcon-DibvqOt0.js",
       "_axios-U26XEoMZ.js",
-      "_StoreSettings-N6LLkSZ-.js",
+      "_StoreSettings-CkIu2oeq.js",
       "_search-CIPSQ_0R.js",
       "_user-BCOOWPvP.js",
       "_truck-DIKGeKoM.js",
@@ -210,14 +210,14 @@
     ]
   },
   "resources/js/entries/shop-admin.jsx": {
-    "file": "assets/shop-admin-D_mnXI6R.js",
+    "file": "assets/shop-admin-C0BgUij1.js",
     "name": "shop-admin",
     "src": "resources/js/entries/shop-admin.jsx",
     "isEntry": true,
     "imports": [
       "_createLucideIcon-DibvqOt0.js",
       "_axios-U26XEoMZ.js",
-      "_StoreSettings-N6LLkSZ-.js",
+      "_StoreSettings-CkIu2oeq.js",
       "_search-CIPSQ_0R.js",
       "_truck-DIKGeKoM.js",
       "_InvoicePrintModal-XFCZ9u2C.js",

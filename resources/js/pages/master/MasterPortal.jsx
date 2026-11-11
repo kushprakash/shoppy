@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   RefreshCw,
   ArrowUpRight,
+  ArrowDownRight,
   ArrowRight,
   Database,
   Store,
@@ -106,6 +107,18 @@ export default function MasterPortal() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState(null);
 
+  // Authenticated Super Admin User & Real-Time Platform Dashboard Metrics (MySQL)
+  const [loggedInAdmin, setLoggedInAdmin] = useState(() => {
+    try {
+      const stored = localStorage.getItem('master_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
   // Navigation tab in Master Portal: 'dashboard' | 'plans' | 'stores' | 'due_payments' | 'categories'
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -118,33 +131,23 @@ export default function MasterPortal() {
   // Platform Branding Modal State (User requested: "setting se o apna branding karega")
   const [isBrandingModalOpen, setIsBrandingModalOpen] = useState(false);
   const [platformBranding, setPlatformBranding] = useState(() => {
+    const fallback = {
+      platformName: 'Enexa IT Super Admin',
+      platformTagline: 'Enterprise Retail ERP & Omnichannel Multi-Tenant Platform',
+      companyName: 'Enexa IT Solutions Private Limited',
+      website: 'https://www.enexa.in',
+      adminName: 'Super Admin',
+      adminEmail: '',
+      supportPhone: '',
+      supportEmail: '',
+      companyGstin: '—',
+      themeColor: '#00a2c7'
+    };
     try {
       const stored = localStorage.getItem('shoppy_platform_branding');
-      return stored ? JSON.parse(stored) : {
-        platformName: 'Enexa IT Super Admin',
-        platformTagline: 'Enterprise Retail ERP & Omnichannel Multi-Tenant Platform',
-        companyName: 'Enexa IT Solutions Private Limited',
-        website: 'https://www.enexa.in',
-        adminName: 'Super Admin (Enexa IT)',
-        adminEmail: 'admin@shoppy.io',
-        supportPhone: '+91 98290 00192',
-        supportEmail: 'info@enexa.in',
-        companyGstin: '08AABCE1290M1Z5',
-        themeColor: '#00a2c7'
-      };
+      return stored ? { ...fallback, ...JSON.parse(stored) } : fallback;
     } catch (e) {
-      return {
-        platformName: 'Enexa IT Super Admin',
-        platformTagline: 'Enterprise Retail ERP & Omnichannel Multi-Tenant Platform',
-        companyName: 'Enexa IT Solutions Private Limited',
-        website: 'https://www.enexa.in',
-        adminName: 'Super Admin (Enexa IT)',
-        adminEmail: 'admin@shoppy.io',
-        supportPhone: '+91 98290 00192',
-        supportEmail: 'info@enexa.in',
-        companyGstin: '08AABCE1290M1Z5',
-        themeColor: '#00a2c7'
-      };
+      return fallback;
     }
   });
 
@@ -273,20 +276,20 @@ export default function MasterPortal() {
   const [leads, setLeads] = useState([]);
   const [leadFilter, setLeadFilter] = useState('all');
 
-  // Website CMS & Branding Settings State
+  // Website CMS & Branding Settings State (populated live from MySQL website_settings)
   const [websiteCms, setWebsiteCms] = useState({
     company_name: 'Enexa IT Solutions Private Limited',
     brand_title: 'Shoppy ERP & Retail Omnichannel Platform',
     brand_tagline: 'Next-Generation POS Billing, GST Compliance & Omnichannel Digital Commerce for Indian Retailers',
-    header_notice: '🚀 Next-Gen Retail POS & Omnichannel Cloud ERP — Powered by Enexa IT Solutions Private Limited',
+    header_notice: '',
     website: 'https://www.enexa.in',
     official_domain: 'www.enexa.in',
-    support_phone: '+91 98290 00192',
-    support_email: 'info@enexa.in',
-    sales_email: 'sales@enexa.in',
-    corporate_address: 'Enexa IT Solutions Private Limited, IT Park, Tech Zone, Jaipur, Rajasthan - 302020',
-    company_gstin: '08AABCE1290M1Z5',
-    company_cin: 'U72900RJ2021PTC075482'
+    support_phone: '',
+    support_email: '',
+    sales_email: '',
+    corporate_address: '',
+    company_gstin: '',
+    company_cin: ''
   });
 
   // Blog Management State
@@ -310,14 +313,13 @@ export default function MasterPortal() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Sync data on load, verify session with backend, and subscribe to master updates
+  // Verify Super Admin session on initial mount
   useEffect(() => {
     const token = localStorage.getItem('master_token') || sessionStorage.getItem('master_token');
 
     if (!token) {
       setIsAuthenticated(false);
     } else {
-      // Verify Super Admin token session with backend database
       fetch('/api/master/me', {
         headers: {
           'Accept': 'application/json',
@@ -332,10 +334,14 @@ export default function MasterPortal() {
             try {
               sessionStorage.setItem('master_auth', 'true');
               localStorage.setItem('master_auth', 'true');
-              if (data.user) localStorage.setItem('master_user', JSON.stringify(data.user));
+              if (data.user) {
+                localStorage.setItem('master_user', JSON.stringify(data.user));
+                setLoggedInAdmin(data.user);
+              }
             } catch (e) {}
           } else {
             setIsAuthenticated(false);
+            setLoggedInAdmin(null);
             try {
               sessionStorage.removeItem('master_auth');
               localStorage.removeItem('master_auth');
@@ -349,28 +355,67 @@ export default function MasterPortal() {
           // If momentary network blip, keep authenticated state from valid localStorage token
         });
     }
+  }, []);
 
-    const syncData = async () => {
+  // Sync live MySQL portal data, branding settings & dashboard metrics
+  useEffect(() => {
+    let active = true;
+
+    const applyLocalState = () => {
+      const liveSettings = subscriptionService.getWebsiteSettings() || {};
       setPlans(subscriptionService.getPlans());
       setShops(subscriptionService.getStores());
       setCategories(subscriptionService.getCategories());
       setSubcategories(subscriptionService.getSubcategories());
-      setWebsiteCms(subscriptionService.getWebsiteSettings());
+      setWebsiteCms(liveSettings);
       setBlogs(subscriptionService.getBlogs());
 
-      // Fetch live leads from backend
-      try {
-        const liveLeads = await subscriptionService.getLeads();
-        if (Array.isArray(liveLeads)) {
-          setLeads(liveLeads);
-        }
-      } catch (e) {}
+      setPlatformBranding((prev) => ({
+        ...prev,
+        platformName: liveSettings.brand_title || prev.platformName,
+        platformTagline: liveSettings.brand_tagline || prev.platformTagline,
+        companyName: liveSettings.company_name || prev.companyName,
+        website: liveSettings.website || prev.website,
+        supportPhone: liveSettings.support_phone || prev.supportPhone,
+        supportEmail: liveSettings.support_email || prev.supportEmail,
+        companyGstin: liveSettings.company_gstin || prev.companyGstin
+      }));
     };
 
-    syncData();
-    window.addEventListener('shoppy:master_updated', syncData);
-    return () => window.removeEventListener('shoppy:master_updated', syncData);
-  }, []);
+    const syncFromServer = async () => {
+      setIsLoadingStats(true);
+      applyLocalState();
+
+      await subscriptionService.syncFromBackend(false);
+      if (!active) return;
+      applyLocalState();
+
+      const [liveLeads, liveStats] = await Promise.all([
+        subscriptionService.getLeads(),
+        subscriptionService.getDashboardStats()
+      ]);
+
+      if (!active) return;
+      if (Array.isArray(liveLeads)) {
+        setLeads(liveLeads);
+      }
+      if (liveStats) {
+        setDashboardStats(liveStats);
+      }
+      setIsLoadingStats(false);
+    };
+
+    const handleMasterUpdated = () => {
+      syncFromServer();
+    };
+
+    syncFromServer();
+    window.addEventListener('shoppy:master_updated', handleMasterUpdated);
+    return () => {
+      active = false;
+      window.removeEventListener('shoppy:master_updated', handleMasterUpdated);
+    };
+  }, [isAuthenticated]);
 
   // Super Admin Login Handler (Strict Real Database Authentication)
   const handleLogin = async (e) => {
@@ -408,6 +453,7 @@ export default function MasterPortal() {
           }
           if (data.user) {
             localStorage.setItem('master_user', JSON.stringify(data.user));
+            setLoggedInAdmin(data.user);
           }
         } catch (err) {}
         setIsAuthenticated(true);
@@ -505,6 +551,7 @@ export default function MasterPortal() {
     setIsAuthenticated(false);
     setAuthRole('admin');
     setAgentUser(null);
+    setLoggedInAdmin(null);
     showToast('Logged out successfully');
   };
 
@@ -856,10 +903,51 @@ export default function MasterPortal() {
   });
 
   // Calculate Due Payment metrics
-  const totalDues = shops.reduce((sum, s) => sum + (s.due_amount || 0), 0);
-  const expiringCount = shops.filter((s) => s.status === 'expiring_soon').length;
-  const expiredCount = shops.filter((s) => s.status === 'expired').length;
+  const totalDues = dashboardStats?.stores?.total_dues ?? shops.reduce((sum, s) => sum + (s.due_amount || 0), 0);
+  const expiringCount = dashboardStats?.stores?.expiring_soon ?? shops.filter((s) => s.status === 'expiring_soon').length;
+  const expiredCount = dashboardStats?.stores?.expired ?? shops.filter((s) => s.status === 'expired' || s.status === 'suspended').length;
   const dueShops = shops.filter((s) => (s.due_amount && s.due_amount > 0) || s.status === 'expiring_soon' || s.status === 'expired');
+
+  // Effective logged-in Super Admin profile & derived Dashboard helpers
+  const effectiveAdminName = loggedInAdmin?.name || platformBranding.adminName || 'Super Admin';
+  const effectiveAdminEmail = loggedInAdmin?.email || platformBranding.adminEmail || websiteCms.support_email || '—';
+  const adminInitials = (effectiveAdminName || 'SA')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('') || 'SA';
+
+  const formatInr = (val) => {
+    const num = Number(val || 0);
+    return `₹ ${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const revenueStats = dashboardStats?.revenue || {};
+  const storeStats = dashboardStats?.stores || {};
+  const infraStats = dashboardStats?.infrastructure || {};
+  const opsStats = dashboardStats?.operations || {};
+  const recentPayments = Array.isArray(dashboardStats?.recent_payments) ? dashboardStats.recent_payments : [];
+
+  const computedPlanShare = (() => {
+    if (Array.isArray(dashboardStats?.plans?.share) && dashboardStats.plans.share.length > 0) {
+      return dashboardStats.plans.share;
+    }
+    const total = shops.length;
+    if (total === 0) return [];
+    const grouped = shops.reduce((acc, s) => {
+      const name = s.plan_name || 'Custom Plan';
+      if (!acc[name]) acc[name] = { code: s.plan_id || name, name, count: 0, ribbon_bg: s.plan_ribbon_bg || 'bg-[#00a2c7]' };
+      acc[name].count += 1;
+      return acc;
+    }, {});
+    return Object.values(grouped)
+      .sort((a, b) => b.count - a.count)
+      .map((item) => ({
+        ...item,
+        percentage: Math.round((item.count / total) * 100)
+      }));
+  })();
 
   // Filtered Leads
   const filteredLeads = leads.filter((l) => {
@@ -1827,11 +1915,11 @@ export default function MasterPortal() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#008ba3] to-[#10b981] text-white font-bold flex items-center justify-center text-xs shadow-sm shrink-0">
-                SA
+                {adminInitials}
               </div>
               <div className="truncate">
-                <p className="text-xs font-semibold text-white truncate">{platformBranding.adminName}</p>
-                <p className="text-[10px] text-slate-400 truncate">{platformBranding.adminEmail}</p>
+                <p className="text-xs font-semibold text-white truncate">{effectiveAdminName}</p>
+                <p className="text-[10px] text-slate-400 truncate">{effectiveAdminEmail}</p>
               </div>
             </div>
 
@@ -1940,7 +2028,7 @@ export default function MasterPortal() {
                 className="w-8 h-8 rounded-full overflow-hidden border-2 border-cyan-500/80 shadow-xs flex items-center justify-center bg-gradient-to-tr from-[#008ba3] to-[#10b981] font-bold text-white text-xs cursor-pointer hover:ring-2 hover:ring-cyan-400 transition"
                 title="Super Admin Profile & Branding"
               >
-                SA
+                {adminInitials}
               </button>
 
               {/* Profile Dropdown Menu */}
@@ -1954,17 +2042,17 @@ export default function MasterPortal() {
                     {/* Profile Header */}
                     <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#008ba3] to-[#10b981] text-white font-extrabold flex items-center justify-center text-sm shrink-0">
-                        SA
+                        {adminInitials}
                       </div>
                       <div className="truncate">
                         <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {platformBranding.adminName}
+                          {effectiveAdminName}
                         </p>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                          {platformBranding.adminEmail}
+                          {effectiveAdminEmail}
                         </p>
                         <span className="inline-block px-1.5 py-0.5 text-[9px] font-mono font-bold bg-cyan-50 dark:bg-cyan-950 text-[#00a2c7] rounded mt-0.5">
-                          Super Admin (Root)
+                          {loggedInAdmin?.role ? loggedInAdmin.role.replace(/_/g, ' ').toUpperCase() : 'SUPER ADMIN'}
                         </span>
                       </div>
                     </div>
@@ -2033,31 +2121,49 @@ export default function MasterPortal() {
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950 text-[#00a2c7] border border-cyan-200 dark:border-cyan-800 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Tenant DB: Isolated
+              Tenant DBs: {infraStats.isolated_dbs_count ?? shops.length} Isolated
             </span>
-            <span className="hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-              GSTIN: {platformBranding.companyGstin}
-            </span>
+            {(websiteCms.company_gstin || platformBranding.companyGstin) && (
+              <span className="hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                GSTIN: {websiteCms.company_gstin || platformBranding.companyGstin}
+              </span>
+            )}
           </div>
         </div>
 
         {/* Main Work Area */}
         <main className="px-6 pb-12 flex-1 space-y-6">
-          {/* Top 4 Key Metric Cards (Super Admin Platform Metrics) */}
+          {/* Top 4 Key Metric Cards (Live MySQL Platform Metrics) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Metric 1: Total SaaS MRR / Gross Revenue */}
+            {/* Metric 1: Verified Subscription Revenue & Est. MRR */}
             <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Total Platform MRR
+                  Total SaaS Revenue
                 </p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">₹ 48,250.00</h3>
-                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>+18.4% vs last month</span>
-                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {isLoadingStats && !dashboardStats ? 'Loading...' : formatInr(revenueStats.total_revenue)}
+                </h3>
+                {revenueStats.growth_percent !== null && revenueStats.growth_percent !== undefined ? (
+                  <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${revenueStats.growth_percent >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {revenueStats.growth_percent >= 0 ? (
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    ) : (
+                      <ArrowDownRight className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {revenueStats.growth_percent >= 0 ? '+' : ''}{revenueStats.growth_percent}% vs last month
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
+                    <span>
+                      Est. MRR: ₹{Math.round(revenueStats.estimated_mrr || 0).toLocaleString('en-IN')} • {revenueStats.completed_payments_count || 0} Paid Txns
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="w-12 h-12 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] flex items-center justify-center font-bold text-lg">
+              <div className="w-12 h-12 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] flex items-center justify-center font-bold text-lg shrink-0">
                 ₹
               </div>
             </div>
@@ -2068,28 +2174,39 @@ export default function MasterPortal() {
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Provisioned Stores
                 </p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{shops.length} Stores</h3>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {storeStats.total ?? shops.length} Stores
+                </h3>
                 <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
-                  <span>{shops.filter((s) => s.has_ecommerce).length} Ecommerce / {shops.filter((s) => !s.has_ecommerce).length} Billing Only</span>
+                  <span>
+                    {storeStats.ecommerce ?? shops.filter((s) => s.has_ecommerce).length} Ecommerce / {storeStats.billing_only ?? shops.filter((s) => !s.has_ecommerce).length} Billing Only
+                  </span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center shrink-0">
                 <Store className="w-6 h-6" />
               </div>
             </div>
 
             {/* Metric 3: Active Subscription Tiers */}
             <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
-              <div>
+              <div className="min-w-0 pr-2">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Active Subscription Plans
                 </p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{plans.length} Tiers</h3>
-                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
-                  <span>GST Billing, WhatsApp, Storefront</span>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {dashboardStats?.plans?.active_count ?? plans.length} Tiers
+                </h3>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1 truncate">
+                  <span className="truncate">
+                    {(dashboardStats?.plans?.names?.length
+                      ? dashboardStats.plans.names
+                      : plans.map((p) => p.shortName || p.name)
+                    ).slice(0, 3).join(', ') || 'No active plans configured'}
+                  </span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center shrink-0">
                 <Boxes className="w-6 h-6" />
               </div>
             </div>
@@ -2100,18 +2217,22 @@ export default function MasterPortal() {
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Outstanding Dues
                 </p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">₹ {totalDues.toLocaleString('en-IN')}.00</h3>
-                <div className="flex items-center gap-1 text-[11px] font-bold text-rose-500 mt-1">
-                  <span>{dueShops.length} Stores Overdue / Expiring</span>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {formatInr(totalDues)}
+                </h3>
+                <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${(storeStats.due_count ?? dueShops.length) > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                  <span>
+                    {storeStats.due_count ?? dueShops.length} Stores Overdue / Expiring
+                  </span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center shrink-0">
                 <Receipt className="w-6 h-6" />
               </div>
             </div>
           </div>
 
-          {/* Quick Super Admin Action Cards (matching screenshot layout) */}
+          {/* Quick Super Admin Action Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               onClick={() => setIsProvisionModalOpen(true)}
@@ -2143,18 +2264,17 @@ export default function MasterPortal() {
             </button>
 
             <button
-              onClick={() => {
-                setActiveTab('due_payments');
-                showToast('Dispatched WhatsApp renewal reminders to all due accounts');
-              }}
+              onClick={() => setActiveTab('due_payments')}
               className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition shadow-xs flex items-center gap-3 text-left group cursor-pointer"
             >
               <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Send className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">Send WhatsApp Dues</h4>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Automated reminder dispatch</p>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">Dues & Renewals</h4>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {dueShops.length} stores awaiting action
+                </p>
               </div>
             </button>
 
@@ -2176,190 +2296,303 @@ export default function MasterPortal() {
           </div>
 
           {/* =================================================================== */}
-          {/* VIEW A: SAAS PLATFORM DASHBOARD (MATCHING SCREENSHOT LAYOUT)        */}
+          {/* VIEW A: SAAS PLATFORM DASHBOARD (LIVE MYSQL DATA)                   */}
           {/* =================================================================== */}
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column (2 Cols): Active Provisioned Stores & Databases */}
-              <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Active Stores & Tenant Databases</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Real-time MySQL isolated databases, plan status & Ecommerce module switches
-                    </p>
+              {/* Left Column (2 Cols): Active Provisioned Stores + Recent Subscription Payments */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">Active Stores & Tenant Databases</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Real-time MySQL isolated databases, plan status & Ecommerce module switches
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('stores')}
+                      className="text-xs font-bold text-[#00a2c7] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>View All Stores ({shops.length})</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setActiveTab('stores')}
-                    className="text-xs font-bold text-[#00a2c7] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View All Stores</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-100 dark:border-slate-800">
+                        <tr>
+                          <th className="pb-3 font-semibold">STORE CODE & NAME</th>
+                          <th className="pb-3 font-semibold">MERCHANT / OWNER</th>
+                          <th className="pb-3 font-semibold">ASSIGNED PLAN</th>
+                          <th className="pb-3 font-semibold">ECOMMERCE MODULE</th>
+                          <th className="pb-3 font-semibold">ISOLATED DB</th>
+                          <th className="pb-3 font-semibold text-right">ACTION</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {shops.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="py-8 text-center text-xs text-slate-400">
+                              No provisioned stores found in MySQL yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          shops.slice(0, 6).map((shop) => (
+                            <tr key={shop.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                              <td className="py-3.5">
+                                <span className="font-mono font-bold text-[#00a2c7]">{shop.shop_code}</span>
+                                <div className="font-bold text-slate-900 dark:text-white">{shop.name}</div>
+                                <div className="text-[10px] text-slate-400">{shop.city}</div>
+                              </td>
+
+                              <td className="py-3.5">
+                                <div className="font-semibold text-slate-800 dark:text-slate-200">{shop.owner_name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">{shop.owner_phone}</div>
+                              </td>
+
+                              <td className="py-3.5">
+                                <div className="font-bold text-slate-900 dark:text-white">{shop.plan_name}</div>
+                                <div className="text-[10px] font-semibold text-emerald-600 uppercase">
+                                  {shop.billing_cycle} {shop.own_whatsapp ? '• Own WA' : ''}
+                                </div>
+                              </td>
+
+                              {/* Interactive Ecommerce Toggle Switch */}
+                              <td className="py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleToggleEcommerce(shop.shop_code)}
+                                    className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ease-in-out ${
+                                      shop.has_ecommerce ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                                    }`}
+                                    title={
+                                      shop.has_ecommerce
+                                        ? 'Ecommerce Active: URL opens store'
+                                        : 'Ecommerce Inactive: URL opens billing login'
+                                    }
+                                  >
+                                    <div
+                                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
+                                        shop.has_ecommerce ? 'translate-x-5' : 'translate-x-0'
+                                      }`}
+                                    />
+                                  </button>
+                                  <span
+                                    className={`text-[10px] font-bold ${
+                                      shop.has_ecommerce
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-slate-400'
+                                    }`}
+                                  >
+                                    {shop.has_ecommerce ? 'Store Active' : 'Billing Only'}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="py-3.5">
+                                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center gap-1 w-max">
+                                  <Database className="w-3 h-3 text-[#00a2c7]" />
+                                  {shop.database_name || shop.db_name || 'tenant_db'}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 text-right">
+                                <a
+                                  href={`/${shop.shop_code}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2.5 py-1 rounded bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] hover:bg-cyan-100 text-[11px] font-bold inline-flex items-center gap-1 transition"
+                                >
+                                  <span>Launch</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-100 dark:border-slate-800">
-                      <tr>
-                        <th className="pb-3 font-semibold">STORE CODE & NAME</th>
-                        <th className="pb-3 font-semibold">MERCHANT / OWNER</th>
-                        <th className="pb-3 font-semibold">ASSIGNED PLAN</th>
-                        <th className="pb-3 font-semibold">ECOMMERCE MODULE</th>
-                        <th className="pb-3 font-semibold">ISOLATED DB</th>
-                        <th className="pb-3 font-semibold text-right">ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {shops.map((shop) => (
-                        <tr key={shop.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                          <td className="py-3.5">
-                            <span className="font-mono font-bold text-[#00a2c7]">{shop.shop_code}</span>
-                            <div className="font-bold text-slate-900 dark:text-white">{shop.name}</div>
-                            <div className="text-[10px] text-slate-400">{shop.city}</div>
-                          </td>
+                {/* Recent Subscription Payments Feed (MySQL subscription_payments) */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">Recent Subscription Payments</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Live MySQL onboarding &amp; renewal ledger across PayU &amp; Paytm UPI
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] font-bold">
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        {revenueStats.completed_payments_count || 0} Paid
+                      </span>
+                      {(revenueStats.pending_payments_count || 0) > 0 && (
+                        <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                          {revenueStats.pending_payments_count} Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                          <td className="py-3.5">
-                            <div className="font-semibold text-slate-800 dark:text-slate-200">{shop.owner_name}</div>
-                            <div className="text-[10px] text-slate-400 font-mono">{shop.owner_phone}</div>
-                          </td>
-
-                          <td className="py-3.5">
-                            <div className="font-bold text-slate-900 dark:text-white">{shop.plan_name}</div>
-                            <div className="text-[10px] font-semibold text-emerald-600 uppercase">
-                              {shop.billing_cycle} {shop.own_whatsapp ? '• Own WA' : ''}
-                            </div>
-                          </td>
-
-                          {/* Interactive Ecommerce Toggle Switch */}
-                          <td className="py-3.5">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleToggleEcommerce(shop.shop_code)}
-                                className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors duration-200 ease-in-out ${
-                                  shop.has_ecommerce ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
-                                }`}
-                                title={
-                                  shop.has_ecommerce
-                                    ? 'Ecommerce Active: URL opens store'
-                                    : 'Ecommerce Inactive: URL opens billing login'
-                                }
-                              >
-                                <div
-                                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                                    shop.has_ecommerce ? 'translate-x-5' : 'translate-x-0'
-                                  }`}
-                                />
-                              </button>
-                              <span
-                                className={`text-[10px] font-bold ${
-                                  shop.has_ecommerce
-                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                    : 'text-slate-400'
-                                }`}
-                              >
-                                {shop.has_ecommerce ? 'Store Active' : 'Billing Only'}
-                              </span>
-                            </div>
-                          </td>
-
-                          <td className="py-3.5">
-                            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center gap-1 w-max">
-                              <Database className="w-3 h-3 text-[#00a2c7]" />
-                              {shop.database_name || shop.db_name || 'tenant_db'}
-                            </span>
-                          </td>
-
-                          <td className="py-3.5 text-right">
-                            <a
-                              href={`/${shop.shop_code}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-2.5 py-1 rounded bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] hover:bg-cyan-100 text-[11px] font-bold inline-flex items-center gap-1 transition"
-                            >
-                              <span>Launch</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-slate-400 uppercase font-semibold text-[11px] border-b border-slate-100 dark:border-slate-800">
+                        <tr>
+                          <th className="pb-3 font-semibold">TRANSACTION ID</th>
+                          <th className="pb-3 font-semibold">STORE</th>
+                          <th className="pb-3 font-semibold">GATEWAY</th>
+                          <th className="pb-3 font-semibold">AMOUNT</th>
+                          <th className="pb-3 font-semibold">STATUS</th>
+                          <th className="pb-3 font-semibold text-right">DATE</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {recentPayments.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="py-8 text-center text-xs text-slate-400">
+                              {isLoadingStats ? 'Loading payment transactions...' : 'No subscription transactions recorded in MySQL yet.'}
+                            </td>
+                          </tr>
+                        ) : (
+                          recentPayments.map((pay) => {
+                            const isPaid = ['completed', 'success', 'paid'].includes(pay.status);
+                            const isPending = pay.status === 'pending';
+                            return (
+                              <tr key={pay.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                                <td className="py-3 font-mono font-bold text-slate-700 dark:text-slate-300">
+                                  {pay.transaction_id}
+                                </td>
+                                <td className="py-3">
+                                  <div className="font-bold text-slate-900 dark:text-white">{pay.shop_name}</div>
+                                  <div className="text-[10px] font-mono text-[#00a2c7]">
+                                    {pay.shop_code}{pay.plan_name ? ` • ${pay.plan_name}` : ''}
+                                  </div>
+                                </td>
+                                <td className="py-3 uppercase font-semibold text-[11px] text-slate-600 dark:text-slate-300">
+                                  {pay.gateway}
+                                </td>
+                                <td className="py-3 font-bold text-slate-900 dark:text-white">
+                                  {formatInr(pay.amount)}
+                                </td>
+                                <td className="py-3">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      isPaid
+                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                        : isPending
+                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                                    }`}
+                                  >
+                                    {pay.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 text-right text-[11px] text-slate-400">
+                                  {pay.created_at || '—'}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
-              {/* Right Column (1 Col): SaaS Plan Distribution & System Infrastructure */}
+              {/* Right Column (1 Col): Dynamic SaaS Plan Distribution & System Telemetry */}
               <div className="space-y-6">
                 {/* Subscription Tier Distribution */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">Subscription Tier Share</h3>
-                    <p className="text-[11px] text-slate-400">Active merchant plan distribution</p>
+                    <p className="text-[11px] text-slate-400">
+                      Live distribution across {storeStats.total ?? shops.length} provisioned stores
+                    </p>
                   </div>
 
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <div className="flex justify-between font-bold mb-1">
-                        <span className="text-slate-700 dark:text-slate-300">Enterprise Omnichannel Suite</span>
-                        <span className="text-[#00a2c7]">45%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full bg-[#00a2c7] rounded-full" style={{ width: '45%' }} />
-                      </div>
+                  {computedPlanShare.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                      No stores provisioned yet. Tier distribution updates automatically as merchants onboard.
                     </div>
-
-                    <div>
-                      <div className="flex justify-between font-bold mb-1">
-                        <span className="text-slate-700 dark:text-slate-300">GST Billing + Ecommerce</span>
-                        <span className="text-indigo-600 dark:text-indigo-400">30%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full bg-indigo-600 rounded-full" style={{ width: '30%' }} />
-                      </div>
+                  ) : (
+                    <div className="space-y-3 text-xs">
+                      {computedPlanShare.map((item, idx) => {
+                        const palette = ['#00a2c7', '#6366f1', '#10b981', '#f59e0b'];
+                        const barColor = extractHexFromRibbonBg(item.ribbon_bg) || palette[idx % palette.length];
+                        return (
+                          <div key={item.code || item.name}>
+                            <div className="flex justify-between font-bold mb-1 gap-2">
+                              <span className="text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
+                              <span className="shrink-0" style={{ color: barColor }}>
+                                {item.percentage}% ({item.count})
+                              </span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${item.percentage}%`, backgroundColor: barColor }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    <div>
-                      <div className="flex justify-between font-bold mb-1">
-                        <span className="text-slate-700 dark:text-slate-300">GST Billing Software</span>
-                        <span className="text-emerald-600 dark:text-emerald-400">25%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: '25%' }} />
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Multi-Tenant System Infrastructure Status */}
+                {/* Live Multi-Tenant Infrastructure & Operations Telemetry */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-3">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">Infrastructure Status</h3>
-                    <p className="text-[11px] text-slate-400">SaaS Multi-Tenant Connectivity</p>
+                    <p className="text-[11px] text-slate-400">Live MySQL &amp; gateway telemetry</p>
                   </div>
 
                   <div className="space-y-2.5 text-xs">
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-2">
-                        <Database className="w-4 h-4 text-emerald-500" />
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">MySQL Tenant DB Pool</span>
+                        <Database className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">MySQL Tenant DBs</span>
                       </div>
-                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">100% Isolated</span>
+                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        {infraStats.isolated_dbs_count ?? shops.filter((s) => s.database_name).length} / {infraStats.total_stores ?? shops.length} Isolated
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-cyan-500" />
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">WhatsApp Cloud API</span>
+                        <MessageSquare className="w-4 h-4 text-cyan-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">WhatsApp Enabled</span>
                       </div>
-                      <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">Connected</span>
+                      <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400">
+                        {infraStats.whatsapp_stores_count ?? shops.filter((s) => s.whatsapp_mode && s.whatsapp_mode !== 'none').length} Stores
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-indigo-500" />
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">5 Payment Gateways</span>
+                        <Zap className="w-4 h-4 text-indigo-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">Payment Gateways</span>
                       </div>
-                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">Active</span>
+                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 text-right">
+                        {(infraStats.active_gateways || []).length > 0
+                          ? infraStats.active_gateways.join(' & ')
+                          : 'Not Configured'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">Leads &amp; Partners</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        {opsStats.leads_total ?? leads.length} Leads ({opsStats.leads_new ?? 0} New) • {opsStats.agents_active ?? 0} Agents
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2768,7 +3001,7 @@ export default function MasterPortal() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Outstanding Dues</span>
-                  <div className="text-2xl font-black text-rose-600 mt-1">₹{totalDues.toLocaleString('en-IN')}.00</div>
+                  <div className="text-2xl font-black text-rose-600 mt-1">{formatInr(totalDues)}</div>
                   <p className="text-[11px] text-slate-500 mt-0.5">{dueShops.length} stores awaiting renewal payment</p>
                 </div>
 

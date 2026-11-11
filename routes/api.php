@@ -20,6 +20,9 @@ Route::prefix('master')->group(function () {
     Route::put('/plans/{code}', [MasterPortalApiController::class, 'updatePlan']);
     Route::delete('/plans/{code}', [MasterPortalApiController::class, 'deletePlan']);
 
+    // Super Admin Dashboard Metrics & Recent Payments
+    Route::get('/dashboard-stats', [MasterPortalApiController::class, 'getDashboardStats']);
+
     // Stores & Isolated Databases
     Route::get('/stores', [MasterPortalApiController::class, 'getStores']);
     Route::post('/stores/provision', [MasterPortalApiController::class, 'provisionStore']);
