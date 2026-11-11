@@ -127,7 +127,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-D_Us2gEg.css",
+    "file": "assets/app-Cmxul7cz.css",
     "name": "app",
     "names": [
       "app.css"
@@ -136,7 +136,7 @@
     "isEntry": true
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-CZ45ELmc.js",
+    "file": "assets/app-C0i-Hd_Y.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -161,7 +161,7 @@
     ],
     "css": [
       "assets/app-CTK1v1F-.css",
-      "assets/app-D_Us2gEg.css"
+      "assets/app-Cmxul7cz.css"
     ]
   },
   "resources/js/entries/banking-panel.jsx": {

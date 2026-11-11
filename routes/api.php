@@ -71,6 +71,7 @@ Route::get('/agent/dashboard', [MasterPortalApiController::class, 'getAgentDashb
 
 // Master Super Admin Agent Network Management & Reward APIs
 Route::get('/master/agents', [MasterPortalApiController::class, 'getSuperAdminAgents']);
+Route::get('/master/agents/{id}/report', [MasterPortalApiController::class, 'getSuperAdminAgentReport']);
 Route::post('/master/agents/create', [MasterPortalApiController::class, 'createAgent']);
 Route::post('/master/agents/{id}/update', [MasterPortalApiController::class, 'updateAgent']);
 Route::post('/master/agents/add-reward', [MasterPortalApiController::class, 'addAgentReward']);

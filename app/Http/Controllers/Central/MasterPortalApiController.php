@@ -2073,73 +2073,365 @@ class MasterPortalApiController extends Controller
     }
 
     /**
-     * Super Admin - Get All Agents Network Statistics & Performance
+     * Parse optional from_date and to_date filters for agent business reports.
+     */
+    private function parseAgentDateRange(Request $request): array
+    {
+        $fromRaw = trim((string) $request->query('from_date', ''));
+        $toRaw = trim((string) $request->query('to_date', ''));
+
+        $from = null;
+        $to = null;
+
+        if ($fromRaw !== '') {
+            try {
+                $from = Carbon::parse($fromRaw)->startOfDay();
+            } catch (\Throwable $e) {
+                $from = null;
+            }
+        }
+
+        if ($toRaw !== '') {
+            try {
+                $to = Carbon::parse($toRaw)->endOfDay();
+            } catch (\Throwable $e) {
+                $to = null;
+            }
+        }
+
+        if ($from && $to && $from->greaterThan($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'from_date' => $from ? $from->format('Y-m-d') : null,
+            'to_date' => $to ? $to->format('Y-m-d') : null,
+            'is_filtered' => (bool) ($from || $to),
+        ];
+    }
+
+    /**
+     * Check whether a timestamp string falls inside the selected date range.
+     */
+    private function isTimestampInDateRange(?string $timestamp, array $range): bool
+    {
+        if (!$range['is_filtered']) {
+            return true;
+        }
+        if (empty($timestamp)) {
+            return false;
+        }
+
+        try {
+            $dt = Carbon::parse($timestamp);
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        if ($range['from'] && $dt->lessThan($range['from'])) {
+            return false;
+        }
+        if ($range['to'] && $dt->greaterThan($range['to'])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Preload subscription_plans keyed by plan code for accurate business valuation.
+     */
+    private function buildPlanPriceLookup(): array
+    {
+        if (!Schema::connection('mysql')->hasTable('subscription_plans')) {
+            return [];
+        }
+
+        $lookup = [];
+        $plans = DB::connection('mysql')->table('subscription_plans')
+            ->select('code', 'name', 'monthly_price', 'annual_price', 'cycles')
+            ->get();
+
+        foreach ($plans as $plan) {
+            $lookup[$plan->code] = [
+                'name' => $plan->name,
+                'monthly_price' => (float) ($plan->monthly_price ?? 0),
+                'annual_price' => (float) ($plan->annual_price ?? 0),
+                'cycles' => json_decode((string) $plan->cycles, true) ?: [],
+            ];
+        }
+
+        return $lookup;
+    }
+
+    /**
+     * Resolve plan price for a referred shop when no gateway transaction record exists.
+     */
+    private function resolveShopPlanValue(array $settings, array $planLookup): float
+    {
+        if (isset($settings['plan_amount']) && is_numeric($settings['plan_amount']) && (float) $settings['plan_amount'] > 0) {
+            return (float) $settings['plan_amount'];
+        }
+
+        $planCode = (string) ($settings['plan_id'] ?? 'yearly-package');
+        $cycle = strtolower((string) ($settings['billing_cycle'] ?? ''));
+
+        if ($cycle === '') {
+            if (str_contains($planCode, 'monthly')) {
+                $cycle = 'monthly';
+            } elseif (str_contains($planCode, 'quarterly')) {
+                $cycle = 'quarterly';
+            } elseif (str_contains($planCode, 'half')) {
+                $cycle = 'half_yearly';
+            } else {
+                $cycle = 'yearly';
+            }
+        }
+
+        if (isset($planLookup[$planCode])) {
+            $plan = $planLookup[$planCode];
+            $cycles = $plan['cycles'] ?? [];
+            if (isset($cycles[$cycle]['offer']) && (float) $cycles[$cycle]['offer'] > 0) {
+                return (float) $cycles[$cycle]['offer'];
+            }
+            if ($cycle === 'monthly' && $plan['monthly_price'] > 0) {
+                return $plan['monthly_price'];
+            }
+            if ($cycle === 'yearly' && $plan['annual_price'] > 0) {
+                return $plan['annual_price'];
+            }
+        }
+
+        return match (true) {
+            $cycle === 'monthly' || str_contains($planCode, 'monthly') => 999.0,
+            $cycle === 'quarterly' || str_contains($planCode, 'quarterly') => 2500.0,
+            str_contains($cycle, 'half') || str_contains($planCode, 'half') => 4500.0,
+            default => 8000.0,
+        };
+    }
+
+    /**
+     * Determine whether a referred store is active, expiring soon, or expired.
+     */
+    private function computeShopValidityStatus(array $settings, Carbon $now): string
+    {
+        $validUntil = $settings['valid_until'] ?? null;
+        if (empty($validUntil)) {
+            return 'active';
+        }
+
+        try {
+            $validDate = Carbon::parse($validUntil)->endOfDay();
+            if ($now->greaterThan($validDate)) {
+                return 'expired';
+            }
+            if ($now->diffInDays($validDate, false) <= 30) {
+                return 'expiring_soon';
+            }
+        } catch (\Throwable $e) {
+            return 'active';
+        }
+
+        return 'active';
+    }
+
+    /**
+     * Sort summarized agent report records according to requested sort_by parameter.
+     */
+    private function sortAgentReportRows(array $agentsList, string $sortBy, bool $isDateFiltered): array
+    {
+        usort($agentsList, function (array $a, array $b) use ($sortBy, $isDateFiltered): int {
+            return match ($sortBy) {
+                'business_asc' => ($a['total_sales_driven'] <=> $b['total_sales_driven'])
+                    ?: ($a['paid_business_driven'] <=> $b['paid_business_driven'])
+                    ?: ($a['total_earned'] <=> $b['total_earned'])
+                    ?: ($b['id'] <=> $a['id']),
+                'commission_desc' => ($b['total_earned'] <=> $a['total_earned'])
+                    ?: ($b['total_sales_driven'] <=> $a['total_sales_driven'])
+                    ?: ($b['id'] <=> $a['id']),
+                'commission_asc' => ($a['total_earned'] <=> $b['total_earned'])
+                    ?: ($a['total_sales_driven'] <=> $b['total_sales_driven'])
+                    ?: ($b['id'] <=> $a['id']),
+                'stores_desc' => (
+                    ($isDateFiltered ? $b['referred_stores_in_range'] : $b['total_referred_stores'])
+                    <=> ($isDateFiltered ? $a['referred_stores_in_range'] : $a['total_referred_stores'])
+                ) ?: ($b['total_sales_driven'] <=> $a['total_sales_driven']),
+                'stores_asc' => (
+                    ($isDateFiltered ? $a['referred_stores_in_range'] : $a['total_referred_stores'])
+                    <=> ($isDateFiltered ? $b['referred_stores_in_range'] : $b['total_referred_stores'])
+                ) ?: ($a['total_sales_driven'] <=> $b['total_sales_driven']),
+                'newest' => $b['id'] <=> $a['id'],
+                default => ($b['total_sales_driven'] <=> $a['total_sales_driven'])
+                    ?: ($b['paid_business_driven'] <=> $a['paid_business_driven'])
+                    ?: ($b['total_earned'] <=> $a['total_earned'])
+                    ?: ($b['id'] <=> $a['id']),
+            };
+        });
+
+        foreach ($agentsList as $index => &$row) {
+            $row['rank'] = $index + 1;
+        }
+        unset($row);
+
+        return $agentsList;
+    }
+
+    /**
+     * Super Admin - Get All Agents Network Statistics, Date-Filtered Business & Performance Report
      */
     public function getSuperAdminAgents(Request $request): JsonResponse
     {
-        $agents = DB::connection('mysql')->table('agents')
+        $conn = DB::connection('mysql');
+        $schema = Schema::connection('mysql');
+        $range = $this->parseAgentDateRange($request);
+        $sortBy = (string) $request->query('sort_by', 'business_desc');
+        $now = now();
+
+        $agents = $conn->table('agents')
             ->orderBy('id', 'desc')
             ->get();
 
-        $now = now();
+        $referralsByAgent = $conn->table('agent_referrals as ar')
+            ->join('shops as sh', 'ar.shop_id', '=', 'sh.id')
+            ->whereNull('sh.deleted_at')
+            ->select(
+                'ar.agent_id',
+                'ar.shop_id',
+                'ar.referred_at',
+                'ar.created_at as ref_created_at',
+                'sh.settings',
+                'sh.created_at as shop_created_at'
+            )
+            ->get()
+            ->groupBy('agent_id');
+
+        $allReferredShopIds = $referralsByAgent
+            ->flatten(1)
+            ->pluck('shop_id')
+            ->unique()
+            ->values()
+            ->all();
+
+        $paidShopIdsAllTime = [];
+        $paidPaymentsInRangeByShop = collect();
+        if (!empty($allReferredShopIds) && $schema->hasTable('subscription_payments')) {
+            $paidPayments = $conn->table('subscription_payments')
+                ->whereIn('shop_id', $allReferredShopIds)
+                ->whereRaw("LOWER(COALESCE(status, '')) IN ('completed', 'success', 'paid')")
+                ->select('id', 'shop_id', 'amount', 'created_at')
+                ->get();
+
+            foreach ($paidPayments as $payment) {
+                $paidShopIdsAllTime[(int) $payment->shop_id] = true;
+            }
+
+            $paidPaymentsInRangeByShop = $paidPayments
+                ->filter(fn ($p) => $this->isTimestampInDateRange($p->created_at ?? null, $range))
+                ->groupBy('shop_id');
+        }
+
+        $commissionsQuery = $conn->table('agent_commissions')
+            ->select('agent_id', 'commission_type', 'commission_amount', 'tds_amount', 'net_payable', 'status', 'created_at');
+        if ($range['from']) {
+            $commissionsQuery->where('created_at', '>=', $range['from']);
+        }
+        if ($range['to']) {
+            $commissionsQuery->where('created_at', '<=', $range['to']);
+        }
+        $commissionsByAgent = $commissionsQuery->get()->groupBy('agent_id');
+
+        $payoutsAllByAgent = collect();
+        $payoutsInRangeByAgent = collect();
+        if ($schema->hasTable('agent_payouts')) {
+            $allPayouts = $conn->table('agent_payouts')
+                ->where('status', 'processed')
+                ->select('agent_id', 'amount', 'paid_at', 'created_at')
+                ->get();
+
+            $payoutsAllByAgent = $allPayouts->groupBy('agent_id');
+            $payoutsInRangeByAgent = $allPayouts
+                ->filter(fn ($p) => $this->isTimestampInDateRange($p->paid_at ?: $p->created_at, $range))
+                ->groupBy('agent_id');
+        }
+
+        $planLookup = $this->buildPlanPriceLookup();
+
         $agentsList = [];
-        $platformTotalCommissions = 0;
-        $platformPendingCommissions = 0;
+        $platformTotalBusiness = 0.0;
+        $platformPaidBusiness = 0.0;
+        $platformPaidTransactions = 0;
+        $platformTotalCommissions = 0.0;
+        $platformPendingCommissions = 0.0;
         $platformTotalReferredStores = 0;
+        $platformReferredStoresInRange = 0;
 
         foreach ($agents as $agent) {
-            $referralShopIds = DB::connection('mysql')->table('agent_referrals')
-                ->where('agent_id', $agent->id)
-                ->pluck('shop_id');
-
-            $totalStores = count($referralShopIds);
+            $agentReferrals = $referralsByAgent->get($agent->id, collect());
+            $totalStores = $agentReferrals->count();
             $platformTotalReferredStores += $totalStores;
-
-            $shops = DB::connection('mysql')->table('shops')
-                ->whereIn('id', $referralShopIds)
-                ->get();
 
             $activeStores = 0;
             $expiringSoon = 0;
             $expiredStores = 0;
-            $totalSalesDriven = 0;
+            $storesInRange = 0;
+            $paidBusinessDriven = 0.0;
+            $manualPlanBusiness = 0.0;
+            $paidTransactionsCount = 0;
 
-            foreach ($shops as $shop) {
-                $settings = json_decode($shop->settings, true) ?: [];
-                $validUntil = $settings['valid_until'] ?? null;
-                $planCode = $settings['plan_id'] ?? 'yearly-package';
-
-                // Approximate base revenue from plan
-                $planRev = str_contains($planCode, 'monthly') ? 1000 : (str_contains($planCode, 'quarterly') ? 2500 : (str_contains($planCode, 'half') ? 4500 : 8000));
-                $totalSalesDriven += $planRev;
-
-                if ($validUntil) {
-                    $validDate = \Carbon\Carbon::parse($validUntil)->endOfDay();
-                    if ($now->greaterThan($validDate)) {
-                        $expiredStores++;
-                    } elseif ($now->diffInDays($validDate, false) <= 30) {
-                        $expiringSoon++;
-                    } else {
-                        $activeStores++;
-                    }
+            foreach ($agentReferrals as $ref) {
+                $settings = json_decode((string) $ref->settings, true) ?: [];
+                $validity = $this->computeShopValidityStatus($settings, $now);
+                if ($validity === 'expired') {
+                    $expiredStores++;
+                } elseif ($validity === 'expiring_soon') {
+                    $expiringSoon++;
                 } else {
                     $activeStores++;
                 }
+
+                $refTimestamp = $ref->referred_at ?: ($ref->ref_created_at ?: $ref->shop_created_at);
+                $referredInRange = $this->isTimestampInDateRange($refTimestamp, $range);
+                if ($referredInRange) {
+                    $storesInRange++;
+                }
+
+                $shopPaidRows = $paidPaymentsInRangeByShop->get($ref->shop_id, collect());
+                $paidBusinessDriven += (float) $shopPaidRows->sum('amount');
+                $paidTransactionsCount += $shopPaidRows->count();
+
+                // When a referred store has no gateway payment record in subscription_payments, attribute its plan value in the referral window.
+                $hasGatewayPaymentHistory = isset($paidShopIdsAllTime[(int) $ref->shop_id]);
+                if (!$hasGatewayPaymentHistory && $referredInRange) {
+                    $manualPlanBusiness += $this->resolveShopPlanValue($settings, $planLookup);
+                }
             }
 
-            // Commissions earned by this agent
-            $totalEarned = (float)DB::connection('mysql')->table('agent_commissions')
-                ->where('agent_id', $agent->id)
-                ->where('status', 'approved')
-                ->sum('net_payable');
+            $totalSalesDriven = round($paidBusinessDriven + $manualPlanBusiness, 2);
+            $paidBusinessDriven = round($paidBusinessDriven, 2);
+            $manualPlanBusiness = round($manualPlanBusiness, 2);
 
-            $pendingComm = (float)DB::connection('mysql')->table('agent_commissions')
-                ->where('agent_id', $agent->id)
-                ->where('status', 'pending')
-                ->sum('net_payable');
+            $agentComms = $commissionsByAgent->get($agent->id, collect());
+            $approvedComms = $agentComms->filter(fn ($c) => in_array(strtolower((string) $c->status), ['approved', 'paid'], true));
+            $pendingComms = $agentComms->filter(fn ($c) => strtolower((string) $c->status) === 'pending');
 
+            $totalEarned = round((float) $approvedComms->sum('net_payable'), 2);
+            $grossEarned = round((float) $approvedComms->sum('commission_amount'), 2);
+            $tdsDeducted = round((float) $approvedComms->sum('tds_amount'), 2);
+            $rewardEarned = round((float) $approvedComms->filter(fn ($c) => strtolower((string) $c->commission_type) === 'reward')->sum('net_payable'), 2);
+            $commissionEarned = round($totalEarned - $rewardEarned, 2);
+            $pendingComm = round((float) $pendingComms->sum('net_payable'), 2);
+
+            $payoutsProcessedAll = round((float) $payoutsAllByAgent->get($agent->id, collect())->sum('amount'), 2);
+            $payoutsProcessedRange = round((float) $payoutsInRangeByAgent->get($agent->id, collect())->sum('amount'), 2);
+
+            $platformTotalBusiness += $totalSalesDriven;
+            $platformPaidBusiness += $paidBusinessDriven;
+            $platformPaidTransactions += $paidTransactionsCount;
             $platformTotalCommissions += $totalEarned;
             $platformPendingCommissions += $pendingComm;
+            $platformReferredStoresInRange += $storesInRange;
 
             $agentsList[] = [
                 'id' => $agent->id,
@@ -2152,31 +2444,276 @@ class MasterPortalApiController extends Controller
                 'id_card_number' => $agent->id_card_number ?: ('ICARD-' . $agent->referral_code),
                 'photo' => $agent->photo ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
                 'status' => $agent->status,
-                'commission_rate_percent' => (float)$agent->commission_rate_percent,
-                'fixed_signup_bonus' => (float)$agent->fixed_signup_bonus,
+                'commission_rate_percent' => (float) $agent->commission_rate_percent,
+                'fixed_signup_bonus' => (float) $agent->fixed_signup_bonus,
                 'total_referred_stores' => $totalStores,
+                'referred_stores_in_range' => $storesInRange,
                 'active_stores' => $activeStores,
                 'expiring_soon_stores' => $expiringSoon,
                 'expired_stores' => $expiredStores,
                 'total_sales_driven' => $totalSalesDriven,
+                'paid_business_driven' => $paidBusinessDriven,
+                'manual_plan_business' => $manualPlanBusiness,
+                'paid_transactions_count' => $paidTransactionsCount,
                 'total_earned' => $totalEarned,
+                'gross_earned' => $grossEarned,
+                'tds_deducted' => $tdsDeducted,
+                'commission_earned' => $commissionEarned,
+                'reward_earned' => $rewardEarned,
                 'pending_commissions' => $pendingComm,
+                'payouts_processed' => $payoutsProcessedAll,
+                'payouts_in_range' => $payoutsProcessedRange,
                 'approved_at' => $agent->approved_at ? substr($agent->approved_at, 0, 10) : null,
-                'created_at' => substr($agent->created_at, 0, 10),
+                'created_at' => substr((string) $agent->created_at, 0, 10),
             ];
         }
 
+        $agentsList = $this->sortAgentReportRows($agentsList, $sortBy, $range['is_filtered']);
+
         return response()->json([
             'success' => true,
+            'date_range' => [
+                'from_date' => $range['from_date'],
+                'to_date' => $range['to_date'],
+                'is_filtered' => $range['is_filtered'],
+                'sort_by' => $sortBy,
+            ],
             'statistics' => [
                 'total_agents' => count($agents),
-                'active_agents' => count(array_filter($agentsList, fn($a) => $a['status'] === 'approved' || $a['status'] === 'active')),
+                'active_agents' => count(array_filter($agentsList, fn ($a) => $a['status'] === 'approved' || $a['status'] === 'active')),
                 'total_referred_stores' => $platformTotalReferredStores,
-                'total_commissions_distributed' => $platformTotalCommissions,
-                'total_pending_commissions' => $platformPendingCommissions,
+                'referred_stores_in_range' => $platformReferredStoresInRange,
+                'total_business_driven' => round($platformTotalBusiness, 2),
+                'paid_business_driven' => round($platformPaidBusiness, 2),
+                'paid_transactions_count' => $platformPaidTransactions,
+                'total_commissions_distributed' => round($platformTotalCommissions, 2),
+                'total_pending_commissions' => round($platformPendingCommissions, 2),
                 'average_commission_rate' => count($agents) > 0 ? round(array_sum(array_column($agentsList, 'commission_rate_percent')) / count($agents), 1) : 10.0,
             ],
             'agents' => $agentsList,
+        ]);
+    }
+
+    /**
+     * Super Admin - Detailed Agent-Wise Business & Commission Report within Date Range
+     */
+    public function getSuperAdminAgentReport(Request $request, $id): JsonResponse
+    {
+        $conn = DB::connection('mysql');
+        $schema = Schema::connection('mysql');
+        $agent = $conn->table('agents')->where('id', $id)->first();
+        if (!$agent) {
+            return response()->json(['success' => false, 'message' => 'Agent not found.'], 404);
+        }
+
+        $range = $this->parseAgentDateRange($request);
+        $now = now();
+        $planLookup = $this->buildPlanPriceLookup();
+
+        $referrals = $conn->table('agent_referrals as ar')
+            ->join('shops as sh', 'ar.shop_id', '=', 'sh.id')
+            ->where('ar.agent_id', $agent->id)
+            ->whereNull('sh.deleted_at')
+            ->select(
+                'ar.shop_id',
+                'ar.referred_at',
+                'ar.created_at as ref_created_at',
+                'sh.name',
+                'sh.shop_code',
+                'sh.owner_name',
+                'sh.owner_phone',
+                'sh.settings',
+                'sh.created_at as shop_created_at'
+            )
+            ->orderBy('ar.id', 'desc')
+            ->get();
+
+        $shopIds = $referrals->pluck('shop_id')->unique()->values()->all();
+
+        $allPaidPayments = collect();
+        if (!empty($shopIds) && $schema->hasTable('subscription_payments')) {
+            $allPaidPayments = $conn->table('subscription_payments as sp')
+                ->leftJoin('shops as sh', 'sp.shop_id', '=', 'sh.id')
+                ->whereIn('sp.shop_id', $shopIds)
+                ->whereRaw("LOWER(COALESCE(sp.status, '')) IN ('completed', 'success', 'paid')")
+                ->select(
+                    'sp.id',
+                    'sp.shop_id',
+                    'sp.amount',
+                    'sp.payment_method',
+                    'sp.gateway',
+                    'sp.transaction_id',
+                    'sp.status',
+                    'sp.created_at',
+                    'sh.name as shop_name',
+                    'sh.shop_code'
+                )
+                ->orderBy('sp.id', 'desc')
+                ->get();
+        }
+
+        $paidShopIdsAllTime = [];
+        foreach ($allPaidPayments as $payment) {
+            $paidShopIdsAllTime[(int) $payment->shop_id] = true;
+        }
+
+        $paymentsInRange = $allPaidPayments
+            ->filter(fn ($p) => $this->isTimestampInDateRange($p->created_at ?? null, $range))
+            ->values();
+        $paymentsInRangeByShop = $paymentsInRange->groupBy('shop_id');
+
+        $storesReport = [];
+        $referredStoresInRange = 0;
+        $paidBusinessDriven = 0.0;
+        $manualPlanBusiness = 0.0;
+
+        foreach ($referrals as $ref) {
+            $settings = json_decode((string) $ref->settings, true) ?: [];
+            $refTimestamp = $ref->referred_at ?: ($ref->ref_created_at ?: $ref->shop_created_at);
+            $inRange = $this->isTimestampInDateRange($refTimestamp, $range);
+            if ($inRange) {
+                $referredStoresInRange++;
+            }
+
+            $shopPayments = $paymentsInRangeByShop->get($ref->shop_id, collect());
+            $shopPaidTotal = round((float) $shopPayments->sum('amount'), 2);
+            $hasGatewayHistory = isset($paidShopIdsAllTime[(int) $ref->shop_id]);
+            $shopManualPlanVal = (!$hasGatewayHistory && $inRange)
+                ? round($this->resolveShopPlanValue($settings, $planLookup), 2)
+                : 0.0;
+
+            $shopBusinessTotal = round($shopPaidTotal + $shopManualPlanVal, 2);
+            $paidBusinessDriven += $shopPaidTotal;
+            $manualPlanBusiness += $shopManualPlanVal;
+
+            $planCode = (string) ($settings['plan_id'] ?? 'yearly-package');
+            $planName = $settings['plan_name'] ?? ($planLookup[$planCode]['name'] ?? ucwords(str_replace(['-', '_'], ' ', $planCode)));
+
+            $storesReport[] = [
+                'shop_id' => $ref->shop_id,
+                'shop_code' => $ref->shop_code,
+                'name' => $ref->name,
+                'owner_name' => $ref->owner_name,
+                'owner_phone' => $ref->owner_phone,
+                'city' => $settings['city'] ?? ($agent->city ?: 'Registered Store'),
+                'plan_name' => $planName,
+                'billing_cycle' => $settings['billing_cycle'] ?? 'yearly',
+                'valid_until' => !empty($settings['valid_until']) ? substr((string) $settings['valid_until'], 0, 10) : null,
+                'validity_status' => $this->computeShopValidityStatus($settings, $now),
+                'referred_at' => substr((string) $refTimestamp, 0, 10),
+                'referred_in_range' => $inRange,
+                'paid_business_in_range' => $shopPaidTotal,
+                'paid_txns_in_range' => $shopPayments->count(),
+                'manual_plan_value' => $shopManualPlanVal,
+                'total_business_in_range' => $shopBusinessTotal,
+            ];
+        }
+
+        usort($storesReport, fn (array $a, array $b) => ($b['total_business_in_range'] <=> $a['total_business_in_range']) ?: ($b['shop_id'] <=> $a['shop_id']));
+
+        $commQuery = $conn->table('agent_commissions as ac')
+            ->leftJoin('shops as sh', 'ac.shop_id', '=', 'sh.id')
+            ->where('ac.agent_id', $agent->id)
+            ->select(
+                'ac.id',
+                'ac.shop_id',
+                'ac.subscription_payment_id',
+                'ac.commission_type',
+                'ac.commission_amount',
+                'ac.tds_amount',
+                'ac.net_payable',
+                'ac.status',
+                'ac.created_at',
+                'sh.name as shop_name',
+                'sh.shop_code'
+            )
+            ->orderBy('ac.id', 'desc');
+
+        if ($range['from']) {
+            $commQuery->where('ac.created_at', '>=', $range['from']);
+        }
+        if ($range['to']) {
+            $commQuery->where('ac.created_at', '<=', $range['to']);
+        }
+        $commissions = $commQuery->get();
+
+        $approvedComms = $commissions->filter(fn ($c) => in_array(strtolower((string) $c->status), ['approved', 'paid'], true));
+        $pendingComms = $commissions->filter(fn ($c) => strtolower((string) $c->status) === 'pending');
+
+        $totalEarned = round((float) $approvedComms->sum('net_payable'), 2);
+        $grossEarned = round((float) $approvedComms->sum('commission_amount'), 2);
+        $tdsDeducted = round((float) $approvedComms->sum('tds_amount'), 2);
+        $rewardEarned = round((float) $approvedComms->filter(fn ($c) => strtolower((string) $c->commission_type) === 'reward')->sum('net_payable'), 2);
+        $commissionEarned = round($totalEarned - $rewardEarned, 2);
+        $pendingComm = round((float) $pendingComms->sum('net_payable'), 2);
+
+        $allTimeApproved = (float) $conn->table('agent_commissions')
+            ->where('agent_id', $agent->id)
+            ->whereIn('status', ['approved', 'paid'])
+            ->sum('net_payable');
+        $allTimePayouts = $schema->hasTable('agent_payouts')
+            ? (float) $conn->table('agent_payouts')->where('agent_id', $agent->id)->where('status', 'processed')->sum('amount')
+            : 0.0;
+
+        return response()->json([
+            'success' => true,
+            'date_range' => [
+                'from_date' => $range['from_date'],
+                'to_date' => $range['to_date'],
+                'is_filtered' => $range['is_filtered'],
+            ],
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'agent_code' => $agent->referral_code,
+                'phone' => $agent->phone,
+                'email' => $agent->email,
+                'city' => $agent->city ?: 'Jaipur',
+                'state' => $agent->state ?: '08 - RAJASTHAN',
+                'photo' => $agent->photo ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                'commission_rate_percent' => (float) $agent->commission_rate_percent,
+                'fixed_signup_bonus' => (float) $agent->fixed_signup_bonus,
+                'status' => $agent->status,
+            ],
+            'summary' => [
+                'total_business_driven' => round($paidBusinessDriven + $manualPlanBusiness, 2),
+                'paid_business_driven' => round($paidBusinessDriven, 2),
+                'manual_plan_business' => round($manualPlanBusiness, 2),
+                'paid_transactions_count' => $paymentsInRange->count(),
+                'all_time_referred_stores' => $referrals->count(),
+                'referred_stores_in_range' => $referredStoresInRange,
+                'total_earned' => $totalEarned,
+                'gross_earned' => $grossEarned,
+                'tds_deducted' => $tdsDeducted,
+                'commission_earned' => $commissionEarned,
+                'reward_earned' => $rewardEarned,
+                'pending_commissions' => $pendingComm,
+                'all_time_payouts_processed' => round($allTimePayouts, 2),
+                'available_wallet_balance' => round(max(0, $allTimeApproved - $allTimePayouts), 2),
+            ],
+            'stores' => $storesReport,
+            'payments' => $paymentsInRange->map(fn ($p) => [
+                'id' => $p->id,
+                'shop_name' => $p->shop_name ?: ('Store #' . $p->shop_id),
+                'shop_code' => $p->shop_code ?: 'N/A',
+                'amount' => round((float) $p->amount, 2),
+                'gateway' => $p->gateway ?: 'manual',
+                'payment_method' => $p->payment_method ?: 'online',
+                'transaction_id' => $p->transaction_id ?: ('TXN-' . $p->id),
+                'status' => $p->status,
+                'created_at' => substr((string) $p->created_at, 0, 16),
+            ])->values(),
+            'commissions' => $commissions->map(fn ($c) => [
+                'id' => $c->id,
+                'shop_name' => $c->shop_name ?: 'Platform Reward / Milestone',
+                'shop_code' => $c->shop_code ?: 'REWARD',
+                'commission_type' => $c->commission_type,
+                'commission_amount' => round((float) $c->commission_amount, 2),
+                'tds_amount' => round((float) $c->tds_amount, 2),
+                'net_payable' => round((float) $c->net_payable, 2),
+                'status' => $c->status,
+                'created_at' => substr((string) $c->created_at, 0, 16),
+            ])->values(),
         ]);
     }
 
