@@ -58,6 +58,7 @@ class PaytmController extends Controller
 
     /**
      * Initiate Paytm UPI Intent & Dynamic QR for Store Onboarding / Renewal
+     * Creates order on Paytm V3 Gateway first, then generates UPI QR
      */
     public function initiateUpiIntent(Request $request): JsonResponse
     {
@@ -93,10 +94,74 @@ class PaytmController extends Controller
         // Merchant Credentials
         $vpa = config('services.paytm.upi', 'paytm.s1lcife@pty');
         $mid = config('services.paytm.key', 'oMLHAD02125387471881');
+        $merchantKey = config('services.paytm.salt');
         $merchantName = 'Shoppy ERP';
 
         $storeDisplayName = $type === 'onboard' ? ($request->input('name') ?: 'New Store') : ($request->input('shop_code'));
         $note = "Shoppy ERP - " . Str::limit($storeDisplayName, 25, '');
+
+        // ================================================================
+        // Step A: Create Order on Paytm V3 Gateway (so status check works)
+        // ================================================================
+        $txnToken = null;
+        try {
+            $paytmBody = [
+                "requestType" => "Payment",
+                "mid" => $mid,
+                "websiteName" => "DEFAULT",
+                "orderId" => $orderId,
+                "txnAmount" => [
+                    "value" => $formattedAmount,
+                    "currency" => "INR",
+                ],
+                "userInfo" => [
+                    "custId" => "CUST_" . preg_replace('/[^0-9]/', '', (string)$request->input('owner_phone', '0000000000')),
+                ],
+                "callbackUrl" => url('/api/paytm/callback'),
+            ];
+
+            $checksum = PaytmChecksum::generateSignature(json_encode($paytmBody, JSON_UNESCAPED_SLASHES), $merchantKey);
+
+            $paytmPayload = json_encode([
+                "body" => $paytmBody,
+                "head" => [
+                    "signature" => $checksum,
+                ],
+            ], JSON_UNESCAPED_SLASHES);
+
+            $initUrl = "https://securegw.paytm.in/theia/api/v1/initiateTransaction?mid={$mid}&orderId={$orderId}";
+
+            $ch = curl_init($initUrl);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $paytmPayload);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+
+            $initResponse = curl_exec($ch);
+            $initErr = curl_error($ch);
+            curl_close($ch);
+
+            Log::info("Paytm initiateTransaction [{$orderId}]: response = {$initResponse}, curl_err = {$initErr}");
+
+            if (!$initErr && $initResponse) {
+                $initResult = json_decode($initResponse, true);
+                $initStatus = $initResult['body']['resultInfo']['resultStatus'] ?? '';
+                if ($initStatus === 'S') {
+                    $txnToken = $initResult['body']['txnToken'] ?? null;
+                    Log::info("Paytm order created successfully [{$orderId}]: txnToken obtained");
+                } else {
+                    Log::warning("Paytm initiateTransaction [{$orderId}]: status={$initStatus}, msg=" . ($initResult['body']['resultInfo']['resultMsg'] ?? 'unknown'));
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error("Paytm initiateTransaction error [{$orderId}]: " . $e->getMessage());
+        }
+
+        // ================================================================
+        // Step B: Generate UPI Intent & QR (works with or without gateway)
+        // ================================================================
         $encodedNote = urlencode($note);
 
         // Standard NPCI UPI Intent Link (Deep-links to GPay, PhonePe, Paytm, BHIM)
@@ -124,6 +189,7 @@ class PaytmController extends Controller
             'referral_code' => $request->input('referral_code') ?: null,
             'shop_code' => $request->input('shop_code') ?: null,
             'gateway' => 'paytm_upi',
+            'txn_token' => $txnToken,
         ];
 
         // Cache metadata for 6 hours
@@ -155,6 +221,7 @@ class PaytmController extends Controller
             'plan_name' => $planInfo['plan_name'],
             'upi_intent_url' => $upiIntentUrl,
             'qr_image_url' => $qrImageUrl,
+            'txn_token' => $txnToken,
             'metadata' => $metadata,
             'message' => 'Paytm UPI QR & Intent generated successfully. Scan with any UPI app to pay.'
         ]);
@@ -162,6 +229,7 @@ class PaytmController extends Controller
 
     /**
      * Check Order Status from Paytm Gateway V3 API
+     * Falls back to local DB check if gateway fails (checksum mismatch etc.)
      */
     public function checkOrderStatus(Request $request): JsonResponse
     {
@@ -170,7 +238,33 @@ class PaytmController extends Controller
             return response()->json(['success' => false, 'message' => 'Order ID is required.'], 422);
         }
 
+        // Try Paytm V3 Gateway first
         $res = $this->queryPaytmOrderStatus($orderId);
+
+        // If Paytm Gateway confirms success, return immediately
+        if (($res['status'] ?? '') === 'TXN_SUCCESS') {
+            return response()->json($res);
+        }
+
+        // Fallback: Check local subscription_payments table
+        // (in case payment was received but gateway status check has issues)
+        try {
+            $payRow = DB::connection('mysql')->table('subscription_payments')
+                ->where('transaction_id', $orderId)
+                ->first();
+
+            if ($payRow && $payRow->status === 'success') {
+                return response()->json([
+                    'success' => true,
+                    'status' => 'TXN_SUCCESS',
+                    'order_id' => $orderId,
+                    'message' => 'Payment already verified and processed.'
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning("checkOrderStatus DB fallback error: " . $e->getMessage());
+        }
+
         return response()->json($res);
     }
 
@@ -180,51 +274,42 @@ class PaytmController extends Controller
     protected function queryPaytmOrderStatus(string $orderId): array
     {
         $mid = config('services.paytm.key', 'oMLHAD02125387471881');
-        $merchantKey = config('services.paytm.salt', 'AAuN7izDWN5cb8A5scnUiNME+LkZqI2DWgkXlN1McoP6WZABa/KkFTiLvuPRP6/nWK8BPg/rPhb+u4QMrUEX10UsANTDbJaALcSM9b8Wk218X+55T/zOzb7xoiB+BcX8yYuYayELImXJHIgL/c7nkAnHrwUCmbM97nRbCVVRvU0ku3Tr');
-
-        $paytmParams = [
-            "body" => [
-                "mid" => $mid,
-                "orderId" => $orderId,
-            ]
-        ];
+     
 
         try {
-            $checksum = PaytmChecksum::generateSignature(json_encode($paytmParams["body"], JSON_UNESCAPED_SLASHES), $merchantKey);
-            $paytmParams["head"] = [
-                "signature" => $checksum
-            ];
 
-            $postData = json_encode($paytmParams, JSON_UNESCAPED_SLASHES);
-            $url = "https://securegw.paytm.in/v3/order/status";
+            // Prepare Status Check Request
+            $jsonData = json_encode(["MID" => $mid, "ORDERID" => $orderId]);
+            $url = "https://securegw.paytm.in/order/status?JsonData=" . urlencode($jsonData);
 
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Consider true for prod
             $response = curl_exec($ch);
-            $err = curl_error($ch);
+            
+            if (curl_errno($ch)) {
+                Log::error("Paytm cURL Error: " . curl_error($ch));
+                curl_close($ch);
+                return response()->json(['status' => 0, 'message' => 'Payment Verification Failed (Network)']);
+            }
             curl_close($ch);
 
-            Log::info("Paytm queryOrderStatus [{$orderId}]: response = {$response}, curl_err = {$err}");
+          
 
             if (!$err && $response) {
-                $result = json_decode($response, true);
-                $resultInfo = $result['body']['resultInfo'] ?? [];
-                $resultStatus = $resultInfo['resultStatus'] ?? '';
+          
+             
+                $responseArray = json_decode($response, true);
 
-                if ($resultStatus === 'TXN_SUCCESS') {
+                if ($responseArray && isset($responseArray['STATUS']) && $responseArray['STATUS'] === "TXN_SUCCESS") {
                     return [
                         'success' => true,
                         'status' => 'TXN_SUCCESS',
                         'order_id' => $orderId,
-                        'txn_id' => $result['body']['txnId'] ?? null,
-                        'bank_txn_id' => $result['body']['bankTxnId'] ?? null,
-                        'amount' => $result['body']['txnAmount'] ?? null,
+                        'txn_id' => $responseArray['BANKTXNID'] ?? $responseArray['TXNID'] ?? null,
+                        'bank_txn_id' => $responseArray['BANKTXNID'] ?? $responseArray['TXNID'] ?? null,
+                        'amount' => $responseArray['TXNAMOUNT'] ?? null,
                         'message' => 'Transaction verified successfully via Paytm!'
                     ];
                 }
