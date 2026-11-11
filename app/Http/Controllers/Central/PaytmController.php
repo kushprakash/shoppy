@@ -566,7 +566,7 @@ class PaytmController extends Controller
 
             // 7. Dispatch Official GST Tax Invoice Email from ENEXA IT SOLUTIONS PRIVATE LIMITED (Sent BEFORE Welcome Mail)
             try {
-                CommunicationService::sendGstInvoiceEmail(
+                $invRes = CommunicationService::sendGstInvoiceEmail(
                     ownerName: $ownerName,
                     ownerEmail: $ownerEmail,
                     storeCode: $code,
@@ -581,14 +581,18 @@ class PaytmController extends Controller
                     transactionId: $orderId,
                     validUntil: $validUntil
                 );
-                Log::info("Paytm verify: GST Tax Invoice email sent successfully to {$ownerEmail} for store {$code}");
+                if (($invRes['status'] ?? 0) === 1) {
+                    Log::info("Paytm verify: GST Tax Invoice email sent successfully to {$ownerEmail} for store {$code}");
+                } else {
+                    Log::warning("Paytm verify: GST Tax Invoice email delivery reported non-success for {$ownerEmail}: " . ($invRes['message'] ?? ''));
+                }
             } catch (\Throwable $e) {
                 Log::error("Paytm verify: GST Invoice Email error: " . $e->getMessage());
             }
 
             // 8. Dispatch Welcome / Login Credentials Email via Gmail SMTP
             try {
-                CommunicationService::sendWelcomeEmail(
+                $welRes = CommunicationService::sendWelcomeEmail(
                     ownerName: $ownerName,
                     ownerEmail: $ownerEmail,
                     storeCode: $code,
@@ -598,7 +602,11 @@ class PaytmController extends Controller
                     planName: $planInfo['plan_name'],
                     mpin: '123456'
                 );
-                Log::info("Paytm verify: Welcome email sent successfully to {$ownerEmail} for store {$code}");
+                if (($welRes['status'] ?? 0) === 1) {
+                    Log::info("Paytm verify: Welcome email sent successfully to {$ownerEmail} for store {$code}");
+                } else {
+                    Log::warning("Paytm verify: Welcome email delivery reported non-success for {$ownerEmail}: " . ($welRes['message'] ?? ''));
+                }
             } catch (\Throwable $e) {
                 Log::error("Paytm verify: Welcome Email error: " . $e->getMessage());
             }

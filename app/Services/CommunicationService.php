@@ -362,7 +362,8 @@ class CommunicationService
                 Config::set("mail.mailers.{$mailerName}", $config);
                 Mail::purge($mailerName);
 
-                Mail::mailer($mailerName)->to($toEmail)->send($mailable);
+                $mailableCopy = clone $mailable;
+                Mail::mailer($mailerName)->to($toEmail)->send($mailableCopy);
 
                 Log::info("{$context}: Email delivered successfully to {$toEmail} via {$mailerName} (Port {$config['port']})");
 
@@ -381,7 +382,8 @@ class CommunicationService
         // Final attempt with default mailer
         try {
             Mail::purge('smtp');
-            Mail::mailer('smtp')->to($toEmail)->send($mailable);
+            $mailableCopy = clone $mailable;
+            Mail::mailer('smtp')->to($toEmail)->send($mailableCopy);
             Log::info("{$context}: Email delivered successfully to {$toEmail} via default smtp mailer");
             return [
                 'status' => 1,
