@@ -629,7 +629,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }
   };
 
-  // Auto-poll Paytm order status continuously when on Step 3
+  // Auto-poll Paytm order status every 1 second for instant detection
   useEffect(() => {
     let pollInterval = null;
     if (isOnboardingOpen && onboardStep === 3 && paytmOnboardData?.order_id && !provisionedStore && provisioningPhase === 'idle') {
@@ -641,7 +641,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
             handleCompleteOnboarding('success');
           }
         } catch (e) {}
-      }, 3500);
+      }, 1000);
     }
     return () => {
       if (pollInterval) clearInterval(pollInterval);
@@ -710,9 +710,11 @@ export default function LandingPage({ defaultPage = 'home' }) {
     }
 
     try {
+      // Phase 1: Round tick mark blinking animation FIRST (payment detected)
+      setProvisioningPhase('blink');
+
       const result = await subscriptionService.verifyPaytmPayment({
         order_id: paytmOnboardData.order_id,
-        utr: paytmUtr ? paytmUtr.trim() : undefined,
         status: paymentStatus,
         type: 'onboard',
         store_data: {
@@ -739,22 +741,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
         document.cookie = `shoppy_active_store=${store.shop_code}; path=/; max-age=86400`;
         localStorage.setItem('shoppy_initial_setup', 'true');
 
-        // Phase 1: Round tick mark blinking animation (1.4 seconds)
-        setProvisioningPhase('blink');
-
+        // Keep blink for 1.8 seconds then move to progress
         setTimeout(() => {
           // Phase 2: Live multi-step provisioning checklist animation
           setProvisioningPhase('progress');
           setProvisionStepIndex(0);
-          setProvisionProgress(15);
+          setProvisionProgress(5);
 
           const stepSequence = [
-            { step: 1, progress: 30 },
-            { step: 2, progress: 50 },
-            { step: 3, progress: 68 },
-            { step: 4, progress: 82 },
-            { step: 5, progress: 92 },
-            { step: 6, progress: 100 }
+            { step: 1, progress: 18 },
+            { step: 2, progress: 35 },
+            { step: 3, progress: 52 },
+            { step: 4, progress: 68 },
+            { step: 5, progress: 82 },
+            { step: 6, progress: 95 },
+            { step: 7, progress: 100 }
           ];
 
           stepSequence.forEach((item, idx) => {
@@ -777,14 +778,14 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   }, 3000);
                 }, 600);
               }
-            }, (idx + 1) * 450);
+            }, (idx + 1) * 550);
           });
-        }, 1400);
+        }, 1800);
 
       } else {
         setIsProcessingPayment(false);
         setProvisioningPhase('idle');
-        setPaymentError(result?.message || 'Payment verification failed. If paid via UPI, please enter your 12-digit UTR below.');
+        setPaymentError(result?.message || 'Payment verification failed. Please wait for auto-detection or try again.');
       }
     } catch (err) {
       setIsProcessingPayment(false);
@@ -3066,13 +3067,13 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       {/* Step-by-Step Live Status Checklist */}
                       <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-left text-xs">
                         {[
-                          { label: 'Paytm UPI Payment Confirmed & Verified', sub: `Ref: ${paytmOnboardData?.order_id || 'Paytm Verified'}` },
-                          { label: 'Allocating Store Code & Subscription License', sub: `Store: ${provisionedStore?.shop_code || 'Generating Code...'}` },
-                          { label: 'Creating Dedicated Isolated MySQL Database', sub: `DB: ${provisionedStore?.database_name || 'Allocating schema...'}` },
-                          { label: 'Executing Tenant Database Migrations', sub: 'Setting up POS tables & indexes' },
-                          { label: 'Seeding 38 Indian GST States & Default Branch', sub: 'Master tax ledger mapped' },
-                          { label: 'Setup Admin Login Credentials & Default M-PIN', sub: `ID: ${provisionedStore?.owner_email || onboardForm.ownerEmail} • Password: admin123 • PIN: 123456` },
-                          { label: 'Dispatching Welcome SMS & Email with Credentials', sub: `Sending to +91 ${provisionedStore?.owner_phone || onboardForm.ownerPhone} via Buzzify & SMTP` }
+                          { label: 'Verifying Payment', sub: `Transaction: ${paytmOnboardData?.order_id || 'Paytm UPI Verified'}` },
+                          { label: 'Creating Store', sub: `Store: ${provisionedStore?.shop_code || 'Generating store code...'}` },
+                          { label: 'Generating Database', sub: `DB: ${provisionedStore?.database_name || 'Allocating dedicated MySQL instance...'}` },
+                          { label: 'Configuring Database', sub: 'Running migrations, seeding 38 GST states & default branch' },
+                          { label: 'Creating Login Credentials', sub: `ID: ${provisionedStore?.owner_email || onboardForm.ownerEmail} • Password: admin123 • M-PIN: 123456` },
+                          { label: 'Sending Credentials', sub: `SMS to +91 ${provisionedStore?.owner_phone || onboardForm.ownerPhone} & Email via SMTP` },
+                          { label: 'Processing Complete — Launching Store Panel', sub: `${provisionedStore?.name || onboardForm.storeName} is now live!` }
                         ].map((s, idx) => {
                           const isDone = provisionStepIndex > idx;
                           const isCurrent = provisionStepIndex === idx;
@@ -3202,55 +3203,26 @@ export default function LandingPage({ defaultPage = 'home' }) {
                         </div>
                       )}
 
-                      {/* Manual UTR Input Box (Optional) */}
-                      <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1.5">
-                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                          Paid via UPI? Enter 12-digit UPI Reference / UTR (Optional)
-                        </label>
-                        <input
-                          type="text"
-                          maxLength={16}
-                          placeholder="e.g. 431289102941"
-                          value={paytmUtr}
-                          onChange={(e) => setPaytmUtr(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold focus:outline-none focus:border-[#00b9f5]"
-                        />
-                      </div>
-
-                      {/* Verification CTA Button */}
-                      <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => handleCompleteOnboarding('success')}
-                          disabled={isProcessingPayment}
-                          className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs tracking-wide shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer transition transform active:scale-[0.99] disabled:opacity-60"
-                        >
-                          {isProcessingPayment ? (
-                            <>
-                              <RotateCcw className="w-4 h-4 animate-spin" />
-                              <span>Verifying Payment &amp; Launching Provisioning...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span>I Have Paid — Verify &amp; Launch Store</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </>
-                          )}
-                        </button>
-
-                        <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                      {/* Auto-Detection Status Footer */}
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                        <div className="flex justify-between items-center text-[11px] text-slate-400">
                           <button
                             onClick={() => setOnboardStep(2)}
                             className="font-semibold hover:text-slate-700 dark:hover:text-white cursor-pointer"
                           >
                             ← Back to Store Details
                           </button>
-                          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Listening for UPI payment...
+                          <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </span>
+                            Auto-detecting payment...
                           </span>
                         </div>
+                        <p className="text-[10px] text-center text-slate-400">
+                          Payment will be auto-verified within 1 second of UPI success. No manual action needed.
+                        </p>
                       </div>
                     </>
                   )}
