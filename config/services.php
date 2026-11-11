@@ -54,13 +54,14 @@ return [
     ],
 
     'enexa_mail' => [
-        'host' => 'smtp.gmail.com',
-        'port' => 465,
-        'username' => 'contact@enexa.in',
-        'password' => 'tmdvzyexqjermrfp',
-        'encryption' => 'ssl',
-        'from_address' => 'contact@enexa.in',
-        'from_name' => 'Shoppy ERP - Enexa IT',
+        'host' => env('MAIL_HOST', 'smtp.gmail.com'),
+        'port' => (int) env('MAIL_PORT', 465),
+        'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
+        'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
+        'encryption' => env('MAIL_ENCRYPTION', 'ssl'),
+        'from_address' => env('MAIL_FROM_ADDRESS', 'contact@enexa.in'),
+        'from_name' => env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT Solutions Private Limited'),
+        'ehlo_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
     ],
 
 ];

@@ -25,18 +25,23 @@ class WelcomeStoreMail extends Mailable
         public ?string $loginUrl = null,
     ) {
         if (!$this->loginUrl) {
-            $this->loginUrl = url('/portal/login?code=' . urlencode($this->storeCode));
+            $baseUrl = rtrim((string) config('app.url', 'https://shoppy.live'), '/');
+            if ($baseUrl === '' || str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
+                $baseUrl = 'https://shoppy.live';
+            }
+            $this->loginUrl = $baseUrl . '/portal/login?code=' . urlencode($this->storeCode);
         }
     }
 
     public function envelope(): Envelope
     {
         $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
-        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT');
+        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
 
         return new Envelope(
             from: new Address($fromAddress, $fromName),
-            subject: "🎉 Welcome to Shoppy ERP - Your Store {$this->storeName} ({$this->storeCode}) is Live!",
+            replyTo: [new Address($fromAddress, $fromName)],
+            subject: "Store Account Activated: {$this->storeName} ({$this->storeCode}) — Shoppy ERP",
         );
     }
 
@@ -44,6 +49,7 @@ class WelcomeStoreMail extends Mailable
     {
         return new Content(
             view: 'emails.welcome_store',
+            text: 'emails.welcome_store_plain',
             with: [
                 'ownerName' => $this->ownerName,
                 'ownerEmail' => $this->ownerEmail,

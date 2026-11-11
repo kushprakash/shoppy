@@ -26,10 +26,11 @@ class OtpVerificationMail extends Mailable
     public function envelope(): Envelope
     {
         $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
-        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP Security');
+        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
 
         return new Envelope(
             from: new Address($fromAddress, $fromName),
+            replyTo: [new Address($fromAddress, $fromName)],
             subject: "Your Shoppy ERP Verification Code: {$this->otp} (Valid for 10 mins)",
         );
     }
@@ -38,6 +39,7 @@ class OtpVerificationMail extends Mailable
     {
         return new Content(
             view: 'emails.otp_verification',
+            text: 'emails.otp_verification_plain',
             with: [
                 'ownerName' => $this->ownerName,
                 'otp' => $this->otp,

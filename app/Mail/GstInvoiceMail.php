@@ -73,10 +73,11 @@ class GstInvoiceMail extends Mailable
     public function envelope(): Envelope
     {
         $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
-        $fromName = 'ENEXA IT SOLUTIONS PRIVATE LIMITED';
+        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
 
         return new Envelope(
             from: new Address($fromAddress, $fromName),
+            replyTo: [new Address($fromAddress, $fromName)],
             subject: "TAX INVOICE [{$this->invoiceNumber}] — Shoppy ERP Software Subscription — ENEXA IT SOLUTIONS PRIVATE LIMITED",
         );
     }
@@ -85,6 +86,7 @@ class GstInvoiceMail extends Mailable
     {
         return new Content(
             view: 'emails.gst_invoice',
+            text: 'emails.gst_invoice_plain',
             with: [
                 'sellerName' => $this->sellerName,
                 'sellerGstin' => $this->sellerGstin,

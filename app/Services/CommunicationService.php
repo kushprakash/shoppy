@@ -307,53 +307,40 @@ class CommunicationService
      */
     public static function sendMailWithFallback(string $toEmail, \Illuminate\Mail\Mailable $mailable, string $context = 'Mail'): array
     {
-        // Enforce Gmail SMTP credentials directly to prevent environment overrides (e.g. 127.0.0.1:2525)
-        $host = 'smtp.gmail.com';
-        $username = 'contact@enexa.in';
-        $passwordVal = 'tmdvzyexqjermrfp';
-        $fromAddress = 'contact@enexa.in';
-        $fromName = 'Shoppy ERP - Enexa IT';
+        $host = config('services.enexa_mail.host', 'smtp.gmail.com');
+        $username = config('services.enexa_mail.username', 'contact@enexa.in');
+        $passwordVal = config('services.enexa_mail.password', 'tmdvzyexqjermrfp');
+        $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
+        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
+        $ehloDomain = config('services.enexa_mail.ehlo_domain', 'enexa.in');
 
         Config::set('mail.from', [
             'address' => $fromAddress,
             'name' => $fromName,
         ]);
 
+        $buildMailerConfig = static fn (int $port, string $encryption): array => [
+            'transport' => 'smtp',
+            'host' => $host,
+            'port' => $port,
+            'encryption' => $encryption,
+            'username' => $username,
+            'password' => $passwordVal,
+            'timeout' => 25,
+            'local_domain' => $ehloDomain,
+            'stream' => [
+                'ssl' => [
+                    'allow_self_signed' => true,
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                ],
+            ],
+        ];
+
         $mailers = [
-            'enexa_smtp_ssl' => [
-                'transport' => 'smtp',
-                'host' => $host,
-                'port' => 465,
-                'encryption' => 'ssl',
-                'username' => $username,
-                'password' => $passwordVal,
-                'timeout' => 25,
-                'local_domain' => 'shoppy.live',
-                'stream' => [
-                    'ssl' => [
-                        'allow_self_signed' => true,
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                    ],
-                ],
-            ],
-            'enexa_smtp' => [
-                'transport' => 'smtp',
-                'host' => $host,
-                'port' => 587,
-                'encryption' => 'tls',
-                'username' => $username,
-                'password' => $passwordVal,
-                'timeout' => 25,
-                'local_domain' => 'shoppy.live',
-                'stream' => [
-                    'ssl' => [
-                        'allow_self_signed' => true,
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                    ],
-                ],
-            ],
+            'enexa_smtp_ssl' => $buildMailerConfig(465, 'ssl'),
+            'enexa_smtp' => $buildMailerConfig(587, 'tls'),
+            'smtp' => $buildMailerConfig(465, 'ssl'),
         ];
 
         $transportErrors = [];
@@ -379,40 +366,6 @@ class CommunicationService
                 $transportErrors[$mailerName] = "Port {$config['port']}: " . $e->getMessage();
                 Log::warning("{$context}: Delivery via {$mailerName} (Port {$config['port']}) failed: " . $e->getMessage() . ". Retrying next transport...");
             }
-        }
-
-        // Final attempt with direct Gmail SMTP (overriding any 127.0.0.1:2525 in .env)
-        try {
-            Config::set('mail.mailers.smtp', [
-                'transport' => 'smtp',
-                'host' => 'smtp.gmail.com',
-                'port' => 465,
-                'encryption' => 'ssl',
-                'username' => $username,
-                'password' => $passwordVal,
-                'timeout' => 25,
-                'local_domain' => 'shoppy.live',
-                'stream' => [
-                    'ssl' => [
-                        'allow_self_signed' => true,
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                    ],
-                ],
-            ]);
-            Mail::purge('smtp');
-            $mailableCopy = clone $mailable;
-            Mail::mailer('smtp')->to($toEmail)->send($mailableCopy);
-            Log::info("{$context}: Email delivered successfully to {$toEmail} via direct Gmail SMTP");
-            return [
-                'status' => 1,
-                'mailer' => 'smtp_direct_ssl',
-                'host' => 'smtp.gmail.com',
-                'port' => 465,
-                'message' => "Email sent successfully to {$toEmail}"
-            ];
-        } catch (\Throwable $e) {
-            $transportErrors['smtp_direct_ssl'] = "Port 465: " . $e->getMessage();
         }
 
         Log::error("{$context}: All mail transports failed for recipient {$toEmail}. Errors: " . json_encode($transportErrors));

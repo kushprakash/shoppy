@@ -195,7 +195,7 @@
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <div class="logo-badge">⚡ Shoppy ERP Cloud</div>
+        <div class="logo-badge">Shoppy ERP Cloud</div>
         <h1>Welcome to Shoppy ERP</h1>
         <p>Dedicated Cloud Retail POS & Automated GST Billing Software</p>
       </div>
@@ -204,12 +204,12 @@
       <div class="content">
         <div class="greeting">Dear {{ $ownerName }},</div>
         <div class="lead">
-          Congratulations on joining us! Your merchant account and dedicated high-performance database for <strong>{{ $storeName }}</strong> have been successfully provisioned and activated.
+          Thank you for choosing Shoppy ERP. Your merchant account and isolated store database for <strong>{{ $storeName }}</strong> have been provisioned and activated.
         </div>
 
         <!-- Credentials Card -->
         <div class="card">
-          <div class="card-title">🔑 STORE ACCESS CREDENTIALS</div>
+          <div class="card-title">STORE ACCESS CREDENTIALS</div>
 
           <table style="width: 100%; border-collapse: collapse;">
             <tr style="border-bottom: 1px dashed #e2e8f0;">
@@ -256,25 +256,25 @@
         <!-- Call To Action -->
         <div class="cta-container">
           <a href="{{ $loginUrl }}" target="_blank" class="cta-button">
-            🚀 Launch &amp; Login to Your Store
+            Login to Your Store Portal
           </a>
           <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
-            Or copy login link: <a href="{{ $loginUrl }}" style="color: #0284c7;">{{ $loginUrl }}</a>
+            Or open login link directly: <a href="{{ $loginUrl }}" style="color: #0284c7;">{{ $loginUrl }}</a>
           </p>
         </div>
 
         <!-- Security Warning -->
         <div class="alert-box">
-          <strong>⚠️ Security Advisory:</strong> For the security of your store and billing transactions, please update your default password and M-PIN immediately after your first login via <em>Settings &rarr; Security</em>.
+          <strong>Security Advisory:</strong> For the security of your store and billing transactions, please update your temporary password and M-PIN after your first login via <em>Settings &rarr; Security</em>.
         </div>
 
         <!-- Quick 3-Step Guide -->
         <div class="steps">
-          <div class="steps-title">⚡ Quick Start in 3 Easy Steps:</div>
+          <div class="steps-title">Quick Start in 3 Easy Steps:</div>
           <ol class="steps-list">
-            <li>Click <strong>Launch Store</strong> above and enter your <strong>Store ID</strong> (or Email) and <strong>Password</strong>.</li>
-            <li>Configure your GSTIN, Business Header, and Thermal / A4 Print layouts.</li>
-            <li>Add your inventory products and start printing high-speed GST bills!</li>
+            <li>Open the <strong>Store Portal</strong> link above and enter your <strong>Store ID</strong> (or Email) and password.</li>
+            <li>Configure your GSTIN, business header, and Thermal / A4 invoice layouts.</li>
+            <li>Add your inventory products and start generating GST invoices.</li>
           </ol>
         </div>
       </div>

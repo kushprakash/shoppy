@@ -41,13 +41,13 @@ return [
             'transport' => 'smtp',
             'scheme' => null,
             'url' => env('MAIL_URL'),
-            'host' => 'smtp.gmail.com',
-            'port' => 465,
-            'encryption' => 'ssl',
-            'username' => 'contact@enexa.in',
-            'password' => 'tmdvzyexqjermrfp',
+            'host' => env('MAIL_HOST', 'smtp.gmail.com'),
+            'port' => (int) env('MAIL_PORT', 465),
+            'encryption' => env('MAIL_ENCRYPTION', 'ssl'),
+            'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
+            'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
             'timeout' => 25,
-            'local_domain' => 'shoppy.live',
+            'local_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
             'stream' => [
                 'ssl' => [
                     'allow_self_signed' => true,
@@ -65,7 +65,7 @@ return [
             'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
             'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
             'timeout' => 25,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', 'shoppy.live'),
+            'local_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
             'stream' => [
                 'ssl' => [
                     'allow_self_signed' => true,
@@ -83,7 +83,7 @@ return [
             'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
             'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
             'timeout' => 25,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', 'shoppy.live'),
+            'local_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
             'stream' => [
                 'ssl' => [
                     'allow_self_signed' => true,
@@ -156,7 +156,7 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'contact@enexa.in'),
-        'name' => env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT'),
+        'name' => env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT Solutions Private Limited'),
     ],
 
 ];
