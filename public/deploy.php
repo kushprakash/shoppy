@@ -52,6 +52,7 @@ $mail_sync_feedback = null;
 if (file_exists($env_file)) {
     $cur_env = @file_get_contents($env_file) ?: '';
     $mail_replacements = [
+        'APP_NAME' => '"Shoppy ERP"',
         'MAIL_MAILER' => 'smtp',
         'MAIL_HOST' => 'smtp.gmail.com',
         'MAIL_PORT' => '465',

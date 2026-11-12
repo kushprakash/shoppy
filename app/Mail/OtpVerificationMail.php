@@ -7,6 +7,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 class OtpVerificationMail extends Mailable
@@ -31,7 +32,20 @@ class OtpVerificationMail extends Mailable
         return new Envelope(
             from: new Address($fromAddress, $fromName),
             replyTo: [new Address($fromAddress, $fromName)],
-            subject: "Your Shoppy ERP Verification Code: {$this->otp} (Valid for 10 mins)",
+            subject: "Shoppy ERP - Verification Code: {$this->otp}",
+        );
+    }
+
+    public function headers(): Headers
+    {
+        return new Headers(
+            text: [
+                'X-Mailer' => 'Shoppy ERP Cloud Mailer',
+                'X-Priority' => '1 (Highest)',
+                'Importance' => 'High',
+                'Auto-Submitted' => 'auto-generated',
+                'X-Auto-Response-Suppress' => 'All',
+            ]
         );
     }
 

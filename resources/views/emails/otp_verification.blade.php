@@ -146,26 +146,31 @@
   </style>
 </head>
 <body>
+  <!-- Preheader text (prevents strange snippets in inbox) -->
+  <div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+    Your verification code is {{ $otp }} for Shoppy ERP account security. Valid for 10 minutes.
+  </div>
+
   <div class="wrapper">
     <div class="container">
       <!-- Header -->
       <div class="header">
-        <div class="logo-badge">🔒 Security Verification</div>
-        <h1>Password Reset Request</h1>
+        <div class="logo-badge">Shoppy ERP • Account Security</div>
+        <h1>Password Reset Verification</h1>
       </div>
 
       <!-- Main Body -->
       <div class="content">
         <div class="greeting">Dear {{ $ownerName }},</div>
         <div class="lead">
-          We received a request to reset the terminal access password for your store account on <strong>Shoppy ERP</strong>.
+          We received a request to verify access for your store account on <strong>Shoppy ERP</strong>.
         </div>
 
         <!-- OTP Card -->
         <div class="otp-card">
-          <div class="otp-subtitle">Your One-Time Password (OTP)</div>
+          <div class="otp-subtitle">One-Time Password (OTP)</div>
           <div class="otp-code">{{ $otp }}</div>
-          <div class="otp-expiry">⏳ Valid for the next 10 minutes only</div>
+          <div class="otp-expiry">Valid for the next 10 minutes only</div>
         </div>
 
         <!-- Store Details -->
@@ -189,7 +194,7 @@
         </div>
 
         <div class="alert-box">
-          <strong>⚠️ Security Notice:</strong> Never share this OTP with anyone, including Shoppy or Enexa representatives. If you did not initiate this password reset, please ignore this email or reach out to our merchant security desk immediately.
+          <strong>Security Notice:</strong> Never share this OTP with anyone, including Shoppy or Enexa representatives. If you did not initiate this password reset, please ignore this email or reach out to our merchant security desk immediately.
         </div>
       </div>
 

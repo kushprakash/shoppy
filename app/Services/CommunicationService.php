@@ -328,8 +328,15 @@ class CommunicationService
             ? 'contact@enexa.in'
             : trim((string)$rawFrom);
 
-        $fromName = config('services.enexa_mail.from_name') ?: env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT Solutions Private Limited');
-        $ehloDomain = config('services.enexa_mail.ehlo_domain') ?: env('MAIL_EHLO_DOMAIN', 'enexa.in');
+        $rawFromName = config('services.enexa_mail.from_name') ?: env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT Solutions Private Limited');
+        $fromName = (empty($rawFromName) || strtolower(trim((string)$rawFromName)) === 'laravel' || str_contains(strtolower((string)$rawFromName), 'example'))
+            ? 'Shoppy ERP - Enexa IT Solutions Private Limited'
+            : trim((string)$rawFromName);
+
+        $rawEhlo = config('services.enexa_mail.ehlo_domain') ?: env('MAIL_EHLO_DOMAIN', 'enexa.in');
+        $ehloDomain = (empty($rawEhlo) || in_array(strtolower(trim((string)$rawEhlo)), ['localhost', '127.0.0.1']))
+            ? 'enexa.in'
+            : trim((string)$rawEhlo);
 
         Config::set('mail.from', [
             'address' => $fromAddress,
