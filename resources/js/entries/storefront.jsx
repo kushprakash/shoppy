@@ -7,7 +7,7 @@ import {
   Layers, Palette, Maximize2, Check, ChevronRight, ChevronLeft, PackageCheck, Zap,
   Star, Heart, Eye, Clock, Flame, Percent, RotateCcw, BadgeCheck, Gift,
   Filter, HelpCircle, Headphones, Share2, ThumbsUp, ChevronDown, CheckCheck,
-  ExternalLink, SlidersHorizontal, ArrowUpRight
+  ExternalLink, SlidersHorizontal, ArrowUpRight, Menu
 } from 'lucide-react';
 import { 
   INITIAL_TOP_CATEGORIES, 
@@ -20,143 +20,48 @@ import { getActiveShopCode, installStoreFetchInterceptor, syncAxiosStoreHeaders 
 installStoreFetchInterceptor();
 
 // ============================================================================
-// 1. 5 TOP INDIAN MARKETPLACE THEMES CONFIGURATION
+// 1. 5 DISTINCT MARKETPLACE THEMES METADATA
 // ============================================================================
-export const MARKETPLACE_THEMES = {
+export const THEMES_META = {
   snapdeal: {
     id: 'snapdeal',
-    name: 'Shoppy Snapdeal Hybrid',
-    badge: 'DEFAULT • HIGH CONVERTING',
+    themeNumber: 1,
+    name: 'Theme 1: Snapdeal Style',
+    subtitle: 'Lightning Deals & Indian Direct Marketplace',
     accentColor: '#e11d48',
-    primaryHeaderBg: 'bg-[#0f172a]',
-    primaryHeaderBorder: 'border-slate-800',
-    primaryHeaderText: 'text-white',
-    subHeaderBg: 'bg-white',
-    subHeaderBorder: 'border-slate-200',
-    searchBorder: 'border-slate-300 focus-within:border-[#e11d48] focus-within:ring-2 focus-within:ring-rose-500/10',
-    searchBtnBg: 'bg-[#e11d48] hover:bg-[#be123c] text-white',
-    cartBtnBg: 'bg-slate-900 hover:bg-slate-800 text-white',
-    cartIconColor: 'text-rose-400',
-    badgeText: 'Shoppy Verified',
-    tagColor: 'text-[#e11d48]',
-    priceColor: 'text-[#e11d48]',
-    buyNowBtn: 'bg-[#e11d48] hover:bg-[#be123c] text-white font-black shadow-md shadow-rose-600/20 rounded-lg',
-    addToCartBtn: 'border border-slate-200 hover:border-slate-300 text-slate-800 bg-white hover:bg-slate-50 font-bold rounded-lg',
-    bodyBg: 'bg-[#f8fafc]',
-    categoryChipActive: 'bg-rose-50 text-[#e11d48] border-[#e11d48]',
-    categoryHoverText: 'hover:text-[#e11d48]',
-    dealsTag: '⚡ Lightning Deals',
-    dealsBadgeBg: 'bg-rose-500 text-white',
-    guaranteeTitle: 'Shoppy Trust Pay Guarantee',
   },
   flipkart: {
     id: 'flipkart',
-    name: 'Flipkart Style',
-    badge: 'POPULAR INDIAN MARKETPLACE',
+    themeNumber: 2,
+    name: 'Theme 2: Flipkart Style',
+    subtitle: 'Iconic Royal Blue, Explore Plus ★ & Dual Yellow/Orange Action Buttons',
     accentColor: '#2874f0',
-    primaryHeaderBg: 'bg-[#2874f0]',
-    primaryHeaderBorder: 'border-[#1e60cc]',
-    primaryHeaderText: 'text-white',
-    subHeaderBg: 'bg-white',
-    subHeaderBorder: 'border-slate-200',
-    searchBorder: 'border-slate-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-400/20',
-    searchBtnBg: 'bg-[#ffe500] hover:bg-[#ebd300] text-slate-900 font-black',
-    cartBtnBg: 'bg-white/15 hover:bg-white/25 text-white border border-white/25',
-    cartIconColor: 'text-amber-300',
-    badgeText: 'Shoppy Assured',
-    tagColor: 'text-[#2874f0]',
-    priceColor: 'text-slate-900',
-    buyNowBtn: 'bg-[#fb641b] hover:bg-[#e65612] text-white font-black shadow-md shadow-orange-500/20 rounded-sm',
-    addToCartBtn: 'bg-[#ff9f00] hover:bg-[#e68f00] text-white font-black rounded-sm',
-    bodyBg: 'bg-[#f1f2f4]',
-    categoryChipActive: 'bg-blue-50 text-[#2874f0] border-[#2874f0]',
-    categoryHoverText: 'hover:text-[#2874f0]',
-    dealsTag: '🔥 Flipkart Top Deals of the Day',
-    dealsBadgeBg: 'bg-[#2874f0] text-white',
-    guaranteeTitle: 'Shoppy Assured Quality Promise',
   },
   jiomart: {
     id: 'jiomart',
-    name: 'JioMart Fresh & Essentials',
-    badge: 'GROCERY & OMNICHANNEL',
+    themeNumber: 3,
+    name: 'Theme 3: JioMart Style',
+    subtitle: 'Jio Blue & Leaf Green Fresh Groceries, Smart Bazaar & Essentials',
     accentColor: '#0078ad',
-    primaryHeaderBg: 'bg-[#0078ad]',
-    primaryHeaderBorder: 'border-[#006694]',
-    primaryHeaderText: 'text-white',
-    subHeaderBg: 'bg-[#006694]',
-    subHeaderBorder: 'border-[#00557c]',
-    searchBorder: 'border-slate-300 focus-within:border-[#0078ad] focus-within:ring-2 focus-within:ring-cyan-500/20',
-    searchBtnBg: 'bg-[#0c831f] hover:bg-[#096e1a] text-white font-bold',
-    cartBtnBg: 'bg-[#0c831f] hover:bg-[#096e1a] text-white',
-    cartIconColor: 'text-emerald-200',
-    badgeText: 'Jio Smart Quality',
-    tagColor: 'text-[#0078ad]',
-    priceColor: 'text-slate-900',
-    buyNowBtn: 'bg-[#0c831f] hover:bg-[#096e1a] text-white font-bold rounded-full shadow-sm',
-    addToCartBtn: 'border border-emerald-600 text-emerald-700 hover:bg-emerald-50 bg-white font-bold rounded-full',
-    bodyBg: 'bg-[#f3f9fb]',
-    categoryChipActive: 'bg-emerald-50 text-[#0c831f] border-[#0c831f]',
-    categoryHoverText: 'hover:text-[#0078ad]',
-    dealsTag: '🛒 Smart Bazaar Super Savings',
-    dealsBadgeBg: 'bg-[#0c831f] text-white',
-    guaranteeTitle: '100% Quality & Freshness Guarantee',
   },
   amazon: {
     id: 'amazon',
-    name: 'Amazon India Style',
-    badge: 'GLOBAL RETAIL CLASSIC',
+    themeNumber: 4,
+    name: 'Theme 4: Amazon India Style',
+    subtitle: 'Amazon 2-Tier Dark Nav (#131921), Prime Badges & 4-Quadrant Feature Cards',
     accentColor: '#f08804',
-    primaryHeaderBg: 'bg-[#131921]',
-    primaryHeaderBorder: 'border-slate-900',
-    primaryHeaderText: 'text-white',
-    subHeaderBg: 'bg-[#232f3e]',
-    subHeaderBorder: 'border-[#334155]',
-    searchBorder: 'border-slate-300 focus-within:border-[#f08804] focus-within:ring-2 focus-within:ring-amber-500/20',
-    searchBtnBg: 'bg-[#febd69] hover:bg-[#f3a847] text-slate-900 font-bold',
-    cartBtnBg: 'bg-transparent hover:bg-white/10 text-white border border-white/20',
-    cartIconColor: 'text-amber-400',
-    badgeText: "Shoppy's Choice",
-    tagColor: 'text-[#f08804]',
-    priceColor: 'text-[#b12704]',
-    buyNowBtn: 'bg-[#ffa41c] hover:bg-[#fa8900] text-slate-900 font-bold rounded-full shadow-xs',
-    addToCartBtn: 'bg-[#ffd814] hover:bg-[#f7ca00] text-slate-900 font-bold rounded-full',
-    bodyBg: 'bg-[#eaeded]',
-    categoryChipActive: 'bg-amber-50 text-[#b12704] border-[#f08804]',
-    categoryHoverText: 'hover:text-[#f08804]',
-    dealsTag: '⚡ Amazon Deal of the Day',
-    dealsBadgeBg: 'bg-[#b12704] text-white',
-    guaranteeTitle: 'Shoppy A-to-z Buyer Protection',
   },
   tatacliq: {
     id: 'tatacliq',
-    name: 'Tata CLiQ Luxury & Fashion',
-    badge: 'PREMIUM LUXURY CURATION',
+    themeNumber: 5,
+    name: 'Theme 5: Tata CLiQ Luxury Style',
+    subtitle: 'Minimalist Obsidian & Magenta Curated High-Fashion Boutique',
     accentColor: '#da1c5c',
-    primaryHeaderBg: 'bg-[#111111]',
-    primaryHeaderBorder: 'border-[#222222]',
-    primaryHeaderText: 'text-white',
-    subHeaderBg: 'bg-white',
-    subHeaderBorder: 'border-slate-200',
-    searchBorder: 'border-slate-300 focus-within:border-[#da1c5c] focus-within:ring-1 focus-within:ring-pink-500/20',
-    searchBtnBg: 'bg-[#da1c5c] hover:bg-[#b8124b] text-white text-[10px] font-black tracking-widest uppercase',
-    cartBtnBg: 'bg-[#1c1c1c] hover:bg-[#282828] text-white border border-slate-700',
-    cartIconColor: 'text-pink-400',
-    badgeText: 'Curated 100% Luxury Authentic',
-    tagColor: 'text-[#da1c5c]',
-    priceColor: 'text-[#111111]',
-    buyNowBtn: 'bg-[#da1c5c] hover:bg-[#b8124b] text-white uppercase tracking-wider text-xs font-black rounded-none shadow-sm',
-    addToCartBtn: 'bg-black text-white hover:bg-slate-900 uppercase tracking-wider text-xs font-black rounded-none border border-black',
-    bodyBg: 'bg-[#ffffff]',
-    categoryChipActive: 'bg-pink-50 text-[#da1c5c] border-[#da1c5c]',
-    categoryHoverText: 'hover:text-[#da1c5c]',
-    dealsTag: '💎 Handpicked Luxury Edit',
-    dealsBadgeBg: 'bg-[#da1c5c] text-white',
-    guaranteeTitle: 'Tata Trust & Authentic Luxury Guarantee',
   }
 };
 
 // ============================================================================
-// 2. HORIZONTAL CATEGORIES WITH MEGA MENU DATA
+// 2. HORIZONTAL CATEGORIES WITH MEGA MENU
 // ============================================================================
 export const TOP_CATEGORIES_MENU = [
   {
@@ -206,7 +111,7 @@ export const TOP_CATEGORIES_MENU = [
   },
   {
     id: 'CAT-FASHION',
-    name: "Men & Women's Fashion",
+    name: "Fashion & Wear",
     icon: '👗',
     count: '450+ Styles',
     subcategories: ['Men Cotton Shirts & T-Shirts', 'Women Festive Kurta Sets', 'Slim-Fit Stretch Denim Jeans', 'Athletic Running Sneakers', 'Formal Trousers & Blazers', 'Ethnic Dupattas & Sarees'],
@@ -543,7 +448,7 @@ export const SHOPPY_PRODUCTS = [
 ];
 
 // ============================================================================
-// 4. FULL-WIDTH HERO BANNERS (Compact widescreen format, 25-30% reduced height)
+// 4. FULL-WIDTH HERO BANNERS
 // ============================================================================
 export const HERO_BANNERS = [
   {
@@ -607,6 +512,17 @@ export default function Storefront() {
   const [shopCode, setShopCode] = useState(() => getActiveShopCode());
   const [storeInfo, setStoreInfo] = useState(null);
 
+  // Check if store owner / admin is previewing a demo theme from Store Settings
+  const previewThemeParam = new URLSearchParams(window.location.search).get('preview_theme');
+  const serverThemeAttr = typeof document !== 'undefined' ? document.getElementById('root')?.getAttribute('data-theme') : null;
+
+  // Active Theme: Immediate zero-millisecond load from server, or preview parameter
+  const [activeThemeId, setActiveThemeId] = useState(() => {
+    if (previewThemeParam && THEMES_META[previewThemeParam]) return previewThemeParam;
+    if (serverThemeAttr && THEMES_META[serverThemeAttr]) return serverThemeAttr;
+    return 'snapdeal';
+  });
+
   // Active Category & Mega Menu State
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [hoveredCategory, setHoveredCategory] = useState(null);
@@ -630,7 +546,6 @@ export default function Storefront() {
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [addedToCartNotification, setAddedToCartNotification] = useState(null);
   const addedToCartTimerRef = useRef(null);
   const [welcomePopupOpen, setWelcomePopupOpen] = useState(false);
@@ -638,19 +553,6 @@ export default function Storefront() {
   const [deliveryPincode, setDeliveryPincode] = useState('800001');
   const [pincodeInput, setPincodeInput] = useState('800001');
   const [wishlist, setWishlist] = useState({});
-
-  // Theme Switcher State
-  const [activeThemeId, setActiveThemeId] = useState(() => {
-    const urlParam = new URLSearchParams(window.location.search).get('theme');
-    if (urlParam && MARKETPLACE_THEMES[urlParam]) return urlParam;
-    return 'snapdeal';
-  });
-  const [themeSwitcherOpen, setThemeSwitcherOpen] = useState(false);
-
-  // Active Theme Object
-  const theme = useMemo(() => {
-    return MARKETPLACE_THEMES[activeThemeId] || MARKETPLACE_THEMES.snapdeal;
-  }, [activeThemeId]);
 
   // Carousel Active Slide
   const [activeBanner, setActiveBanner] = useState(0);
@@ -668,7 +570,6 @@ export default function Storefront() {
   const [couponSuccess, setCouponSuccess] = useState('');
 
   // Checkout Payment
-  const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPayment, setSelectedPayment] = useState('cod');
   const [customerForm, setCustomerForm] = useState(() => {
     try {
@@ -754,16 +655,15 @@ export default function Storefront() {
         const s = infoRes.data.store;
         setStoreInfo(s);
 
-        // Update Theme from Store Database if not forced by URL param
-        const urlParam = new URLSearchParams(window.location.search).get('theme');
-        if (!urlParam) {
-          const dbTheme = s.ecom_theme || s.settings?.ecom_theme || s.settings?.theme_template;
-          if (dbTheme && MARKETPLACE_THEMES[dbTheme]) {
+        // If not in preview mode, set theme directly from store's saved settings
+        if (!previewThemeParam) {
+          const dbTheme = s.ecom_theme || s.settings?.ecom_theme;
+          if (dbTheme && THEMES_META[dbTheme]) {
             setActiveThemeId(dbTheme);
           }
         }
 
-        // Dynamically update document title & favicon from Store Settings
+        // Dynamically update document title & favicon
         if (s.name) {
           document.title = `${s.name} — Official Online Store | Exclusive Deals & Offers`;
         }
@@ -828,7 +728,7 @@ export default function Storefront() {
     }));
   };
 
-  // Add to Bag
+  // Add to Bag (DO NOT auto-open Shopping Bag, show center notification)
   const handleAddToCart = (product, e) => {
     if (e) e.stopPropagation();
     const variant = selectedVariants[product.id] || (product.variants && product.variants[0]) || {
@@ -873,7 +773,7 @@ export default function Storefront() {
       ];
     });
 
-    // DO NOT force-open the full cart drawer. Instead, show middle center notification toast!
+    // Show middle center notification toast
     if (addedToCartTimerRef.current) {
       clearTimeout(addedToCartTimerRef.current);
     }
@@ -1075,7 +975,7 @@ export default function Storefront() {
           return discB - discA;
         }
         if (sortBy === 'rating') return b.rating - a.rating;
-        return 0; // relevance
+        return 0;
       });
   }, [products, activeCategory, searchCategoryFilter, searchQuery, sortBy]);
 
@@ -1129,7 +1029,6 @@ export default function Storefront() {
       setCheckoutOpen(false);
     } catch (err) {
       console.error('Order submission error:', err);
-      // Client-side simulated order confirmation
       setOrderSuccess({
         order_number: `ORD-${Date.now().toString().slice(-6)}`,
         invoice_number: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1146,895 +1045,988 @@ export default function Storefront() {
     }
   };
 
-  // Store Brand Logo Check
+  // Activate Theme (when admin clicks Activate inside Demo Preview)
+  const handleActivateCurrentTheme = async (themeKey) => {
+    const target = themeKey || activeThemeId;
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/tenant/settings/branding', {
+        ecom_theme: target,
+      }).catch(() => ({ data: {} }));
+      alert(`🎉 Theme ${target.toUpperCase()} activated successfully for store ${shopCode}!`);
+      // Remove preview parameter and reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('preview_theme');
+      window.location.href = url.toString();
+    } catch (err) {
+      alert('Failed to activate theme. Please check connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const storeLogo = storeInfo?.logo || storeInfo?.settings?.logo;
   const storeName = storeInfo?.name || 'Shoppy Store';
 
   return (
-    <div className={`min-h-screen ${theme.bodyBg} text-slate-900 flex flex-col font-sans transition-colors duration-200`}>
+    <div className="min-h-screen flex flex-col font-sans transition-colors duration-200">
 
       {/* =========================================================================
-          1. TOP NOTIFICATION RIBBON (Marketplace Theme Styled)
+          ADMIN LIVE DEMO PREVIEW BAR (ONLY VISIBLE IF ADMIN CLICKS "LIVE DEMO")
       ========================================================================== */}
-      <div className={`${theme.primaryHeaderBg} ${theme.primaryHeaderText} text-[11px] font-medium py-1.5 px-4 border-b ${theme.primaryHeaderBorder}`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold uppercase tracking-wider text-amber-300">
-              {theme.dealsTag}
-            </span>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <span className="hidden sm:inline text-slate-200">
-              Extra 10% Instant Off on HDFC &amp; SBI Cards • Use Code: <span className="font-mono font-bold text-amber-300">SHOPPY150</span>
+      {previewThemeParam && (
+        <div className="bg-slate-900 text-amber-300 text-xs py-2 px-4 flex flex-wrap items-center justify-between border-b border-amber-400/30 z-50 sticky top-0 shadow-lg">
+          <div className="flex items-center gap-2 font-bold">
+            <Eye className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span>
+              STORE ADMIN LIVE DEMO: Previewing <span className="text-white underline">{THEMES_META[activeThemeId]?.name}</span> for Store: <span className="font-mono text-white">{shopCode}</span>
             </span>
           </div>
-
-          <div className="flex items-center gap-4 text-slate-300">
-            {/* Live Ticking Countdown */}
-            <div className="flex items-center gap-1 font-bold text-amber-300">
-              <Clock className="w-3.5 h-3.5 animate-pulse" />
-              <span>
-                Sale Ends: {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
-              </span>
-            </div>
-
-            <a
-              href="tel:+919546042639"
-              className="hidden md:flex items-center gap-1 hover:text-white transition"
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => handleActivateCurrentTheme(activeThemeId)}
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1 shadow-xs transition"
             >
-              <Headphones className="w-3 h-3 text-emerald-400" />
-              <span>Help: +91 95460 42639</span>
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+              <span>Activate This Theme Now</span>
+            </button>
+            <a
+              href="/shop-admin/store-settings"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+            >
+              Back to Settings
             </a>
           </div>
         </div>
-      </div>
+      )}
 
       {/* =========================================================================
-          2. MAIN STORE HEADER (With Store Logo, Favicon, Search & Cart)
+          THEME 1: SNAPDEAL STYLE LAYOUT
       ========================================================================== */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-
-          {/* Store Logo / Store Name */}
-          <div
-            onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }}
-            className="flex items-center gap-3 cursor-pointer flex-shrink-0 group"
-          >
-            {storeLogo ? (
-              <img
-                src={storeLogo}
-                alt={storeName}
-                className="h-9 sm:h-11 max-w-[200px] object-contain group-hover:scale-105 transition-transform"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const fallbackEl = document.getElementById('store-fallback-text-logo');
-                  if (fallbackEl) fallbackEl.style.display = 'flex';
-                }}
-              />
-            ) : null}
-
-            <div
-              id="store-fallback-text-logo"
-              className={`flex items-center gap-2.5 ${storeLogo ? 'hidden' : 'flex'}`}
-            >
-              <div 
-                className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-xl shadow-md group-hover:scale-105 transition-transform"
-                style={{ backgroundColor: theme.accentColor }}
-              >
-                {storeName ? storeName[0] : 'S'}
+      {activeThemeId === 'snapdeal' && (
+        <div className="flex-1 flex flex-col bg-[#f8fafc]">
+          {/* Snapdeal Top Deals Bar */}
+          <div className="bg-[#0f172a] text-white text-[11px] font-medium py-1.5 px-4 border-b border-slate-800">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold uppercase tracking-wider text-rose-400">⚡ SNAPDEAL LIGHTNING OFFERS</span>
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <span className="hidden sm:inline text-slate-200">10% Instant Bank Cashback • Use Code: <span className="font-mono font-bold text-amber-300">SHOPPY150</span></span>
               </div>
-              <div className="flex flex-col leading-none">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl md:text-2xl font-black font-heading text-slate-900 tracking-tight">
-                    {storeName}
-                  </span>
-                  <span className="text-xl md:text-2xl font-black" style={{ color: theme.accentColor }}>
-                    Store
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 pt-0.5">
-                  <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-[10px] font-bold text-slate-500">{theme.badgeText}</span>
+              <div className="flex items-center gap-4 text-slate-300">
+                <div className="flex items-center gap-1 font-bold text-amber-300">
+                  <Clock className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Sale Ends: {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Category Dropdown + Search Bar */}
-          <div className="flex-1 max-w-2xl relative">
-            <div className={`flex items-center bg-slate-50 border rounded-lg overflow-hidden transition ${theme.searchBorder}`}>
-
-              {/* Category Dropdown Selector */}
-              <div className="hidden sm:flex items-center gap-1 pl-3 pr-2 py-2 text-xs font-bold text-slate-700 border-r border-slate-200 bg-slate-100/80 flex-shrink-0">
-                <select
-                  value={searchCategoryFilter}
-                  onChange={(e) => setSearchCategoryFilter(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">All Categories</option>
-                  <option value="CAT-MOBILES">Mobiles &amp; 5G</option>
-                  <option value="CAT-ELECTRONICS">Electronics</option>
-                  <option value="CAT-FASHION">Fashion &amp; Wear</option>
-                  <option value="CAT-HOME">Home &amp; Kitchen</option>
-                  <option value="CAT-APPLIANCES">Appliances</option>
-                  <option value="CAT-GROCERY">Grocery Supermarket</option>
-                  <option value="CAT-BEAUTY">Beauty &amp; Wellness</option>
-                </select>
+          {/* Snapdeal Header */}
+          <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+              <div onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }} className="flex items-center gap-3 cursor-pointer flex-shrink-0 group">
+                {storeLogo ? (
+                  <img src={storeLogo} alt={storeName} className="h-9 sm:h-11 max-w-[200px] object-contain" />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-[#e11d48] text-white flex items-center justify-center font-black text-xl shadow-md">
+                      {storeName ? storeName[0] : 'S'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl md:text-2xl font-black font-heading text-slate-900">{storeName}</span>
+                        <span className="text-xl md:text-2xl font-black text-[#e11d48]">Store</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-bold block">Shoppy Verified Deals</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Search Input */}
-              <input
-                type="text"
-                placeholder="Search products, brands, or daily essentials (e.g. iPhone, Puma, Denim, Oil)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full py-2.5 px-3 text-xs md:text-sm text-slate-900 placeholder-slate-400 bg-transparent focus:outline-none"
-              />
+              {/* Snapdeal Category Selector Search Bar */}
+              <div className="flex-1 max-w-2xl relative">
+                <div className="flex items-center bg-slate-50 border border-slate-300 rounded-lg overflow-hidden focus-within:border-[#e11d48] focus-within:ring-2 focus-within:ring-rose-500/10 transition">
+                  <div className="hidden sm:flex items-center gap-1 pl-3 pr-2 py-2 text-xs font-bold text-slate-700 border-r border-slate-200 bg-slate-100 flex-shrink-0">
+                    <select
+                      value={searchCategoryFilter}
+                      onChange={(e) => setSearchCategoryFilter(e.target.value)}
+                      className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Categories</option>
+                      <option value="CAT-MOBILES">Mobiles &amp; 5G</option>
+                      <option value="CAT-ELECTRONICS">Electronics</option>
+                      <option value="CAT-FASHION">Fashion &amp; Wear</option>
+                      <option value="CAT-HOME">Home &amp; Kitchen</option>
+                      <option value="CAT-APPLIANCES">Appliances</option>
+                      <option value="CAT-GROCERY">Grocery Supermarket</option>
+                      <option value="CAT-BEAUTY">Beauty &amp; Wellness</option>
+                    </select>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search products, brands, or daily essentials (e.g. iPhone, Puma, Denim, Oil)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full py-2.5 px-3 text-xs md:text-sm text-slate-900 placeholder-slate-400 bg-transparent focus:outline-none"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="p-2 text-slate-400 hover:text-slate-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button className="px-5 py-2.5 bg-[#e11d48] hover:bg-[#be123c] text-white flex items-center gap-1 text-xs font-black transition flex-shrink-0">
+                    <Search className="w-4 h-4" />
+                    <span className="hidden md:inline">Search</span>
+                  </button>
+                </div>
+              </div>
 
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="p-2 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-
-              {/* Search CTA Button */}
+              {/* Delivery Pincode */}
               <button
-                type="button"
-                className={`px-4 md:px-5 py-2.5 flex items-center gap-1.5 text-xs font-black transition flex-shrink-0 ${theme.searchBtnBg}`}
+                onClick={() => setPincodeModalOpen(true)}
+                className="hidden lg:flex items-center gap-2 text-xs text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50"
               >
-                <Search className="w-4 h-4" />
-                <span className="hidden md:inline">Search</span>
+                <MapPin className="w-4 h-4 text-[#e11d48]" />
+                <div className="text-left leading-tight">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Deliver to</span>
+                  <span className="font-extrabold text-slate-800">{deliveryPincode} • Change</span>
+                </div>
               </button>
-            </div>
-          </div>
 
-          {/* Delivery Pincode */}
-          <button
-            onClick={() => setPincodeModalOpen(true)}
-            className="hidden lg:flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 transition"
-          >
-            <MapPin className="w-4 h-4" style={{ color: theme.accentColor }} />
-            <div className="text-left leading-tight">
-              <span className="text-[10px] text-slate-400 block font-semibold">Deliver to</span>
-              <span className="font-extrabold text-slate-800">{deliveryPincode} • Change</span>
-            </div>
-          </button>
-
-          {/* Actions: Terminal Login & Shopping Bag */}
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            <a
-              href="/store"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-slate-900 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Merchant Terminal</span>
-            </a>
-
-            {/* Shopping Cart Button */}
-            <button
-              onClick={() => setCartOpen(true)}
-              className={`relative flex items-center gap-2 px-3.5 md:px-4 py-2.5 text-xs md:text-sm font-extrabold rounded-lg shadow-sm transition active:scale-95 ${theme.cartBtnBg}`}
-            >
-              <div className="relative">
-                <ShoppingBag className={`w-4 h-4 ${theme.cartIconColor}`} />
+              {/* Shopping Bag */}
+              <button
+                onClick={() => setCartOpen(true)}
+                className="relative flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs md:text-sm font-extrabold rounded-lg shadow-sm transition active:scale-95"
+              >
+                <ShoppingBag className="w-4 h-4 text-rose-400" />
+                <span className="hidden sm:inline">Bag</span>
                 {cart.length > 0 && (
-                  <span 
-                    className="absolute -top-2 -right-2 w-4 h-4 rounded-full text-white text-[10px] font-black flex items-center justify-center animate-pulse"
-                    style={{ backgroundColor: theme.accentColor }}
-                  >
+                  <span className="w-4 h-4 rounded-full bg-[#e11d48] text-white text-[10px] font-black flex items-center justify-center animate-pulse">
                     {cart.reduce((a, b) => a + b.quantity, 0)}
                   </span>
                 )}
-              </div>
-              <span className="hidden sm:inline">Bag</span>
-              {cart.length > 0 && (
-                <span className="text-xs font-black text-amber-300 hidden md:inline">
-                  • ₹{grandTotal.toFixed(0)}
-                </span>
-              )}
-            </button>
-          </div>
+                {cart.length > 0 && <span className="text-xs font-black text-amber-300 hidden md:inline">• ₹{grandTotal.toFixed(0)}</span>}
+              </button>
+            </div>
 
-        </div>
-
-        {/* =========================================================================
-            3. HORIZONTAL TOP CATEGORIES (LEFT TO RIGHT) WITH MEGA MENU
-        ========================================================================== */}
-        <div className="border-t border-slate-100 bg-white relative">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto scrollbar-none py-1">
-            <div className="flex items-center gap-1 py-1">
-              {TOP_CATEGORIES_MENU.map((cat) => {
-                const isActive = activeCategory === cat.id;
-                const isHovered = hoveredCategory === cat.id;
-                return (
-                  <div
-                    key={cat.id}
-                    onMouseEnter={() => setHoveredCategory(cat.id)}
-                    className="relative"
-                  >
+            {/* Top Horizontal Categories with Mega Menu */}
+            <div className="border-t border-slate-100 bg-white relative">
+              <div className="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto scrollbar-none py-1">
+                <div className="flex items-center gap-1 py-1">
+                  {TOP_CATEGORIES_MENU.map((cat) => (
                     <button
-                      onClick={() => {
-                        setActiveCategory(cat.id);
-                        setSearchQuery('');
-                        setHoveredCategory(null);
-                      }}
+                      key={cat.id}
+                      onClick={() => { setActiveCategory(cat.id); setSearchQuery(''); }}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
-                        isActive
-                          ? theme.categoryChipActive + ' font-black shadow-xs'
-                          : `text-slate-700 hover:bg-slate-50 ${theme.categoryHoverText}`
+                        activeCategory === cat.id
+                          ? 'bg-rose-50 text-[#e11d48] border border-[#e11d48] font-black shadow-xs'
+                          : 'text-slate-700 hover:bg-slate-50 hover:text-[#e11d48]'
                       }`}
                     >
                       <span className="text-sm">{cat.icon}</span>
                       <span>{cat.name}</span>
-                      <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isHovered ? 'rotate-180' : ''}`} />
                     </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Quick Coupon Voucher Pill */}
-            <div className="hidden lg:flex items-center gap-2 pl-4 text-xs font-bold shrink-0">
-              <span className="text-slate-400 text-[11px]">FLAT ₹150 OFF:</span>
-              <button
-                onClick={() => handleApplyCoupon('SHOPPY150')}
-                className="px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-mono text-[11px] font-black transition flex items-center gap-1"
-              >
-                <Tag className="w-3 h-3 text-amber-600" />
-                <span>SHOPPY150</span>
-              </button>
-            </div>
-          </div>
-
-          {/* =========================================================================
-              3B. RICH MEGA MENU DROPDOWN PANEL (On Hover / Click)
-          ========================================================================== */}
-          {hoveredCategory && (
-            <div
-              onMouseLeave={() => setHoveredCategory(null)}
-              className="absolute top-full left-0 right-0 bg-white border-b border-slate-200 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-            >
-              <div className="max-w-7xl mx-auto p-6">
-                {(() => {
-                  const catData = TOP_CATEGORIES_MENU.find((c) => c.id === hoveredCategory) || TOP_CATEGORIES_MENU[0];
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-                      {/* Column 1: Subcategories */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                          <span className="text-lg">{catData.icon}</span>
-                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                            {catData.name} Departments
-                          </h4>
-                        </div>
-                        <ul className="space-y-2 text-xs">
-                          {catData.subcategories.map((sub, sIdx) => (
-                            <li key={sIdx}>
-                              <button
-                                onClick={() => {
-                                  setActiveCategory(catData.id);
-                                  setSearchQuery(sub);
-                                  setHoveredCategory(null);
-                                }}
-                                className="text-slate-600 hover:text-slate-900 font-medium hover:font-bold transition flex items-center justify-between w-full group"
-                              >
-                                <span>{sub}</span>
-                                <ChevronRight className="w-3 h-3 text-slate-300 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-transform" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Column 2: Accessories & Peripherals */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                          <Zap className="w-4 h-4 text-amber-500" />
-                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                            Accessories &amp; Add-ons
-                          </h4>
-                        </div>
-                        <ul className="space-y-2 text-xs">
-                          {catData.accessories.map((acc, aIdx) => (
-                            <li key={aIdx}>
-                              <button
-                                onClick={() => {
-                                  setActiveCategory(catData.id);
-                                  setSearchQuery(acc);
-                                  setHoveredCategory(null);
-                                }}
-                                className="text-slate-600 hover:text-slate-900 font-medium hover:font-bold transition flex items-center justify-between w-full group"
-                              >
-                                <span>{acc}</span>
-                                <ArrowUpRight className="w-3 h-3 text-slate-300 group-hover:text-slate-600 transition-transform" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Column 3: Featured Brands */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                          <BadgeCheck className="w-4 h-4 text-emerald-600" />
-                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                            Top Featured Brands
-                          </h4>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {catData.brands.map((brand, bIdx) => (
-                            <button
-                              key={bIdx}
-                              onClick={() => {
-                                setActiveCategory(catData.id);
-                                setSearchQuery(brand);
-                                setHoveredCategory(null);
-                              }}
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition"
-                            >
-                              {brand}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Column 4: Promo Deal Card */}
-                      <div className="rounded-xl overflow-hidden border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 space-y-3 shadow-md relative group">
-                        <div className="flex items-center justify-between">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white">
-                            {catData.promo.badge}
-                          </span>
-                          <span className="text-[10px] font-mono text-amber-300">Code: {catData.promo.code}</span>
-                        </div>
-                        <div>
-                          <h5 className="text-sm font-black text-white">{catData.promo.title}</h5>
-                          <p className="text-[11px] text-slate-300 mt-0.5">Explore certified models with instant dispatch.</p>
-                        </div>
-                        <img
-                          src={catData.promo.image}
-                          alt={catData.promo.title}
-                          className="w-full h-24 object-cover rounded-lg group-hover:scale-102 transition-transform duration-300"
-                        />
-                        <button
-                          onClick={() => {
-                            setActiveCategory(catData.id);
-                            setHoveredCategory(null);
-                          }}
-                          className="w-full py-2 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-black transition flex items-center justify-center gap-1"
-                        >
-                          <span>Explore {catData.name}</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-3 md:px-4 space-y-5 w-full mt-3 flex-1">
-
-        {/* =========================================================================
-            4. FULL-WIDTH HERO BANNER CAROUSEL (Compact Widescreen - Height Reduced ~25%)
-        ========================================================================== */}
-        <div className="w-full relative rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between h-[180px] sm:h-[220px] md:h-[260px] lg:h-[280px]">
-          <div className={`w-full h-full p-6 md:p-8 bg-gradient-to-br ${HERO_BANNERS[activeBanner].bgGradient} text-white flex flex-col justify-between transition-all duration-700 relative`}>
-
-            <div className="space-y-1.5 md:space-y-2 max-w-2xl z-10">
-              <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-white/15 backdrop-blur text-[10px] font-black tracking-wider uppercase text-amber-300">
-                <Flame className="w-3 h-3 fill-current" />
-                {HERO_BANNERS[activeBanner].tag}
-              </span>
-
-              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black font-heading leading-tight tracking-tight text-white drop-shadow">
-                {HERO_BANNERS[activeBanner].title}
-              </h2>
-
-              <p className="text-xs sm:text-sm text-slate-200 line-clamp-1 sm:line-clamp-2 font-medium max-w-xl">
-                {HERO_BANNERS[activeBanner].subtitle}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 z-10">
-              <div className="bg-black/30 backdrop-blur px-3 py-1 rounded-md text-[11px] font-bold text-amber-300 border border-white/10 flex items-center gap-1.5">
-                <Gift className="w-3.5 h-3.5 text-amber-400" />
-                <span>{HERO_BANNERS[activeBanner].badgeText}</span>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (HERO_BANNERS[activeBanner].categoryTarget !== 'ALL') {
-                    setActiveCategory(HERO_BANNERS[activeBanner].categoryTarget);
-                  }
-                  window.scrollTo({ top: 520, behavior: 'smooth' });
-                }}
-                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-white text-xs font-black shadow-lg shadow-black/20 transition active:scale-95 flex items-center gap-1.5 ${theme.buyNowBtn}`}
-              >
-                <span>{HERO_BANNERS[activeBanner].ctaText}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Slide Dots Indicator */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-              {HERO_BANNERS.map((b, idx) => (
-                <button
-                  key={b.id}
-                  onClick={() => setActiveBanner(idx)}
-                  className={`h-1.5 rounded-full transition-all ${activeBanner === idx ? 'w-6 bg-white' : 'w-2 bg-white/40'}`}
-                  aria-label={`Slide ${idx + 1}`}
-                />
-              ))}
-            </div>
-
-            {/* Prev / Next controls */}
-            <button
-              onClick={() => setActiveBanner((prev) => (prev - 1 + HERO_BANNERS.length) % HERO_BANNERS.length)}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur transition z-20"
-              aria-label="Previous Banner"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setActiveBanner((prev) => (prev + 1) % HERO_BANNERS.length)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur transition z-20"
-              aria-label="Next Banner"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-
-          </div>
-        </div>
-
-        {/* =========================================================================
-            5. VALUE OFFERS STRIP (Bank Cards & Instant UPI)
-        ========================================================================== */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white p-3.5 rounded-xl shadow-xs border border-slate-200 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#e11d48] flex items-center justify-center flex-shrink-0">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-900">10% Bank Discount</p>
-              <p className="text-[10px] text-slate-500">HDFC, SBI &amp; ICICI Cards</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl shadow-xs border border-slate-200 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-900">Instant UPI Cashback</p>
-              <p className="text-[10px] text-slate-500">PhonePe, Paytm &amp; Google Pay</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl shadow-xs border border-slate-200 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <Truck className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-900">Free Express Delivery</p>
-              <p className="text-[10px] text-slate-500">On all orders above ₹499</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl shadow-xs border border-slate-200 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-              <Tag className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-900">Flat ₹150 OFF Voucher</p>
-              <p className="text-[10px] text-slate-500">Use Code: SHOPPY150</p>
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================================
-            6. ⚡ LIGHTNING DEALS OF THE DAY
-        ========================================================================== */}
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 md:p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2.5">
-              <div 
-                className="w-8 h-8 rounded-lg text-white flex items-center justify-center font-black shadow-xs"
-                style={{ backgroundColor: theme.accentColor }}
-              >
-                <Zap className="w-4 h-4 fill-current" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-black font-heading text-slate-900">
-                    {theme.dealsTag}
-                  </h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 text-[#e11d48]">
-                    UP TO 70% OFF
-                  </span>
+                  ))}
                 </div>
-                <p className="text-xs text-slate-500">Handpicked top deals refreshed every 24 hours.</p>
-              </div>
-            </div>
-
-            {/* Countdown Badge */}
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 self-start sm:self-auto">
-              <Clock className="w-4 h-4 text-rose-500" />
-              <span className="text-xs font-black text-slate-800">
-                Ends in: <span className="font-mono text-[#e11d48]">{String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Deals Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {dealProducts.slice(0, 4).map((product) => {
-              const activeVariant = selectedVariants[product.id] || product.variants[0];
-              const sellingPrice = activeVariant?.sellingPrice || product.selling_price;
-              const mrp = activeVariant?.mrp || product.mrp;
-              const discountPct = Math.round(((mrp - sellingPrice) / mrp) * 100);
-
-              return (
-                <div
-                  key={product.id}
-                  onClick={() => setQuickViewProduct(product)}
-                  className="group rounded-xl border border-slate-200 hover:border-slate-300 bg-white p-3 flex flex-col justify-between transition-all hover:shadow-md cursor-pointer relative"
-                >
-                  <div className="space-y-2">
-                    {/* Thumbnail & Badges */}
-                    <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black bg-[#e11d48] text-white shadow-xs">
-                        {discountPct}% OFF
-                      </span>
-                      <button
-                        onClick={(e) => toggleWishlist(product.id, e)}
-                        className={`absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur shadow-xs transition ${
-                          wishlist[product.id] ? 'text-[#e11d48]' : 'text-slate-400 hover:text-slate-600'
-                        }`}
-                      >
-                        <Heart className="w-3.5 h-3.5 fill-current" />
-                      </button>
-                    </div>
-
-                    {/* Title */}
-                    <div>
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 block">{product.brand}</span>
-                      <h4 className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-rose-600 transition">
-                        {product.name}
-                      </h4>
-                    </div>
-
-                    {/* Rating */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold">
-                        <span>{product.rating}</span>
-                        <Star className="w-2.5 h-2.5 fill-current" />
-                      </span>
-                      <span className="text-[10px] text-slate-400">({product.rating_count.toLocaleString('en-IN')})</span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-black text-slate-900">₹{sellingPrice.toLocaleString('en-IN')}</span>
-                      <span className="text-[11px] text-slate-400 line-through">₹{mrp.toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-
-                  {/* Quick Add CTA */}
-                  <button
-                    onClick={(e) => handleAddToCart(product, e)}
-                    className="w-full mt-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center justify-center gap-1"
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Add to Bag</span>
+                <div className="hidden lg:flex items-center gap-2 pl-4 text-xs font-bold shrink-0">
+                  <span className="text-slate-400 text-[11px]">FLAT ₹150 OFF:</span>
+                  <button onClick={() => handleApplyCoupon('SHOPPY150')} className="px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-mono text-[11px] font-black transition flex items-center gap-1">
+                    <Tag className="w-3 h-3 text-amber-600" />
+                    <span>SHOPPY150</span>
                   </button>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* =========================================================================
-            7. FULL PRODUCT CATALOG WITH FILTERS & SORTING
-        ========================================================================== */}
-        <section className="space-y-4 pt-2">
-          {/* Header & Sort Controls */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-black font-heading text-slate-900">
-                {activeCategory === 'ALL' ? 'All Curated Products' : activeCategory}
-              </h3>
-              <p className="text-xs text-slate-500">
-                Showing {filteredProducts.length} verified products with doorstep delivery
-              </p>
-            </div>
-
-            {/* Sort & Filter Controls */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-                <span>Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-                >
-                  <option value="relevance">Relevance</option>
-                  <option value="price_asc">Price: Low to High</option>
-                  <option value="price_desc">Price: High to Low</option>
-                  <option value="discount">Highest Discount</option>
-                  <option value="rating">Customer Rating</option>
-                </select>
               </div>
             </div>
-          </div>
+          </header>
 
-          {/* Product Cards Grid */}
-          {filteredProducts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-              <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                <Search className="w-6 h-6" />
-              </div>
-              <h4 className="text-base font-bold text-slate-800">No Products Found</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                No items match your search or filter criteria. Try resetting the category or searching for another term.
-              </p>
-              <button
-                onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); setSearchCategoryFilter('ALL'); }}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold"
-              >
-                Reset All Filters
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => {
-                const activeVariant = selectedVariants[product.id] || (product.variants && product.variants[0]);
-                const sellingPrice = activeVariant?.sellingPrice || product.selling_price;
-                const mrp = activeVariant?.mrp || product.mrp;
-                const discountPct = Math.round(((mrp - sellingPrice) / mrp) * 100);
-
-                return (
-                  <div
-                    key={product.id}
-                    onClick={() => setQuickViewProduct(product)}
-                    className="group rounded-2xl border border-slate-200 hover:border-slate-300 bg-white p-3.5 flex flex-col justify-between transition-all hover:shadow-lg cursor-pointer relative"
+          {/* Snapdeal Hero Carousel */}
+          <main className="max-w-7xl mx-auto px-3 md:px-4 space-y-5 w-full mt-3 flex-1">
+            <div className="w-full relative rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between h-[180px] sm:h-[220px] md:h-[260px] lg:h-[280px]">
+              <div className={`w-full h-full p-6 md:p-8 bg-gradient-to-br ${HERO_BANNERS[activeBanner].bgGradient} text-white flex flex-col justify-between transition-all duration-700 relative`}>
+                <div className="space-y-1.5 max-w-2xl z-10">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-white/15 backdrop-blur text-[10px] font-black tracking-wider uppercase text-amber-300">
+                    <Flame className="w-3 h-3 fill-current" />
+                    {HERO_BANNERS[activeBanner].tag}
+                  </span>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-heading leading-tight tracking-tight text-white drop-shadow">
+                    {HERO_BANNERS[activeBanner].title}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-200 line-clamp-1 font-medium">{HERO_BANNERS[activeBanner].subtitle}</p>
+                </div>
+                <div className="flex items-center justify-between pt-2 z-10">
+                  <span className="bg-black/30 backdrop-blur px-3 py-1 rounded-md text-[11px] font-bold text-amber-300 border border-white/10">
+                    {HERO_BANNERS[activeBanner].badgeText}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (HERO_BANNERS[activeBanner].categoryTarget !== 'ALL') setActiveCategory(HERO_BANNERS[activeBanner].categoryTarget);
+                      window.scrollTo({ top: 520, behavior: 'smooth' });
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-black shadow-lg transition active:scale-95 flex items-center gap-1.5"
                   >
-                    <div className="space-y-3">
-                      {/* Product Image & Wishlist Heart */}
-                      <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
+                    <span>{HERO_BANNERS[activeBanner].ctaText}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
 
-                        {/* Badges */}
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          <span 
-                            className="px-2 py-0.5 rounded text-[9px] font-black text-white shadow-xs"
-                            style={{ backgroundColor: theme.accentColor }}
-                          >
-                            {discountPct}% OFF
-                          </span>
-                          {product.badge && (
-                            <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900/80 backdrop-blur text-white shadow-xs">
-                              {product.badge}
-                            </span>
-                          )}
-                        </div>
+            {/* Snapdeal Lightning Deals */}
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 md:p-5 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#e11d48] text-white flex items-center justify-center font-black">
+                    <Zap className="w-4 h-4 fill-current" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black font-heading text-slate-900">⚡ Lightning Deals of the Day</h3>
+                    <p className="text-xs text-slate-500">Up to 70% Off • Live Deals Refreshed Daily</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-black text-slate-800">
+                  <Clock className="w-4 h-4 text-rose-500" />
+                  <span>Ends in: <span className="text-[#e11d48]">{String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m</span></span>
+                </div>
+              </div>
 
-                        {/* Wishlist Heart */}
-                        <button
-                          onClick={(e) => toggleWishlist(product.id, e)}
-                          className={`absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur shadow-xs transition ${
-                            wishlist[product.id] ? 'text-[#e11d48]' : 'text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          <Heart className="w-3.5 h-3.5 fill-current" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                {dealProducts.slice(0, 4).map((p) => (
+                  <div key={p.id} className="rounded-xl border border-slate-200 bg-white p-3 flex flex-col justify-between hover:shadow-md transition">
+                    <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-50">
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black bg-[#e11d48] text-white">DEAL</span>
+                    </div>
+                    <div className="pt-2">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
+                      <h4 className="text-xs font-bold text-slate-800 line-clamp-1">{p.name}</h4>
+                      <div className="flex items-baseline gap-2 pt-1">
+                        <span className="text-sm font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                        <span className="text-[11px] text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                    <button onClick={(e) => handleAddToCart(p, e)} className="mt-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-1">
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>Add to Bag</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Snapdeal Catalog Grid */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200">
+                <h3 className="text-base font-black text-slate-900">{activeCategory === 'ALL' ? 'All Curated Products' : activeCategory}</h3>
+                <span className="text-xs text-slate-500 font-bold">{filteredProducts.length} Products</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="rounded-2xl border border-slate-200 bg-white p-3.5 flex flex-col justify-between hover:shadow-lg transition">
+                    <div className="space-y-2">
+                      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50">
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black bg-[#e11d48] text-white">
+                          {Math.round(((product.mrp - product.selling_price) / product.mrp) * 100)}% OFF
+                        </span>
+                        <button onClick={(e) => toggleWishlist(product.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow-xs">
+                          <Heart className={`w-3.5 h-3.5 ${wishlist[product.id] ? 'fill-rose-600 text-rose-600' : 'text-slate-400'}`} />
                         </button>
                       </div>
-
-                      {/* Title & Brand */}
-                      <div>
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
-                          <span className="font-extrabold uppercase">{product.brand}</span>
-                          <span className="font-medium text-emerald-600">{product.delivery_text}</span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 group-hover:text-slate-700 transition leading-snug">
-                          {product.name}
-                        </h4>
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{product.brand}</span>
+                      <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{product.name}</h4>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                        <Star className="w-3 h-3 fill-current" />
+                        <span>{product.rating} ({product.rating_count})</span>
                       </div>
-
-                      {/* Star Rating Badge */}
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold">
-                          <span>{product.rating}</span>
-                          <Star className="w-2.5 h-2.5 fill-current" />
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {product.rating_count.toLocaleString('en-IN')} verified ratings
-                        </span>
+                      <div className="flex items-baseline gap-2 pt-1">
+                        <span className="text-base font-black text-slate-900">₹{product.selling_price.toLocaleString('en-IN')}</span>
+                        <span className="text-xs text-slate-400 line-through">₹{product.mrp.toLocaleString('en-IN')}</span>
                       </div>
-
-                      {/* Variant Size Pills / Color Dots */}
-                      {product.variants && product.variants.length > 1 && (
-                        <div className="pt-1 space-y-1.5">
-                          <div className="flex flex-wrap items-center gap-1">
-                            {product.variants.map((v) => {
-                              const isSelected = activeVariant?.id === v.id;
-                              return (
-                                <button
-                                  key={v.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectVariant(product.id, v);
-                                  }}
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition border ${
-                                    isSelected
-                                      ? 'bg-slate-900 text-white border-slate-900'
-                                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
-                                  }`}
-                                >
-                                  {v.size}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Price Section */}
-                      <div className="pt-1 flex items-baseline gap-2">
-                        <span className="text-base font-black text-slate-900">
-                          ₹{sellingPrice.toLocaleString('en-IN')}
-                        </span>
-                        <span className="text-xs text-slate-400 line-through">
-                          ₹{mrp.toLocaleString('en-IN')}
-                        </span>
-                        <span className="text-xs font-bold text-emerald-600">
-                          Save ₹{(mrp - sellingPrice).toLocaleString('en-IN')}
-                        </span>
-                      </div>
-
-                      {product.bank_offer && (
-                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded flex items-center gap-1">
-                          <Tag className="w-3 h-3" />
-                          <span className="line-clamp-1">{product.bank_offer}</span>
-                        </div>
-                      )}
                     </div>
-
-                    {/* Dual Action Buttons (Add to Bag & Buy Now) */}
                     <div className="grid grid-cols-2 gap-2 pt-3 mt-2 border-t border-slate-100">
-                      <button
-                        onClick={(e) => handleAddToCart(product, e)}
-                        className={`py-2 text-xs transition flex items-center justify-center gap-1 ${theme.addToCartBtn}`}
-                      >
+                      <button onClick={(e) => handleAddToCart(product, e)} className="py-2 text-xs border border-slate-200 hover:border-slate-300 font-bold rounded-lg flex items-center justify-center gap-1">
                         <ShoppingBag className="w-3.5 h-3.5" />
                         <span>Add</span>
                       </button>
-
-                      <button
-                        onClick={(e) => handleBuyNow(product, e)}
-                        className={`py-2 text-xs transition flex items-center justify-center gap-1 ${theme.buyNowBtn}`}
-                      >
+                      <button onClick={(e) => handleBuyNow(product, e)} className="py-2 text-xs bg-[#e11d48] hover:bg-[#be123c] text-white font-black rounded-lg flex items-center justify-center gap-1">
                         <Zap className="w-3.5 h-3.5 fill-current" />
                         <span>Buy Now</span>
                       </button>
                     </div>
-
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* =========================================================================
-            8. TRUST PAY GUARANTEE SECTION (POSITIONED RIGHT ABOVE FOOTER)
-        ========================================================================== */}
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 md:p-8 space-y-6 mt-8">
-          <div className="text-center max-w-2xl mx-auto space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black border border-emerald-200">
-              <ShieldCheck className="w-4 h-4" />
-              <span>100% BUYER &amp; PAYMENT PROTECTION</span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-black font-heading text-slate-900">
-              {theme.guaranteeTitle}
-            </h3>
-            <p className="text-xs text-slate-500">
-              Every order placed at {storeName} is backed by our direct merchant warranty, fast dispatch, and verified tax invoicing.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
-            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-start gap-3.5">
-              <div 
-                className="w-10 h-10 rounded-xl text-white flex items-center justify-center flex-shrink-0 shadow-xs"
-                style={{ backgroundColor: theme.accentColor }}
-              >
-                <Truck className="w-5 h-5" />
+                ))}
               </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Free Express Delivery</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Free doorstep delivery on orders above ₹499 with real-time SMS tracking updates.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                <RotateCcw className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">7-Day Easy Replacement</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Hassle-free doorstep returns and instant replacements with zero questions asked.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                <BadgeCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">100% Genuine Products</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Direct brand-authorized inventory with valid manufacturer warranty and GST tax invoices.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                <Zap className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-900">Instant UPI &amp; COD</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Zero payment surcharge on Google Pay, PhonePe, Cards, Netbanking, or Cash on Delivery.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-      </main>
+            </section>
+          </main>
+        </div>
+      )}
 
       {/* =========================================================================
-          9. OFFICIAL FOOTER (Omnichannel Storefront Footer)
+          THEME 2: FLIPKART STYLE LAYOUT (Classic Blue Header, Circular Icons, f-Assured)
+      ========================================================================== */}
+      {activeThemeId === 'flipkart' && (
+        <div className="flex-1 flex flex-col bg-[#f1f2f4]">
+          {/* Flipkart Royal Blue Top Header */}
+          <header className="bg-[#2874f0] text-white sticky top-0 z-40 shadow-md">
+            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-6">
+              {/* Flipkart Store Logo & Plus Star */}
+              <div onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }} className="flex flex-col cursor-pointer flex-shrink-0 group leading-none">
+                {storeLogo ? (
+                  <img src={storeLogo} alt={storeName} className="h-8 md:h-9 object-contain" />
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xl md:text-2xl font-black italic tracking-tight text-white font-heading">{storeName}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1 text-[11px] italic font-semibold text-slate-200 mt-0.5">
+                  <span>Explore</span>
+                  <span className="text-[#ffe500] font-black flex items-center">Plus<Star className="w-3 h-3 fill-[#ffe500] ml-0.5" /></span>
+                </div>
+              </div>
+
+              {/* Flipkart Center Search Input */}
+              <div className="flex-1 max-w-2xl relative">
+                <div className="flex items-center bg-white rounded-sm overflow-hidden shadow-inner">
+                  <input
+                    type="text"
+                    placeholder="Search for products, brands and more"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full py-2 px-4 text-xs md:text-sm text-slate-900 placeholder-slate-400 bg-transparent focus:outline-none"
+                  />
+                  <button className="px-4 py-2 text-[#2874f0] hover:text-[#1e60cc]">
+                    <Search className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Flipkart Header Actions */}
+              <div className="flex items-center gap-4 text-xs font-extrabold flex-shrink-0">
+                <a href="/store" className="bg-white text-[#2874f0] px-6 py-1.5 rounded-sm shadow-xs font-bold hover:bg-slate-50 transition">
+                  Login
+                </a>
+                <span className="hidden md:inline cursor-pointer hover:text-slate-200">Become a Seller</span>
+                <span className="hidden md:inline cursor-pointer hover:text-slate-200">More ▾</span>
+
+                <button onClick={() => setCartOpen(true)} className="flex items-center gap-1.5 hover:text-slate-200 cursor-pointer">
+                  <div className="relative">
+                    <ShoppingCart className="w-5 h-5" />
+                    {cart.length > 0 && (
+                      <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-[#ffe500] text-slate-900 text-[10px] font-black flex items-center justify-center">
+                        {cart.reduce((a, b) => a + b.quantity, 0)}
+                      </span>
+                    )}
+                  </div>
+                  <span>Cart</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Flipkart Circular Icon Ribbon (Below Header) */}
+            <div className="bg-white border-b border-slate-200 py-3 text-slate-800 shadow-xs">
+              <div className="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto scrollbar-none gap-6">
+                {[
+                  { id: 'ALL', name: 'Top Offers', icon: '⚡' },
+                  { id: 'CAT-MOBILES', name: 'Mobiles', icon: '📱' },
+                  { id: 'CAT-ELECTRONICS', name: 'Electronics', icon: '💻' },
+                  { id: 'CAT-FASHION', name: 'Fashion', icon: '👗' },
+                  { id: 'CAT-HOME', name: 'Home & Kitchen', icon: '🛋️' },
+                  { id: 'CAT-APPLIANCES', name: 'Appliances', icon: '📺' },
+                  { id: 'CAT-GROCERY', name: 'Grocery', icon: '🛒' },
+                  { id: 'CAT-BEAUTY', name: 'Beauty & Toys', icon: '🧸' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveCategory(item.id); setSearchQuery(''); }}
+                    className="flex flex-col items-center gap-1.5 group cursor-pointer flex-shrink-0"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-blue-50 flex items-center justify-center text-xl transition-transform group-hover:scale-105 border border-slate-200 group-hover:border-[#2874f0]">
+                      {item.icon}
+                    </div>
+                    <span className={`text-xs font-bold transition ${activeCategory === item.id ? 'text-[#2874f0] font-black' : 'text-slate-700 group-hover:text-[#2874f0]'}`}>
+                      {item.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {/* Flipkart Hero & Featured Sliders */}
+          <main className="max-w-7xl mx-auto px-3 md:px-4 space-y-4 w-full mt-3 flex-1">
+            {/* Banner */}
+            <div className="w-full relative rounded-sm overflow-hidden shadow-sm h-[190px] sm:h-[230px] md:h-[260px]">
+              <div className={`w-full h-full p-6 md:p-8 bg-gradient-to-r from-[#2874f0] via-[#1e60cc] to-[#124294] text-white flex flex-col justify-between`}>
+                <div className="space-y-1">
+                  <span className="px-2.5 py-0.5 rounded-sm bg-[#ffe500] text-slate-900 text-[10px] font-black uppercase">FLIPKART BIG SAVING DAYS</span>
+                  <h2 className="text-2xl md:text-3xl font-black text-white">{HERO_BANNERS[activeBanner].title}</h2>
+                  <p className="text-xs text-blue-100">{HERO_BANNERS[activeBanner].subtitle}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-[#ffe500]">{HERO_BANNERS[activeBanner].badgeText}</span>
+                  <button onClick={() => window.scrollTo({ top: 480, behavior: 'smooth' })} className="px-5 py-2 rounded-sm bg-[#fb641b] text-white text-xs font-black uppercase shadow">
+                    Shop Now
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Flipkart Multi-Product Deal Strip ("Best of Electronics") */}
+            <section className="bg-white rounded-sm border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch overflow-hidden">
+              <div className="w-full md:w-56 p-5 bg-gradient-to-b from-blue-50 to-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between items-center text-center">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black font-heading text-slate-900">Best of Tech &amp; Gadgets</h3>
+                  <p className="text-xs text-emerald-600 font-bold">From ₹1,299</p>
+                </div>
+                <button onClick={() => setActiveCategory('CAT-MOBILES')} className="mt-4 px-4 py-2 bg-[#2874f0] text-white text-xs font-bold rounded-sm shadow uppercase">
+                  VIEW ALL
+                </button>
+              </div>
+
+              <div className="flex-1 p-4 grid grid-cols-2 md:grid-cols-4 gap-4 overflow-x-auto">
+                {products.slice(0, 4).map((p) => (
+                  <div key={p.id} className="text-center space-y-1 p-2 hover:shadow-md rounded transition cursor-pointer" onClick={() => handleAddToCart(p)}>
+                    <img src={p.image} alt={p.name} className="w-24 h-24 object-contain mx-auto" />
+                    <h5 className="text-xs font-bold text-slate-800 line-clamp-1">{p.name}</h5>
+                    <p className="text-xs text-emerald-600 font-bold">Min 40% Off</p>
+                    <p className="text-[11px] text-slate-500 font-semibold">{p.brand}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Flipkart Product Cards Grid (With f-Assured Badge & Dual Yellow/Orange Buttons) */}
+            <section className="bg-white p-4 rounded-sm border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-base font-black text-slate-900">Featured Deals For You</h3>
+                <span className="text-xs font-bold text-slate-500">{filteredProducts.length} Items</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {filteredProducts.map((p) => (
+                  <div key={p.id} className="rounded-sm border border-slate-200 p-3 flex flex-col justify-between hover:shadow-lg transition bg-white">
+                    <div className="space-y-2">
+                      <div className="relative aspect-square rounded-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-sm bg-[#2874f0] text-[#ffe500] text-[9px] font-black italic">
+                          f-Assured ★
+                        </span>
+                        <button onClick={(e) => toggleWishlist(p.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow-xs">
+                          <Heart className={`w-3.5 h-3.5 ${wishlist[p.id] ? 'fill-rose-600 text-rose-600' : 'text-slate-400'}`} />
+                        </button>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
+                      <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{p.name}</h4>
+                      <div className="flex items-baseline gap-2 pt-1">
+                        <span className="text-base font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                        <span className="text-xs text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
+                        <span className="text-xs font-bold text-emerald-600">
+                          {Math.round(((p.mrp - p.selling_price) / p.mrp) * 100)}% off
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-600 block">Free delivery</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-3 mt-2 border-t border-slate-100">
+                      <button onClick={(e) => handleAddToCart(p, e)} className="py-2 text-xs bg-[#ff9f00] hover:bg-[#e68f00] text-white font-black rounded-sm">
+                        Add to Cart
+                      </button>
+                      <button onClick={(e) => handleBuyNow(p, e)} className="py-2 text-xs bg-[#fb641b] hover:bg-[#e65612] text-white font-black rounded-sm">
+                        Buy Now
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
+      )}
+
+      {/* =========================================================================
+          THEME 3: JIOMART STYLE LAYOUT (Fresh Groceries & Supermarket Retail)
+      ========================================================================== */}
+      {activeThemeId === 'jiomart' && (
+        <div className="flex-1 flex flex-col bg-[#f3f9fb]">
+          {/* JioMart Clean White Header with Location Pill & Green Bag */}
+          <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+              <div onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }} className="flex items-center gap-2 cursor-pointer flex-shrink-0">
+                {storeLogo ? (
+                  <img src={storeLogo} alt={storeName} className="h-9 md:h-10 object-contain" />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-[#0078ad] text-white flex items-center justify-center font-black text-xl">
+                      {storeName ? storeName[0] : 'J'}
+                    </div>
+                    <div>
+                      <span className="text-xl font-black text-[#0078ad]">{storeName}</span>
+                      <span className="text-xs font-bold text-[#0c831f] block leading-none">Smart Bazaar Direct</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* JioMart Location Pill */}
+              <button onClick={() => setPincodeModalOpen(true)} className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#f3f9fb] border border-cyan-100 text-xs font-bold text-slate-800">
+                <MapPin className="w-4 h-4 text-[#0078ad]" />
+                <span>Deliver to: {deliveryPincode} (Patna) ▾</span>
+              </button>
+
+              {/* JioMart Search Bar */}
+              <div className="flex-1 max-w-xl">
+                <div className="flex items-center bg-[#f3f9fb] border border-slate-300 rounded-full px-4 py-2 focus-within:border-[#0078ad] transition">
+                  <Search className="w-4 h-4 text-slate-400 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="Search essentials, groceries & electronics..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full text-xs md:text-sm bg-transparent focus:outline-none text-slate-900"
+                  />
+                </div>
+              </div>
+
+              {/* JioMart Leaf Green Pill Cart */}
+              <button
+                onClick={() => setCartOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#0c831f] hover:bg-[#096e1a] text-white text-xs font-bold shadow transition"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span className="hidden sm:inline">My Cart</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-black">
+                  {cart.reduce((a, b) => a + b.quantity, 0)}
+                </span>
+                {cart.length > 0 && <span className="font-mono hidden md:inline">• ₹{grandTotal.toFixed(0)}</span>}
+              </button>
+            </div>
+
+            {/* JioMart Department Capsules */}
+            <div className="border-t border-slate-100 bg-[#f8fafc] py-2 overflow-x-auto scrollbar-none">
+              <div className="max-w-7xl mx-auto px-4 flex items-center gap-2">
+                {[
+                  { id: 'ALL', name: 'All Departments' },
+                  { id: 'CAT-GROCERY', name: '🍎 Fruits & Veggies' },
+                  { id: 'CAT-GROCERY', name: '🥛 Dairy & Bakery' },
+                  { id: 'CAT-GROCERY', name: '🌾 Staples & Pulses' },
+                  { id: 'CAT-GROCERY', name: '🍪 Snacks & Biscuits' },
+                  { id: 'CAT-BEAUTY', name: '🧴 Personal Care' },
+                  { id: 'CAT-HOME', name: '🧹 Home Care' },
+                  { id: 'CAT-MOBILES', name: '📱 Electronics' }
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveCategory(item.id)}
+                    className="px-3.5 py-1 rounded-full text-xs font-bold border border-slate-200 bg-white hover:border-[#0078ad] hover:text-[#0078ad] transition whitespace-nowrap text-slate-700"
+                  >
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {/* JioMart Main Content */}
+          <main className="max-w-7xl mx-auto px-3 md:px-4 space-y-4 w-full mt-3 flex-1">
+            {/* Smart Bazaar Banner */}
+            <div className="w-full rounded-2xl overflow-hidden shadow-xs h-[180px] sm:h-[220px] bg-gradient-to-r from-[#0078ad] to-[#0c831f] p-6 text-white flex flex-col justify-between">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full bg-white text-[#0078ad] text-[10px] font-black uppercase">SMART BAZAAR SUPER SAVINGS</span>
+                <h2 className="text-2xl md:text-3xl font-black mt-1">Guaranteed Lowest Rates Every Day</h2>
+                <p className="text-xs text-blue-50">Direct from wholesale mandi to your doorstep in 2 hours.</p>
+              </div>
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span>Free 2-Hour Express Delivery</span>
+                <button onClick={() => window.scrollTo({ top: 450, behavior: 'smooth' })} className="px-4 py-1.5 rounded-full bg-white text-[#0c831f] font-black">
+                  Explore Deals →
+                </button>
+              </div>
+            </div>
+
+            {/* JioMart Product Cards Grid */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-slate-900">Daily Essentials &amp; Supermarket</h3>
+                <span className="text-xs font-bold text-emerald-700">⚡ 2-Hour Delivery Available</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+                {filteredProducts.map((p) => (
+                  <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-3 flex flex-col justify-between hover:shadow-md transition">
+                    <div className="space-y-1.5">
+                      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center">
+                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#0c831f] text-white text-[9px] font-black">
+                          SAVE ₹{p.mrp - p.selling_price}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
+                      <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{p.name}</h4>
+                      <span className="text-[10px] text-slate-500 font-medium">Standard Pack</span>
+                      <div className="flex items-baseline gap-2 pt-1">
+                        <span className="text-base font-black text-slate-900">₹{p.selling_price}</span>
+                        <span className="text-xs text-slate-400 line-through">₹{p.mrp}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => handleAddToCart(p, e)}
+                      className="mt-3 w-full py-2 rounded-full border border-[#0c831f] text-[#0c831f] hover:bg-[#0c831f] hover:text-white font-bold text-xs transition flex items-center justify-center gap-1"
+                    >
+                      <span>Add +</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
+      )}
+
+      {/* =========================================================================
+          THEME 4: AMAZON INDIA STYLE LAYOUT (Dark 2-Tier Nav, Prime, 4-Quadrant Cards)
+      ========================================================================== */}
+      {activeThemeId === 'amazon' && (
+        <div className="flex-1 flex flex-col bg-[#eaeded]">
+          {/* Amazon Tier 1: Dark Navy #131921 Header */}
+          <header className="bg-[#131921] text-white sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+              {/* Store Logo with Smile arc */}
+              <div onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }} className="cursor-pointer flex-shrink-0">
+                {storeLogo ? (
+                  <img src={storeLogo} alt={storeName} className="h-8 md:h-9 object-contain" />
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xl md:text-2xl font-black text-white font-heading">{storeName}</span>
+                    <span className="text-xs font-bold text-[#f08804]">.in</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Amazon Location Block */}
+              <button onClick={() => setPincodeModalOpen(true)} className="hidden md:flex items-center gap-1.5 text-xs text-slate-300 hover:text-white leading-tight">
+                <MapPin className="w-4 h-4 text-white" />
+                <div className="text-left">
+                  <span className="text-[10px] text-slate-400 block font-semibold">Deliver to</span>
+                  <span className="font-bold text-white">Patna {deliveryPincode}</span>
+                </div>
+              </button>
+
+              {/* Amazon 3-Part Search Bar */}
+              <div className="flex-1 max-w-2xl relative">
+                <div className="flex items-center bg-white rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-[#f08804]">
+                  <select
+                    value={searchCategoryFilter}
+                    onChange={(e) => setSearchCategoryFilter(e.target.value)}
+                    className="hidden sm:block bg-slate-100 text-slate-800 text-xs px-2 py-2.5 border-r border-slate-300 font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">All</option>
+                    <option value="CAT-MOBILES">Mobiles</option>
+                    <option value="CAT-ELECTRONICS">Electronics</option>
+                    <option value="CAT-FASHION">Fashion</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Search Amazon / Shoppy.in"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full py-2 px-3 text-xs md:text-sm text-slate-900 focus:outline-none"
+                  />
+                  <button className="px-4 py-2 bg-[#febd69] hover:bg-[#f3a847] text-slate-900 font-bold">
+                    <Search className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Amazon Orders & Cart */}
+              <div className="flex items-center gap-4 text-xs font-bold flex-shrink-0">
+                <a href="/store" className="hidden sm:block leading-tight text-slate-300 hover:text-white">
+                  <span className="text-[10px] text-slate-400 block">Hello, sign in</span>
+                  <span>Account &amp; Lists ▾</span>
+                </a>
+                <span className="hidden sm:block leading-tight text-slate-300 hover:text-white cursor-pointer">
+                  <span className="text-[10px] text-slate-400 block">Returns</span>
+                  <span>&amp; Orders</span>
+                </span>
+                <button onClick={() => setCartOpen(true)} className="flex items-center gap-1.5 text-white cursor-pointer">
+                  <div className="relative">
+                    <ShoppingCart className="w-6 h-6" />
+                    <span className="absolute -top-1 left-2 text-[#f08804] text-xs font-black">
+                      {cart.reduce((a, b) => a + b.quantity, 0)}
+                    </span>
+                  </div>
+                  <span className="font-black text-sm hidden sm:inline">Cart</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Amazon Tier 2: #232f3e Sub-Nav */}
+            <div className="bg-[#232f3e] text-white text-xs py-1.5 px-4 overflow-x-auto scrollbar-none">
+              <div className="max-w-7xl mx-auto flex items-center gap-5 whitespace-nowrap">
+                <button onClick={() => setActiveCategory('ALL')} className="flex items-center gap-1 font-black text-white hover:text-amber-300">
+                  <Menu className="w-4 h-4" />
+                  <span>All</span>
+                </button>
+                <span onClick={() => setActiveCategory('CAT-MOBILES')} className="cursor-pointer hover:text-amber-300 font-semibold">Today's Deals</span>
+                <span onClick={() => setActiveCategory('CAT-ELECTRONICS')} className="cursor-pointer hover:text-amber-300 font-semibold">Customer Service</span>
+                <span onClick={() => setActiveCategory('CAT-FASHION')} className="cursor-pointer hover:text-amber-300 font-semibold">Registry</span>
+                <span onClick={() => setActiveCategory('CAT-HOME')} className="cursor-pointer hover:text-amber-300 font-semibold">Gift Cards</span>
+                <span onClick={() => setActiveCategory('CAT-GROCERY')} className="cursor-pointer hover:text-amber-300 font-semibold">Sell</span>
+                <span className="text-[#febd69] font-black cursor-pointer">✓prime</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Amazon Main Content */}
+          <main className="max-w-7xl mx-auto px-3 md:px-4 space-y-4 w-full mt-3 flex-1">
+            {/* Amazon 4-Quadrant Feature Boxes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { title: 'Appliances for your home | Up to 55% off', cat: 'CAT-APPLIANCES', img: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=300' },
+                { title: 'Starting ₹999 | Best Selling Audio Gear', cat: 'CAT-ELECTRONICS', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300' },
+                { title: 'Revamp your wardrobe | Min 50% off', cat: 'CAT-FASHION', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300' },
+                { title: 'Daily Supermarket | Up to 40% off', cat: 'CAT-GROCERY', img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300' }
+              ].map((box, bIdx) => (
+                <div key={bIdx} className="bg-white p-4 rounded-sm border border-slate-200 space-y-3 shadow-xs">
+                  <h4 className="text-base font-black text-slate-900 leading-tight">{box.title}</h4>
+                  <img src={box.img} alt={box.title} className="w-full h-44 object-cover rounded-sm" />
+                  <button onClick={() => setActiveCategory(box.cat)} className="text-xs font-bold text-[#007185] hover:underline block text-left">
+                    See more offers →
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Amazon Product Cards Grid (Prime Badges & Yellow Buy Buttons) */}
+            <section className="bg-white p-5 rounded-sm border border-slate-200 space-y-4">
+              <h3 className="text-base font-black text-slate-900">Today's Deals &amp; Top Recommendations</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {filteredProducts.map((p) => (
+                  <div key={p.id} className="rounded-sm border border-slate-200 p-3 flex flex-col justify-between hover:shadow-md transition bg-white">
+                    <div className="space-y-1.5">
+                      <div className="aspect-square bg-slate-50 rounded-sm overflow-hidden flex items-center justify-center p-2">
+                        <img src={p.image} alt={p.name} className="w-full h-full object-contain" />
+                      </div>
+                      <span className="inline-block px-2 py-0.5 rounded-sm bg-[#b12704] text-white text-[10px] font-bold">
+                        Limited time deal
+                      </span>
+                      <h4 className="text-xs font-medium text-slate-900 hover:text-[#c45500] line-clamp-2 leading-snug cursor-pointer">
+                        {p.name}
+                      </h4>
+                      <div className="flex items-center gap-1">
+                        <span className="text-amber-500 font-bold text-xs">★★★★☆</span>
+                        <span className="text-[10px] text-[#007185]">{p.rating_count}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-[#b12704]">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                        <span className="text-xs text-slate-500">M.R.P: <span className="line-through">₹{p.mrp}</span></span>
+                      </div>
+                      <span className="text-[10px] text-slate-600 block">Get it by <span className="font-bold">Tomorrow</span> • <span className="text-[#007185] font-black">✓prime</span></span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-3 mt-2 border-t border-slate-100">
+                      <button onClick={(e) => handleAddToCart(p, e)} className="py-2 text-xs bg-[#ffd814] hover:bg-[#f7ca00] text-slate-900 font-bold rounded-full">
+                        Add to Cart
+                      </button>
+                      <button onClick={(e) => handleBuyNow(p, e)} className="py-2 text-xs bg-[#ffa41c] hover:bg-[#fa8900] text-slate-900 font-bold rounded-full">
+                        Buy Now
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
+      )}
+
+      {/* =========================================================================
+          THEME 5: TATA CLIQ LUXURY STYLE (Minimalist Black & Magenta, Curated Editorial)
+      ========================================================================== */}
+      {activeThemeId === 'tatacliq' && (
+        <div className="flex-1 flex flex-col bg-white">
+          {/* Tata CLiQ Top Luxury Strip */}
+          <div className="bg-[#111111] text-white text-[10px] font-bold tracking-widest uppercase py-1.5 px-4 text-center border-b border-slate-800">
+            <span>100% LUXURY AUTHENTIC • COMPLIMENTARY EXPRESS DOORSTEP SHIPPING ACROSS INDIA</span>
+          </div>
+
+          {/* Tata CLiQ Minimalist Header */}
+          <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-6">
+              <div onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }} className="cursor-pointer flex-shrink-0">
+                {storeLogo ? (
+                  <img src={storeLogo} alt={storeName} className="h-9 object-contain" />
+                ) : (
+                  <div className="tracking-widest uppercase font-black text-xl md:text-2xl text-slate-900 font-heading">
+                    {storeName} <span className="text-[#da1c5c] font-light">LUXURY</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Tata CLiQ Minimalist Search Input */}
+              <div className="flex-1 max-w-md">
+                <div className="flex items-center border-b border-slate-300 focus-within:border-[#da1c5c] py-1.5">
+                  <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="Search luxury brands, designer apparel, footwear..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full text-xs text-slate-900 focus:outline-none bg-transparent placeholder-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Tata Actions */}
+              <div className="flex items-center gap-6 text-xs uppercase tracking-wider font-bold text-slate-800">
+                <a href="/store" className="hover:text-[#da1c5c] transition">Sign In</a>
+                <button onClick={() => setCartOpen(true)} className="flex items-center gap-1.5 hover:text-[#da1c5c] cursor-pointer">
+                  <ShoppingBag className="w-4 h-4 text-slate-800" />
+                  <span>Bag ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Tata CLiQ Department Bar */}
+            <div className="border-t border-slate-100 py-2.5 overflow-x-auto scrollbar-none">
+              <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-8 text-[11px] font-black uppercase tracking-widest text-slate-700 whitespace-nowrap">
+                {['CLIQ LUXURY', 'WOMEN', 'MEN', 'KIDS', 'BEAUTY', 'WATCHES', 'HOME & LIVING'].map((dept, idx) => (
+                  <span key={idx} onClick={() => setActiveCategory('ALL')} className="hover:text-[#da1c5c] cursor-pointer transition">
+                    {dept}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {/* Tata CLiQ Editorial Hero Banner */}
+          <main className="max-w-7xl mx-auto px-4 space-y-6 w-full mt-4 flex-1">
+            <div className="w-full h-[220px] md:h-[260px] bg-slate-950 text-white rounded-none p-8 flex flex-col justify-between border-t-2 border-[#da1c5c]">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest text-[#da1c5c] font-black">CURATED DESIGNER EDIT</span>
+                <h2 className="text-3xl md:text-4xl font-serif font-normal italic tracking-wide">The High-Fashion Autumn Edit</h2>
+                <p className="text-xs text-slate-300 font-light">Explore authentic luxury creations crafted with precision.</p>
+              </div>
+              <button onClick={() => window.scrollTo({ top: 460, behavior: 'smooth' })} className="self-start px-6 py-2 bg-white text-slate-900 text-xs uppercase tracking-widest font-black hover:bg-slate-100">
+                DISCOVER THE EDIT
+              </button>
+            </div>
+
+            {/* Tata CLiQ Luxury Product Cards */}
+            <section className="space-y-4">
+              <div className="text-center py-2">
+                <h3 className="text-lg font-black uppercase tracking-widest text-slate-900">Featured Designer Showcase</h3>
+                <p className="text-xs text-slate-400 tracking-wide mt-0.5">Handpicked luxury items with verified authenticity</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                {filteredProducts.map((p) => (
+                  <div key={p.id} className="group border border-slate-200 p-4 flex flex-col justify-between hover:shadow-lg transition bg-white">
+                    <div className="space-y-2">
+                      <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
+                        <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <button onClick={(e) => toggleWishlist(p.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 shadow-xs">
+                          <Heart className={`w-3.5 h-3.5 ${wishlist[p.id] ? 'fill-[#da1c5c] text-[#da1c5c]' : 'text-slate-400'}`} />
+                        </button>
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-900 block">{p.brand}</span>
+                      <h4 className="text-xs font-normal text-slate-600 line-clamp-1">{p.name}</h4>
+                      <div className="flex items-baseline gap-2 pt-1">
+                        <span className="text-sm font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                        <span className="text-xs text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
+                        <span className="text-[11px] font-bold text-[#da1c5c]">
+                          {Math.round(((p.mrp - p.selling_price) / p.mrp) * 100)}% Off
+                        </span>
+                      </div>
+                      <span className="text-[9px] uppercase tracking-wider text-emerald-700 font-bold block">100% Luxury Authentic</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-4 mt-2 border-t border-slate-100">
+                      <button onClick={(e) => handleAddToCart(p, e)} className="py-2.5 text-[11px] uppercase tracking-wider bg-black text-white font-bold hover:bg-slate-800">
+                        Add to Bag
+                      </button>
+                      <button onClick={(e) => handleBuyNow(p, e)} className="py-2.5 text-[11px] uppercase tracking-wider bg-[#da1c5c] text-white font-bold hover:bg-[#b8124b]">
+                        Buy Now
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
+      )}
+
+      {/* =========================================================================
+          COMMON SECTION: TRUST PAY GUARANTEE (PLACED RIGHT ABOVE FOOTER)
+      ========================================================================== */}
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 md:p-8 space-y-6 max-w-7xl mx-auto px-4 w-full mt-10">
+        <div className="text-center max-w-2xl mx-auto space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black border border-emerald-200">
+            <ShieldCheck className="w-4 h-4" />
+            <span>100% BUYER &amp; PAYMENT PROTECTION</span>
+          </div>
+          <h3 className="text-xl md:text-2xl font-black font-heading text-slate-900">
+            {storeName} Buyer Trust Guarantee
+          </h3>
+          <p className="text-xs text-slate-500">
+            Every order placed at {storeName} is backed by direct merchant warranty, fast dispatch, and verified tax invoicing.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-2">
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-[#e11d48] text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <Truck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900">Free Express Delivery</h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Free doorstep delivery on orders above ₹499 with real-time SMS tracking updates.</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <RotateCcw className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900">7-Day Easy Replacement</h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Hassle-free doorstep returns and instant replacements with zero questions asked.</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <BadgeCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900">100% Genuine Products</h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Direct brand-authorized inventory with valid manufacturer warranty and GST tax invoices.</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900">Instant UPI &amp; COD</h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Zero payment surcharge on Google Pay, PhonePe, Cards, Netbanking, or Cash on Delivery.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          COMMON FOOTER
       ========================================================================== */}
       <footer className="bg-[#0f172a] text-white mt-12 border-t border-slate-800 text-xs">
         <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Col 1 */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-8 h-8 rounded-lg text-white flex items-center justify-center font-black text-base shadow-xs"
-                style={{ backgroundColor: theme.accentColor }}
-              >
-                {storeName ? storeName[0] : 'S'}
-              </div>
-              <span className="text-lg font-black text-white">{storeName}</span>
-            </div>
+            <span className="text-lg font-black text-white">{storeName}</span>
             <p className="text-slate-400 text-xs leading-relaxed">
-              India's trusted omnichannel retail store powered by Shoppy Cloud ERP. Authentic brand products, fast dispatch, and instant GST invoices.
+              India's trusted retail store powered by Shoppy Cloud ERP. Authentic brand products, fast dispatch, and instant GST invoices.
             </p>
             <div className="pt-2 text-slate-400 text-xs space-y-1">
               <p>Store Code: <span className="font-mono text-white font-bold">{shopCode || 'SP-LIVE'}</span></p>
@@ -2042,43 +2034,32 @@ export default function Storefront() {
             </div>
           </div>
 
-          {/* Col 2 */}
           <div className="space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">Customer Service</h4>
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">Customer Support</h4>
             <ul className="space-y-2 text-slate-400">
-              <li><a href="#track" onClick={(e) => { e.preventDefault(); alert('Order tracking SMS sent to your registered mobile number upon dispatch.'); }} className="hover:text-white transition">Track Order</a></li>
-              <li><a href="#returns" onClick={(e) => { e.preventDefault(); alert('7-day doorstep return policy applies to all orders.'); }} className="hover:text-white transition">Return Policy</a></li>
-              <li><a href="#shipping" onClick={(e) => { e.preventDefault(); alert('Free shipping on all orders above ₹499.'); }} className="hover:text-white transition">Shipping Terms</a></li>
+              <li><a href="#track" onClick={(e) => { e.preventDefault(); alert('Order tracking SMS sent to your mobile upon dispatch.'); }} className="hover:text-white transition">Track Order</a></li>
+              <li><a href="#returns" onClick={(e) => { e.preventDefault(); alert('7-day doorstep replacement policy.'); }} className="hover:text-white transition">Return Policy</a></li>
               <li><a href="/store" className="hover:text-white transition">Merchant POS Login</a></li>
             </ul>
           </div>
 
-          {/* Col 3 */}
           <div className="space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">Payment Modes Accepted</h4>
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">Payment Modes</h4>
             <div className="flex flex-wrap gap-2 text-[11px] text-slate-300">
-              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 font-medium">Google Pay</span>
-              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 font-medium">PhonePe</span>
-              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 font-medium">Paytm UPI</span>
-              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 font-medium">Visa / MasterCard</span>
-              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700 font-medium">Cash on Delivery</span>
+              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700">UPI (GPay / PhonePe)</span>
+              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700">Credit / Debit Cards</span>
+              <span className="px-2.5 py-1 bg-slate-800 rounded border border-slate-700">Cash on Delivery</span>
             </div>
-            <p className="text-[11px] text-slate-400 pt-2">
-              All transactions encrypted with 256-bit bank-grade SSL security.
-            </p>
           </div>
 
-          {/* Col 4 */}
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">Shoppy Cloud Technology</h4>
             <p className="text-slate-400 text-xs leading-relaxed">
-              Multi-tenant high-speed retail platform engineered by Enexa IT Solutions Private Limited.
+              Engineered by Enexa IT Solutions Private Limited.
             </p>
-            <div className="pt-2">
-              <span className="inline-block px-3 py-1 bg-slate-800 text-emerald-400 font-mono text-[10px] rounded-lg border border-slate-700">
-                SSL Secured • ISO Certified
-              </span>
-            </div>
+            <span className="inline-block px-3 py-1 bg-slate-800 text-emerald-400 font-mono text-[10px] rounded-lg border border-slate-700">
+              SSL 256-Bit Secured
+            </span>
           </div>
         </div>
 
@@ -2088,56 +2069,33 @@ export default function Storefront() {
       </footer>
 
       {/* =========================================================================
-          10. SLIDE-OVER CART DRAWER (Smooth right-to-left slide, NO backdrop fade)
+          SLIDE-OVER CART DRAWER (Smooth right-to-left slide, NO backdrop fade)
       ========================================================================== */}
-      <div 
-        className={`fixed inset-0 z-50 pointer-events-none transition-opacity duration-300 ${
-          cartOpen ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        {/* Transparent Click-away layer: NO dark overlay, background remains 100% visible */}
+      <div className={`fixed inset-0 z-50 pointer-events-none transition-opacity duration-300 ${cartOpen ? 'opacity-100' : 'opacity-0'}`}>
         {cartOpen && (
-          <div
-            className="fixed inset-0 pointer-events-auto bg-black/10 transition-colors"
-            onClick={() => setCartOpen(false)}
-          />
+          <div className="fixed inset-0 pointer-events-auto bg-black/10 transition-colors" onClick={() => setCartOpen(false)} />
         )}
 
-        {/* Slide-in Cart Panel (moves from right to left) */}
-        <div
-          className={`pointer-events-auto fixed top-0 right-0 h-full w-full max-w-md sm:max-w-lg bg-white shadow-[-15px_0_40px_rgba(0,0,0,0.18)] border-l border-slate-200 flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${
-            cartOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          {/* Header */}
+        <div className={`pointer-events-auto fixed top-0 right-0 h-full w-full max-w-md sm:max-w-lg bg-white shadow-[-15px_0_40px_rgba(0,0,0,0.18)] border-l border-slate-200 flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${cartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="p-4 bg-slate-900 text-white flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-rose-400" />
-              <h3 className="text-base font-black font-heading">
-                My Shopping Bag ({cart.reduce((a, b) => a + b.quantity, 0)} Items)
-              </h3>
+              <h3 className="text-base font-black font-heading">My Shopping Bag ({cart.reduce((a, b) => a + b.quantity, 0)} Items)</h3>
             </div>
-            <button
-              onClick={() => setCartOpen(false)}
-              className="p-1.5 rounded-full hover:bg-white/20 transition cursor-pointer"
-            >
+            <button onClick={() => setCartOpen(false)} className="p-1.5 rounded-full hover:bg-white/20 transition cursor-pointer">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Cart Items List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {cart.length === 0 ? (
               <div className="py-20 text-center space-y-3">
-                <div className="w-16 h-16 rounded-full bg-rose-50 text-[#e11d48] flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <ShoppingBag className="w-8 h-8" />
                 </div>
                 <h4 className="text-base font-bold text-slate-800">Your Bag is Empty!</h4>
-                <p className="text-xs text-slate-500">Explore lightning deals and add items to your cart.</p>
-                <button
-                  onClick={() => setCartOpen(false)}
-                  className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm"
-                >
+                <p className="text-xs text-slate-500">Explore items and add products to your cart.</p>
+                <button onClick={() => setCartOpen(false)} className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm">
                   START SHOPPING
                 </button>
               </div>
@@ -2145,11 +2103,7 @@ export default function Storefront() {
               <>
                 {cart.map((item) => (
                   <div key={item.cartItemId} className="p-3 rounded-xl border border-slate-200 bg-white shadow-xs flex gap-3">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded-lg bg-slate-50 flex-shrink-0"
-                    />
+                    <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg bg-slate-50 flex-shrink-0" />
                     <div className="flex-1 space-y-1">
                       <h4 className="text-xs font-bold text-slate-800 line-clamp-1">{item.name}</h4>
                       <div className="text-[10px] text-slate-500 flex items-center gap-2">
@@ -2164,38 +2118,22 @@ export default function Storefront() {
                     </div>
 
                     <div className="flex flex-col justify-between items-end">
-                      <button
-                        onClick={() => removeCartItem(item.cartItemId)}
-                        className="text-slate-400 hover:text-rose-500 p-1"
-                      >
+                      <button onClick={() => removeCartItem(item.cartItemId)} className="text-slate-400 hover:text-rose-500 p-1">
                         <X className="w-4 h-4" />
                       </button>
-
-                      {/* Quantity Selector */}
                       <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
-                        <button
-                          onClick={() => updateQuantity(item.cartItemId, -1)}
-                          className="px-2 py-0.5 text-xs font-bold text-slate-600 hover:bg-slate-200"
-                        >
-                          -
-                        </button>
+                        <button onClick={() => updateQuantity(item.cartItemId, -1)} className="px-2 py-0.5 text-xs font-bold text-slate-600 hover:bg-slate-200">-</button>
                         <span className="px-2 text-xs font-bold text-slate-900">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.cartItemId, 1)}
-                          className="px-2 py-0.5 text-xs font-bold text-slate-600 hover:bg-slate-200"
-                        >
-                          +
-                        </button>
+                        <button onClick={() => updateQuantity(item.cartItemId, 1)} className="px-2 py-0.5 text-xs font-bold text-slate-600 hover:bg-slate-200">+</button>
                       </div>
                     </div>
                   </div>
                 ))}
 
-                {/* Voucher Code Box */}
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                   <div className="flex items-center gap-2">
                     <Tag className="w-4 h-4 text-rose-500" />
-                    <span className="text-xs font-bold text-slate-800">Have a Promotional Voucher?</span>
+                    <span className="text-xs font-bold text-slate-800">Promotional Voucher</span>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -2205,10 +2143,7 @@ export default function Storefront() {
                       onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
                       className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-slate-300 uppercase font-mono font-bold focus:outline-none"
                     />
-                    <button
-                      onClick={() => handleApplyCoupon()}
-                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition"
-                    >
+                    <button onClick={() => handleApplyCoupon()} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold">
                       Apply
                     </button>
                   </div>
@@ -2216,7 +2151,6 @@ export default function Storefront() {
                   {couponSuccess && <p className="text-[11px] text-emerald-600 font-bold">{couponSuccess}</p>}
                 </div>
 
-                {/* Price Breakdown */}
                 <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2 text-xs">
                   <h4 className="font-bold text-slate-900 pb-1 border-b border-slate-100">PRICE DETAILS</h4>
                   <div className="flex justify-between text-slate-600">
@@ -2229,24 +2163,23 @@ export default function Storefront() {
                   </div>
                   {voucherDiscount > 0 && (
                     <div className="flex justify-between text-rose-600 font-bold">
-                      <span>Voucher ({appliedCoupon?.code}):</span>
+                      <span>Voucher Discount:</span>
                       <span>- ₹{voucherDiscount.toLocaleString('en-IN')}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-slate-600">
-                    <span>Doorstep Shipping:</span>
+                    <span>Doorstep Delivery:</span>
                     <span>{shippingFee === 0 ? <span className="text-emerald-600 font-bold">FREE</span> : `₹${shippingFee}`}</span>
                   </div>
                   <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-100">
                     <span>Total Amount:</span>
-                    <span style={{ color: theme.accentColor }}>₹{grandTotal.toFixed(0)}</span>
+                    <span>₹{grandTotal.toFixed(0)}</span>
                   </div>
                 </div>
               </>
             )}
           </div>
 
-          {/* Footer Checkout Bar */}
           {cart.length > 0 && (
             <div className="p-4 border-t border-slate-200 bg-white space-y-2">
               <div className="flex items-center justify-between">
@@ -2255,17 +2188,13 @@ export default function Storefront() {
                   <span className="text-lg font-black text-slate-900">₹{grandTotal.toFixed(0)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-emerald-600 font-bold block">TOTAL SAVINGS</span>
+                  <span className="text-[10px] text-emerald-600 font-bold block">SAVINGS</span>
                   <span className="text-xs font-black text-emerald-600">₹{totalSavings.toFixed(0)} SAVED</span>
                 </div>
               </div>
-
               <button
-                onClick={() => {
-                  setCartOpen(false);
-                  setCheckoutOpen(true);
-                }}
-                className={`w-full py-3 text-white text-xs font-black tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2 ${theme.buyNowBtn}`}
+                onClick={() => { setCartOpen(false); setCheckoutOpen(true); }}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2"
               >
                 <span>PROCEED TO CHECKOUT</span>
                 <ArrowRight className="w-4 h-4" />
@@ -2276,30 +2205,68 @@ export default function Storefront() {
       </div>
 
       {/* =========================================================================
-          11. ONE-PAGE EXPRESS CHECKOUT MODAL
+          MIDDLE CENTER NOTIFICATION TOAST (Item Added to Bag)
+      ========================================================================== */}
+      {addedToCartNotification && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-4">
+          <div className="pointer-events-auto bg-slate-900/95 text-white backdrop-blur-md px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 max-w-sm w-full mx-auto animate-in zoom-in-95 fade-in duration-200 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-wider">
+                <CheckCircle2 className="w-4 h-4 fill-emerald-500/20 text-emerald-400" />
+                <span>Added to Bag Successfully!</span>
+              </div>
+              <button onClick={() => setAddedToCartNotification(null)} className="text-slate-400 hover:text-white p-1 rounded-md transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <img src={addedToCartNotification.image} alt={addedToCartNotification.name} className="w-12 h-12 rounded-xl object-cover bg-white/10 border border-white/10 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase block">{addedToCartNotification.brand}</span>
+                <h4 className="text-xs font-bold text-white truncate">{addedToCartNotification.name}</h4>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-black text-white">₹{addedToCartNotification.price?.toLocaleString('en-IN')}</span>
+                  {addedToCartNotification.size && addedToCartNotification.size !== 'Standard' && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-semibold">{addedToCartNotification.size}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button onClick={() => setAddedToCartNotification(null)} className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition text-center">
+                Continue Shopping
+              </button>
+              <button
+                onClick={() => { setAddedToCartNotification(null); setCartOpen(true); }}
+                className="py-2 px-3 rounded-xl bg-[#e11d48] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>View Bag ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          ONE-PAGE EXPRESS CHECKOUT MODAL
       ========================================================================== */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-black font-heading">
-                  Express Checkout • Verified GST Invoice
-                </h3>
+                <h3 className="text-base font-black font-heading">Express Checkout • GST Invoice</h3>
               </div>
-              <button
-                onClick={() => setCheckoutOpen(false)}
-                className="p-1 rounded-full hover:bg-white/20 transition"
-              >
+              <button onClick={() => setCheckoutOpen(false)} className="p-1 rounded-full hover:bg-white/20 transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Form */}
             <form onSubmit={handlePlaceOrder} className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
-              {/* Order Summary Strip */}
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Order Items:</span>
@@ -2311,145 +2278,58 @@ export default function Storefront() {
                 </div>
               </div>
 
-              {/* Delivery Address */}
               <div className="space-y-3">
                 <h4 className="font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                   <MapPin className="w-4 h-4 text-[#e11d48]" />
                   <span>Doorstep Delivery Address</span>
                 </h4>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-600 font-bold mb-1">Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={customerForm.name}
-                      onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-                      placeholder="e.g. Rahul Sharma"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none focus:border-rose-500"
-                    />
+                    <input type="text" required value={customerForm.name} onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })} placeholder="e.g. Rahul Sharma" className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none" />
                   </div>
-
                   <div>
-                    <label className="block text-slate-600 font-bold mb-1">10-Digit Mobile Number *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={customerForm.phone}
-                      onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
-                      placeholder="e.g. 9829012345"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none focus:border-rose-500"
-                    />
+                    <label className="block text-slate-600 font-bold mb-1">Mobile Number *</label>
+                    <input type="tel" required value={customerForm.phone} onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })} placeholder="e.g. 9829012345" className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none" />
                   </div>
-
                   <div className="sm:col-span-2">
                     <label className="block text-slate-600 font-bold mb-1">Street Address, Flat / Shop No *</label>
-                    <input
-                      type="text"
-                      required
-                      value={customerForm.address}
-                      onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
-                      placeholder="e.g. Flat 304, Green Park Enclave, Main Road"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none focus:border-rose-500"
-                    />
+                    <input type="text" required value={customerForm.address} onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })} placeholder="e.g. Flat 304, Green Park Enclave" className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none" />
                   </div>
-
                   <div>
                     <label className="block text-slate-600 font-bold mb-1">City *</label>
-                    <input
-                      type="text"
-                      required
-                      value={customerForm.city}
-                      onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none focus:border-rose-500"
-                    />
+                    <input type="text" required value={customerForm.city} onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none" />
                   </div>
-
                   <div>
                     <label className="block text-slate-600 font-bold mb-1">Pincode *</label>
-                    <input
-                      type="text"
-                      required
-                      value={customerForm.pincode}
-                      onChange={(e) => setCustomerForm({ ...customerForm, pincode: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none focus:border-rose-500"
-                    />
+                    <input type="text" required value={customerForm.pincode} onChange={(e) => setCustomerForm({ ...customerForm, pincode: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-slate-300 font-medium focus:outline-none" />
                   </div>
                 </div>
               </div>
 
-              {/* Payment Methods */}
               <div className="space-y-3">
                 <h4 className="font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
                   <CreditCard className="w-4 h-4 text-emerald-600" />
                   <span>Choose Payment Mode</span>
                 </h4>
-
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div
-                    onClick={() => setSelectedPayment('cod')}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition ${
-                      selectedPayment === 'cod' ? 'border-[#e11d48] bg-rose-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={selectedPayment === 'cod'}
-                        onChange={() => setSelectedPayment('cod')}
-                        className="text-[#e11d48] focus:ring-0"
-                      />
-                      <span className="font-bold text-slate-900">Cash on Delivery</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1 pl-5">Pay cash at doorstep upon delivery</p>
+                  <div onClick={() => setSelectedPayment('cod')} className={`p-3 rounded-xl border-2 cursor-pointer transition ${selectedPayment === 'cod' ? 'border-[#e11d48] bg-rose-50/50' : 'border-slate-200 bg-white'}`}>
+                    <span className="font-bold text-slate-900">Cash on Delivery</span>
+                    <p className="text-[10px] text-slate-500 mt-1">Pay cash at doorstep upon delivery</p>
                   </div>
-
-                  <div
-                    onClick={() => setSelectedPayment('upi')}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition ${
-                      selectedPayment === 'upi' ? 'border-[#e11d48] bg-rose-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={selectedPayment === 'upi'}
-                        onChange={() => setSelectedPayment('upi')}
-                        className="text-[#e11d48] focus:ring-0"
-                      />
-                      <span className="font-bold text-slate-900">Instant UPI QR</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1 pl-5">GPay / PhonePe / Paytm / BHIM</p>
+                  <div onClick={() => setSelectedPayment('upi')} className={`p-3 rounded-xl border-2 cursor-pointer transition ${selectedPayment === 'upi' ? 'border-[#e11d48] bg-rose-50/50' : 'border-slate-200 bg-white'}`}>
+                    <span className="font-bold text-slate-900">Instant UPI QR</span>
+                    <p className="text-[10px] text-slate-500 mt-1">GPay / PhonePe / Paytm / BHIM</p>
                   </div>
-
-                  <div
-                    onClick={() => setSelectedPayment('card')}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition ${
-                      selectedPayment === 'card' ? 'border-[#e11d48] bg-rose-50/50' : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={selectedPayment === 'card'}
-                        onChange={() => setSelectedPayment('card')}
-                        className="text-[#e11d48] focus:ring-0"
-                      />
-                      <span className="font-bold text-slate-900">Debit / Credit Card</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1 pl-5">Visa, Mastercard, RuPay &amp; Netbanking</p>
+                  <div onClick={() => setSelectedPayment('card')} className={`p-3 rounded-xl border-2 cursor-pointer transition ${selectedPayment === 'card' ? 'border-[#e11d48] bg-rose-50/50' : 'border-slate-200 bg-white'}`}>
+                    <span className="font-bold text-slate-900">Debit / Credit Card</span>
+                    <p className="text-[10px] text-slate-500 mt-1">Visa, Mastercard, RuPay &amp; Netbanking</p>
                   </div>
                 </div>
               </div>
 
-              {/* Submit Button */}
               <div className="pt-3 border-t border-slate-200">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`w-full py-3 text-white text-xs font-black tracking-wider shadow-lg transition active:scale-95 flex items-center justify-center gap-2 ${theme.buyNowBtn}`}
-                >
+                <button type="submit" disabled={loading} className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-2">
                   <PackageCheck className="w-4 h-4" />
                   <span>{loading ? 'CONFIRMING ORDER...' : `PLACE ORDER • ₹${grandTotal.toFixed(0)}`}</span>
                 </button>
@@ -2460,54 +2340,7 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          12. WELCOME OFFER MODAL (SHOPPY150 VOUCHER POPUP)
-      ========================================================================== */}
-      {welcomePopupOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200 relative">
-            <button
-              onClick={() => setWelcomePopupOpen(false)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div 
-              className="w-14 h-14 rounded-2xl text-white flex items-center justify-center mx-auto shadow-lg"
-              style={{ backgroundColor: theme.accentColor }}
-            >
-              <Gift className="w-8 h-8" />
-            </div>
-
-            <div>
-              <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 text-[#e11d48]">
-                WELCOME TO {storeName.toUpperCase()}
-              </span>
-              <h3 className="text-xl font-black font-heading text-slate-900 mt-1">
-                Flat ₹150 OFF On 1st Order!
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Use voucher code <span className="font-mono font-bold text-slate-800">SHOPPY150</span> at checkout on orders above ₹499.
-              </p>
-            </div>
-
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
-              <span className="text-[10px] uppercase font-bold text-amber-700">Your Exclusive Coupon</span>
-              <div className="font-mono text-base font-black text-slate-900 tracking-wider mt-0.5">SHOPPY150</div>
-            </div>
-
-            <button
-              onClick={() => handleApplyCoupon('SHOPPY150')}
-              className={`w-full py-2.5 text-white text-xs font-bold shadow-md transition ${theme.buyNowBtn}`}
-            >
-              Apply Voucher &amp; Shop Now
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          13. PINCODE CHECKER MODAL
+          PINCODE MODAL
       ========================================================================== */}
       {pincodeModalOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -2515,17 +2348,13 @@ export default function Storefront() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black font-heading text-slate-900 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-[#e11d48]" />
-                <span>Choose Delivery Location</span>
+                <span>Delivery Location</span>
               </h3>
               <button onClick={() => setPincodeModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            <p className="text-xs text-slate-500">
-              Enter your 6-digit Indian PIN code to check express delivery availability and doorstep COD status.
-            </p>
-
+            <p className="text-xs text-slate-500">Enter your 6-digit Indian PIN code to check delivery status.</p>
             <div className="space-y-3">
               <input
                 type="text"
@@ -2533,9 +2362,8 @@ export default function Storefront() {
                 value={pincodeInput}
                 onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
                 placeholder="Enter 6-digit Pincode"
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono font-bold text-sm focus:outline-none focus:border-rose-500"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono font-bold text-sm focus:outline-none"
               />
-
               <button
                 onClick={() => {
                   if (pincodeInput.length === 6) {
@@ -2545,7 +2373,7 @@ export default function Storefront() {
                     alert('Please enter a valid 6-digit pincode');
                   }
                 }}
-                className={`w-full py-2.5 text-white text-xs font-bold rounded-lg shadow-sm transition ${theme.buyNowBtn}`}
+                className="w-full py-2.5 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm"
               >
                 Update Delivery Pincode
               </button>
@@ -2555,8 +2383,40 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          14. LIVE SOCIAL PROOF TOAST
+          ORDER SUCCESS MODAL
       ========================================================================== */}
+      {orderSuccess && (
+        <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black font-heading text-slate-900">🎉 Order Placed Successfully!</h3>
+              <p className="text-xs text-slate-500">Thank you for shopping at {storeName}. Your order is confirmed.</p>
+            </div>
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Order Number:</span>
+                <span className="font-mono font-bold text-slate-900">{orderSuccess.order_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">GST Invoice:</span>
+                <span className="font-mono font-bold text-emerald-600">{orderSuccess.invoice_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total Amount:</span>
+                <span className="font-bold text-slate-900">₹{orderSuccess.grand_total}</span>
+              </div>
+            </div>
+            <button onClick={() => setOrderSuccess(null)} className="w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-md">
+              CONTINUE SHOPPING
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Social Proof Toast */}
       {socialProof && (
         <div className="fixed bottom-4 left-4 z-40 max-w-xs bg-white rounded-xl shadow-xl border border-slate-200 p-3 flex items-center gap-3 animate-in slide-in-from-bottom duration-300">
           <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
@@ -2571,201 +2431,6 @@ export default function Storefront() {
           </div>
         </div>
       )}
-
-      {/* =========================================================================
-          14B. MIDDLE CENTER NOTIFICATION TOAST (Item Added to Bag)
-      ========================================================================== */}
-      {addedToCartNotification && (
-        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-4">
-          <div className="pointer-events-auto bg-slate-900/95 text-white backdrop-blur-md px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 max-w-sm w-full mx-auto animate-in zoom-in-95 fade-in duration-200 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-wider">
-                <CheckCircle2 className="w-4 h-4 fill-emerald-500/20 text-emerald-400" />
-                <span>Added to Bag Successfully!</span>
-              </div>
-              <button
-                onClick={() => setAddedToCartNotification(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-md transition"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <img
-                src={addedToCartNotification.image}
-                alt={addedToCartNotification.name}
-                className="w-12 h-12 rounded-xl object-cover bg-white/10 border border-white/10 shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <span className="text-[10px] text-slate-400 font-extrabold uppercase block">{addedToCartNotification.brand}</span>
-                <h4 className="text-xs font-bold text-white truncate">{addedToCartNotification.name}</h4>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs font-black text-white">
-                    ₹{addedToCartNotification.price?.toLocaleString('en-IN')}
-                  </span>
-                  {addedToCartNotification.mrp && addedToCartNotification.mrp > addedToCartNotification.price && (
-                    <span className="text-[10px] text-slate-400 line-through">
-                      ₹{addedToCartNotification.mrp?.toLocaleString('en-IN')}
-                    </span>
-                  )}
-                  {addedToCartNotification.size && addedToCartNotification.size !== 'Standard' && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-semibold">
-                      {addedToCartNotification.size}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                onClick={() => setAddedToCartNotification(null)}
-                className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition text-center"
-              >
-                Continue Shopping
-              </button>
-              <button
-                onClick={() => {
-                  setAddedToCartNotification(null);
-                  setCartOpen(true);
-                }}
-                className="py-2 px-3 rounded-xl text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md"
-                style={{ backgroundColor: theme.accentColor }}
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>View Bag ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          15. ORDER CONFIRMED MODAL
-      ========================================================================== */}
-      {orderSuccess && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-xl font-black font-heading text-slate-900">
-                🎉 Order Placed Successfully!
-              </h3>
-              <p className="text-xs text-slate-500">
-                Thank you for shopping at {storeName}. Your order is confirmed and scheduled for dispatch.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Order Number:</span>
-                <span className="font-mono font-bold text-slate-900">{orderSuccess.order_number}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">GST Tax Invoice:</span>
-                <span className="font-mono font-bold text-emerald-600">{orderSuccess.invoice_number}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Total Amount:</span>
-                <span className="font-bold text-slate-900">₹{orderSuccess.grand_total}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Payment Mode:</span>
-                <span className="font-bold text-slate-900">{orderSuccess.payment_method}</span>
-              </div>
-              <div className="flex justify-between text-emerald-600 font-bold">
-                <span>Total Savings:</span>
-                <span>₹{orderSuccess.savings} Saved</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setOrderSuccess(null)}
-              className="w-full py-3 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-bold shadow-md transition"
-            >
-              CONTINUE SHOPPING
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          16. FLOATING LIVE THEME SWITCHER BAR (5 Marketplace Themes)
-      ========================================================================== */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <div className="relative">
-          {themeSwitcherOpen ? (
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 p-4 w-72 space-y-3 animate-in zoom-in-95 duration-150 text-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-1.5 font-black text-slate-900">
-                  <Palette className="w-4 h-4 text-cyan-600" />
-                  <span>5 Marketplace Themes</span>
-                </div>
-                <button
-                  onClick={() => setThemeSwitcherOpen(false)}
-                  className="text-slate-400 hover:text-slate-600 p-1"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="space-y-1.5">
-                {Object.values(MARKETPLACE_THEMES).map((thm) => {
-                  const isCur = activeThemeId === thm.id;
-                  return (
-                    <button
-                      key={thm.id}
-                      onClick={() => {
-                        setActiveThemeId(thm.id);
-                        try {
-                          const url = new URL(window.location.href);
-                          url.searchParams.set('theme', thm.id);
-                          window.history.replaceState({}, '', url.toString());
-                        } catch (e) {}
-                      }}
-                      className={`w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition ${
-                        isCur
-                          ? 'bg-slate-900 text-white border-slate-900 font-bold'
-                          : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-white/40"
-                          style={{ backgroundColor: thm.accentColor }}
-                        />
-                        <span className="text-[11px] font-bold">{thm.name}</span>
-                      </div>
-                      {isCur && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
-                <span>Configure in Store Settings</span>
-                <a href="/shop-admin/store-settings" className="text-cyan-600 font-bold hover:underline">Admin</a>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setThemeSwitcherOpen(true)}
-              className="px-3 py-2 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-bold shadow-xl border border-slate-700 backdrop-blur flex items-center gap-2 transition hover:scale-105"
-            >
-              <Palette className="w-3.5 h-3.5 text-amber-400" />
-              <span>Theme: {theme.name}</span>
-              <span 
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: theme.accentColor }}
-              />
-            </button>
-          )}
-        </div>
-      </div>
 
     </div>
   );

@@ -1683,7 +1683,7 @@ class MasterPortalApiController extends Controller
                     $targetEmail = strtolower(trim($tenantUser->email));
                 }
             } catch (\Throwable $e) {
-                Log::info("Could not lookup email in tenant database: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::info("Could not lookup email in tenant database: " . $e->getMessage());
             }
         }
 
@@ -1696,7 +1696,7 @@ class MasterPortalApiController extends Controller
                 ]);
                 $shop->owner_email = $targetEmail;
             } catch (\Throwable $e) {
-                Log::warning("Could not persist resolved owner_email: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning("Could not persist resolved owner_email: " . $e->getMessage());
             }
         }
 
@@ -1722,7 +1722,7 @@ class MasterPortalApiController extends Controller
                 otp: $otp
             );
         } catch (\Throwable $e) {
-            Log::error("forgotPasswordSendOtp SMS error: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("forgotPasswordSendOtp SMS error: " . $e->getMessage());
         }
 
         // Dispatch Email via Gmail SMTP
@@ -1740,11 +1740,11 @@ class MasterPortalApiController extends Controller
                 $emailDispatched = (($emailRes['status'] ?? 0) === 1);
                 if (!$emailDispatched) {
                     $emailError = $emailRes['message'] ?? 'Failed to deliver email.';
-                    Log::warning("forgotPasswordSendOtp Email delivery warning for {$targetEmail}: " . json_encode($emailRes));
+                    \Illuminate\Support\Facades\Log::warning("forgotPasswordSendOtp Email delivery warning for {$targetEmail}: " . json_encode($emailRes));
                 }
             } catch (\Throwable $e) {
                 $emailError = $e->getMessage();
-                Log::error("forgotPasswordSendOtp Email error: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error("forgotPasswordSendOtp Email error: " . $e->getMessage());
             }
         }
 
@@ -1883,7 +1883,7 @@ class MasterPortalApiController extends Controller
                     'updated_at' => now(),
                 ]);
         } catch (\Throwable $e) {
-            Log::warning("forgotPasswordReset tenant sync warning: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning("forgotPasswordReset tenant sync warning: " . $e->getMessage());
         }
 
         \Illuminate\Support\Facades\Cache::forget("store_pwd_reset_token_{$resetToken}");

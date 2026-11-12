@@ -26,8 +26,11 @@ class OtpVerificationMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
-        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
+        $fromAddress = config('services.enexa_mail.from_address') ?: 'contact@enexa.in';
+        $rawFromName = config('services.enexa_mail.from_name') ?: 'Shoppy ERP - Enexa IT Solutions';
+        $fromName = (empty($rawFromName) || strtolower(trim((string)$rawFromName)) === 'laravel')
+            ? 'Shoppy ERP - Enexa IT Solutions'
+            : trim((string)$rawFromName);
 
         return new Envelope(
             from: new Address($fromAddress, $fromName),

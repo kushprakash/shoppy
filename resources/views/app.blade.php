@@ -61,6 +61,6 @@
     @endif
 </head>
 <body class="min-h-full flex flex-col {{ $bodyClass ?? 'selection:bg-indigo-500 selection:text-white' }}">
-    <div id="root" class="flex-1 flex flex-col" data-shop-code="{{ $shopCode ?? '' }}"></div>
+    <div id="root" class="flex-1 flex flex-col" data-shop-code="{{ $shopCode ?? '' }}" data-theme="{{ $ecomTheme ?? 'snapdeal' }}"></div>
 </body>
 </html>

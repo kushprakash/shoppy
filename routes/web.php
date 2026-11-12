@@ -176,6 +176,7 @@ Route::get('/shop/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
             'title' => $shopName . ' — Official Online Store | Exclusive Deals & Fast Delivery',
             'faviconUrl' => $faviconUrl,
             'shopCode' => $normalizedCode,
+            'ecomTheme' => $shopSettings['ecom_theme'] ?? 'snapdeal',
             'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
             'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',
         ])
@@ -242,6 +243,7 @@ Route::get('/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
                 'title' => $shop['name'] . ' — Official Online Store | Exclusive Deals & Fast Delivery',
                 'faviconUrl' => $storeFavicon,
                 'shopCode' => $normalizedCode,
+                'ecomTheme' => $settings['ecom_theme'] ?? 'snapdeal',
                 'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
                 'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',
             ])
