@@ -54,6 +54,7 @@ export default function AppRoutes() {
       <Route path="/terms-of-service" element={<LandingPage defaultPage="terms-of-service" />} />
       <Route path="/store" element={<LandingPage defaultPage="store" />} />
       <Route path="/store-login" element={<LandingPage defaultPage="store" />} />
+      <Route path="/my-store" element={<LandingPage defaultPage="my-store" />} />
 
       {/* Super Admin Master Portal */}
       <Route path="/master" element={<MasterPortal />} />

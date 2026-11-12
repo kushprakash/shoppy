@@ -197,7 +197,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
   const getInitialPage = () => {
     if (defaultPage && defaultPage !== 'home') return defaultPage;
     const path = window.location.pathname.replace(/^\//, '').toLowerCase();
-    const validPages = ['about', 'services', 'pricing', 'blog', 'contact', 'privacy-policy', 'return-policy', 'terms-of-service', 'store'];
+    const validPages = ['about', 'services', 'pricing', 'blog', 'contact', 'privacy-policy', 'return-policy', 'terms-of-service', 'store', 'my-store'];
     return validPages.includes(path) ? path : 'home';
   };
 
@@ -1061,45 +1061,76 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
 
   // Dedicated Production Store Login Screen (Distraction-free, Store Code + Password, Zero clutter)
-  if (currentPage === 'store') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0c1421] via-[#101b2b] to-[#152338] text-slate-100 flex flex-col justify-between p-4 sm:p-6 font-sans antialiased selection:bg-[#00a2c7] selection:text-white">
-        {/* Top Minimal Navigation Bar */}
-        <header className="max-w-5xl mx-auto w-full flex items-center justify-between py-2">
-          <button
-            onClick={() => navigateTo('home')}
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer px-3.5 py-1.5 rounded-full hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Shoppy</span>
-          </button>
+  if (currentPage === 'store' || currentPage === 'my-store') {
+    const isMyStore = (currentPage === 'my-store');
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-mono text-[11px] text-slate-300">Terminal Server Live</span>
-          </div>
-        </header>
+    return (
+      <div
+        className={`min-h-screen flex flex-col justify-between p-4 sm:p-6 font-sans antialiased selection:bg-[#00a2c7] selection:text-white transition-colors duration-200 ${
+          isMyStore
+            ? 'text-slate-800'
+            : 'bg-gradient-to-br from-[#0c1421] via-[#101b2b] to-[#152338] text-slate-100'
+        }`}
+        style={isMyStore ? { backgroundColor: 'rgb(255, 249, 242)' } : undefined}
+      >
+        {/* Top Minimal Navigation Bar: Only shown on /store, hidden on /my-store */}
+        {!isMyStore ? (
+          <header className="max-w-5xl mx-auto w-full flex items-center justify-between py-2">
+            <button
+              onClick={() => navigateTo('home')}
+              className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer px-3.5 py-1.5 rounded-full hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Shoppy</span>
+            </button>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-mono text-[11px] text-slate-300">Terminal Server Live</span>
+            </div>
+          </header>
+        ) : (
+          <div className="py-2" />
+        )}
 
         {/* Center Production Auth Card */}
         <main className="w-full max-w-[420px] mx-auto my-auto py-6">
-          <div className="bg-slate-900/95 border border-slate-800/90 rounded-3xl p-7 sm:p-8 shadow-2xl backdrop-blur-xl">
+          <div
+            className={`rounded-3xl p-7 sm:p-8 transition-all ${
+              isMyStore
+                ? 'bg-white border border-[#f0e6dc] shadow-2xl shadow-orange-950/5'
+                : 'bg-slate-900/95 border border-slate-800/90 shadow-2xl backdrop-blur-xl'
+            }`}
+          >
             {/* Brand Header */}
             <div className="text-center space-y-2 mb-6">
               <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#008ba3] via-[#00a8cc] to-[#10b981] items-center justify-center text-white shadow-xl shadow-cyan-500/20 mb-1">
                 <Store className="w-7 h-7" />
               </div>
-              <h1 className="text-xl font-extrabold text-white font-heading tracking-tight">
+              <h1
+                className={`text-xl font-extrabold font-heading tracking-tight ${
+                  isMyStore ? 'text-slate-900' : 'text-white'
+                }`}
+              >
                 Store Terminal Login
               </h1>
-              <p className="text-xs text-slate-400">
+              <p className={`text-xs ${isMyStore ? 'text-slate-500' : 'text-slate-400'}`}>
                 Enter your Store Code and Password to access your POS & ERP billing desk
               </p>
             </div>
 
             {/* Error Message */}
             {loginError && (
-              <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2.5 animate-in fade-in">
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <div
+                className={`mb-5 p-3 rounded-xl border text-xs flex items-center gap-2.5 animate-in fade-in ${
+                  isMyStore
+                    ? 'bg-red-50 border-red-200 text-red-700'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}
+              >
+                <AlertTriangle
+                  className={`w-4 h-4 shrink-0 ${isMyStore ? 'text-red-500' : 'text-red-400'}`}
+                />
                 <span>{loginError}</span>
               </div>
             )}
@@ -1111,25 +1142,43 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
               return (
                 <div
-                  className={`mb-5 p-4 rounded-2xl border text-xs space-y-2.5 animate-in fade-in shadow-xl ${exp.isExpired
-                    ? 'bg-red-500/15 border-red-500/40 text-red-200'
-                    : 'bg-amber-500/15 border-amber-500/40 text-amber-200'
-                    }`}
+                  className={`mb-5 p-4 rounded-2xl border text-xs space-y-2.5 animate-in fade-in shadow-xl ${
+                    isMyStore
+                      ? exp.isExpired
+                        ? 'bg-red-50 border-red-200 text-red-900'
+                        : 'bg-amber-50 border-amber-200 text-amber-900'
+                      : exp.isExpired
+                        ? 'bg-red-500/15 border-red-500/40 text-red-200'
+                        : 'bg-amber-500/15 border-amber-500/40 text-amber-200'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-black">
                       {exp.isExpired ? (
-                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 animate-pulse" />
+                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 animate-pulse" />
                       ) : (
-                        <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+                        <Clock className="w-4 h-4 text-amber-500 shrink-0 animate-pulse" />
                       )}
-                      <span className={exp.isExpired ? 'text-red-300 font-extrabold' : 'text-amber-300 font-extrabold'}>
+                      <span
+                        className={
+                          exp.isExpired
+                            ? 'text-red-600 font-extrabold'
+                            : 'text-amber-700 font-extrabold'
+                        }
+                      >
                         {exp.isExpired ? 'Subscription Expired' : 'Subscription Expiry Alert'}
                       </span>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${exp.isExpired ? 'bg-red-500/25 text-red-300' : 'bg-amber-500/25 text-amber-300'
-                        }`}
+                      className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${
+                        isMyStore
+                          ? exp.isExpired
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-800'
+                          : exp.isExpired
+                            ? 'bg-red-500/25 text-red-300'
+                            : 'bg-amber-500/25 text-amber-300'
+                      }`}
                     >
                       {exp.daysRemaining < 0
                         ? `Expired ${Math.abs(exp.daysRemaining)}d ago`
@@ -1139,9 +1188,20 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Store <strong>{exp.storeName}</strong> ({exp.shopCode}) validity {exp.isExpired ? 'expired on' : 'valid until'}{' '}
-                    <strong className="text-white font-mono">{exp.validUntil}</strong>. Please renew to keep your POS terminal, billing desk & ecommerce storefront active.
+                  <p
+                    className={`text-[11px] leading-relaxed ${
+                      isMyStore ? 'text-slate-600' : 'text-slate-300'
+                    }`}
+                  >
+                    Store <strong>{exp.storeName}</strong> ({exp.shopCode}) validity{' '}
+                    {exp.isExpired ? 'expired on' : 'valid until'}{' '}
+                    <strong
+                      className={`font-mono ${isMyStore ? 'text-slate-900' : 'text-white'}`}
+                    >
+                      {exp.validUntil}
+                    </strong>
+                    . Please renew to keep your POS terminal, billing desk & ecommerce storefront
+                    active.
                   </p>
 
                   <button
@@ -1151,10 +1211,11 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       setFoundStore(exp.store);
                       setIsRenewModalOpen(true);
                     }}
-                    className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${exp.isExpired
-                      ? 'bg-red-600 hover:bg-red-500 text-white'
-                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black'
-                      }`}
+                    className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
+                      exp.isExpired
+                        ? 'bg-red-600 hover:bg-red-500 text-white'
+                        : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black'
+                    }`}
                   >
                     <Zap className="w-4 h-4" />
                     <span>Renew / Extend Subscription Now</span>
@@ -1166,11 +1227,19 @@ export default function LandingPage({ defaultPage = 'home' }) {
             {/* Form: Store Code + Password */}
             <form onSubmit={handleStoreLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  className={`block text-xs font-semibold mb-1.5 ${
+                    isMyStore ? 'text-slate-700' : 'text-slate-300'
+                  }`}
+                >
                   Store Code
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div
+                    className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${
+                      isMyStore ? 'text-slate-400' : 'text-slate-400'
+                    }`}
+                  >
                     <Building2 className="w-4 h-4" />
                   </div>
                   <input
@@ -1183,17 +1252,29 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     placeholder="e.g. SHP-XXXXXX"
                     autoFocus
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white font-mono text-xs font-bold tracking-wider placeholder:font-sans placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl font-mono text-xs font-bold tracking-wider placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition ${
+                      isMyStore
+                        ? 'bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                        : 'bg-slate-800/90 border border-slate-700 text-white placeholder:text-slate-500'
+                    }`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  className={`block text-xs font-semibold mb-1.5 ${
+                    isMyStore ? 'text-slate-700' : 'text-slate-300'
+                  }`}
+                >
                   Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div
+                    className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${
+                      isMyStore ? 'text-slate-400' : 'text-slate-400'
+                    }`}
+                  >
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
@@ -1205,12 +1286,20 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     }}
                     placeholder="Enter terminal password"
                     required
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white text-xs font-medium placeholder:text-slate-500 focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition"
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl text-xs font-medium focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition ${
+                      isMyStore
+                        ? 'bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                        : 'bg-slate-800/90 border border-slate-700 text-white placeholder:text-slate-500'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                    className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition cursor-pointer ${
+                      isMyStore
+                        ? 'text-slate-400 hover:text-slate-700'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1218,12 +1307,18 @@ export default function LandingPage({ defaultPage = 'home' }) {
               </div>
 
               <div className="flex items-center justify-between text-[11px] pt-1">
-                <label className="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
+                <label
+                  className={`flex items-center gap-2 cursor-pointer select-none ${
+                    isMyStore ? 'text-slate-600' : 'text-slate-400'
+                  }`}
+                >
                   <input
                     type="checkbox"
                     checked={rememberTerminal}
                     onChange={(e) => setRememberTerminal(e.target.checked)}
-                    className="rounded border-slate-700 bg-slate-800 text-[#00a2c7] focus:ring-0 cursor-pointer"
+                    className={`rounded text-[#00a2c7] focus:ring-0 cursor-pointer ${
+                      isMyStore ? 'border-slate-300 bg-white' : 'border-slate-700 bg-slate-800'
+                    }`}
                   />
                   <span>Remember Store Code</span>
                 </label>
@@ -1231,7 +1326,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <button
                   type="button"
                   onClick={() => setIsForgotModalOpen(true)}
-                  className="text-[#00a2c7] hover:text-[#38bdf8] hover:underline font-bold transition cursor-pointer"
+                  className="text-[#008ba3] hover:text-[#00a2c7] hover:underline font-bold transition cursor-pointer"
                 >
                   Forgot Password?
                 </button>
@@ -1241,7 +1336,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <button
                   type="submit"
                   disabled={isLoggingIn}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#00a8cc] to-[#008ba3] hover:from-[#0096b7] hover:to-[#007b91] text-white font-bold text-xs shadow-lg shadow-cyan-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#00a8cc] to-[#008ba3] hover:from-[#0096b7] hover:to-[#007b91] text-white font-bold text-xs shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/35 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {isLoggingIn ? (
                     <>
@@ -1258,12 +1353,16 @@ export default function LandingPage({ defaultPage = 'home' }) {
               </div>
             </form>
 
-            <div className="pt-5 mt-5 border-t border-slate-800/80 text-center text-[11px] text-slate-500">
+            <div
+              className={`pt-5 mt-5 border-t text-center text-[11px] ${
+                isMyStore ? 'border-slate-100 text-slate-500' : 'border-slate-800/80 text-slate-500'
+              }`}
+            >
               <span>Need help or new merchant activation?</span>
               <br />
               <button
                 onClick={() => navigateTo('contact')}
-                className="text-[#00a2c7] hover:underline font-semibold mt-1 cursor-pointer"
+                className="text-[#008ba3] hover:text-[#00a2c7] hover:underline font-semibold mt-1 cursor-pointer"
               >
                 Contact Enexa Support Desk
               </button>
@@ -1272,9 +1371,37 @@ export default function LandingPage({ defaultPage = 'home' }) {
         </main>
 
         {/* Minimal Footer */}
-        <footer className="max-w-5xl mx-auto w-full text-center py-2 text-[11px] text-slate-500">
+        <footer
+          className={`max-w-5xl mx-auto w-full text-center py-2 text-[11px] ${
+            isMyStore ? 'text-slate-400' : 'text-slate-500'
+          }`}
+        >
           <span>© 2026 Enexa IT Solutions Private Limited • Enterprise Retail ERP</span>
         </footer>
+
+        {/* Forgot Password & Dual-Channel OTP Reset Modal */}
+        <ForgotPasswordModal
+          isOpen={isForgotModalOpen}
+          onClose={() => setIsForgotModalOpen(false)}
+          initialIdentifier={inputStoreCode}
+          onSuccess={(updatedCode) => {
+            if (updatedCode) {
+              setInputStoreCode(updatedCode);
+            }
+            showToast('Password reset successfully! Please login with your new password.');
+          }}
+        />
+
+        {/* Store Renewal & Upgrade Modal */}
+        <StoreRenewalModal
+          isOpen={isRenewModalOpen}
+          onClose={() => setIsRenewModalOpen(false)}
+          shopCode={lookupStoreCode || ''}
+          onRenewSuccess={(renewed) => {
+            showToast(`Store ${renewed?.shop_code || lookupStoreCode} subscription renewed successfully!`);
+            setIsRenewModalOpen(false);
+          }}
+        />
       </div>
     );
   }

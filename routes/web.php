@@ -144,6 +144,32 @@ Route::get('/store-login', function () {
     return redirect('/store');
 });
 
+// White-label Merchant Store Login Portal (http://domain/my-store)
+Route::get('/my-store', function () use ($loadWebsiteMeta) {
+    $code = strtoupper(trim((string) (request()->query('code') ?: request()->query('shop_code') ?: '')));
+    if ($code !== '' && request()->hasSession()) {
+        session(['active_store_code' => $code]);
+    }
+    $seo = $loadWebsiteMeta();
+    $resp = response()
+        ->view('app', [
+            'entry' => 'app',
+            'title' => 'Merchant Store Login — Shoppy ERP',
+            'faviconUrl' => $seo['favicon_url'],
+            'shopCode' => $code,
+            'htmlClass' => 'h-full bg-[#fff9f2] text-slate-800',
+            'bodyClass' => 'min-h-full flex flex-col bg-[#fff9f2] text-slate-800 selection:bg-cyan-500 selection:text-white',
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    if ($code !== '') {
+        $resp->cookie(StoreToken::CODE_COOKIE, $code, 60 * 24 * 30, '/', null, false, false)
+             ->cookie('shoppy_active_store_code', $code, 60 * 24 * 30, '/', null, false, false);
+    }
+
+    return $resp;
+});
+
 // Store Code dynamic URL routing (http://domain/{storeCode})
 // Rule: Jab o ecommerce lega tabhi uske url pe ecommerce aayega, nahi to login page aayega and billing software open hoga
 Route::get('/{storeCode}', function ($storeCode) {
