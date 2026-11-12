@@ -74,27 +74,27 @@ import { setStoreAuthSession } from '../../utils/storeAuth';
 // Social Icon Components for Contact section
 const FacebookIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
   </svg>
 );
 
 const InstagramIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-    <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
   </svg>
 );
 
 const LinkedinIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
   </svg>
 );
 
 const YoutubeIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
   </svg>
 );
 
@@ -138,8 +138,8 @@ const BrandLogoMark = ({ settings, variant = 'header' }) => {
     const imgSizeClass = isFooter
       ? 'h-20 w-auto max-w-[380px]'
       : isDrawer
-      ? 'h-12 w-auto max-w-[220px]'
-      : 'h-14 sm:h-16 lg:h-[76px] w-auto max-w-[240px] sm:max-w-[320px] lg:max-w-[380px]';
+        ? 'h-12 w-auto max-w-[220px]'
+        : 'h-14 sm:h-16 lg:h-[76px] w-auto max-w-[240px] sm:max-w-[320px] lg:max-w-[380px]';
 
     return (
       <img
@@ -153,18 +153,18 @@ const BrandLogoMark = ({ settings, variant = 'header' }) => {
   const boxSizeClass = isFooter
     ? 'w-16 h-16'
     : isDrawer
-    ? 'w-11 h-11'
-    : 'w-12 h-12 sm:w-14 sm:h-14';
+      ? 'w-11 h-11'
+      : 'w-12 h-12 sm:w-14 sm:h-14';
   const iconSizeClass = isFooter
     ? 'w-8 h-8'
     : isDrawer
-    ? 'w-5 h-5'
-    : 'w-6 h-6 sm:w-7 sm:h-7';
+      ? 'w-5 h-5'
+      : 'w-6 h-6 sm:w-7 sm:h-7';
   const titleSizeClass = isFooter
     ? 'text-2xl sm:text-3xl'
     : isDrawer
-    ? 'text-lg'
-    : 'text-xl sm:text-2xl';
+      ? 'text-lg'
+      : 'text-xl sm:text-2xl';
 
   return (
     <div className="flex items-center gap-3">
@@ -175,9 +175,8 @@ const BrandLogoMark = ({ settings, variant = 'header' }) => {
       </div>
       <div>
         <span
-          className={`${titleSizeClass} font-bold tracking-tight block leading-tight ${
-            isFooter ? 'text-white' : 'text-slate-900'
-          }`}
+          className={`${titleSizeClass} font-bold tracking-tight block leading-tight ${isFooter ? 'text-white' : 'text-slate-900'
+            }`}
         >
           Shoppy<span className={isFooter ? 'text-[#38BDF8]' : 'text-[#0EA5E9]'}>ERP</span>
         </span>
@@ -415,7 +414,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
       if (params.get('forgot') === '1') {
         setIsForgotModalOpen(true);
       }
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   const handleStoreLogin = async (e) => {
@@ -538,7 +537,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
           }, 1000);
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const handleMasterUpdate = () => loadData();
     window.addEventListener('shoppy:master_updated', handleMasterUpdate);
@@ -904,7 +903,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
             clearInterval(pollInterval);
             handleCompleteOnboarding('success');
           }
-        } catch (e) {}
+        } catch (e) { }
       }, 1000);
     }
     return () => {
@@ -1067,11 +1066,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
     return (
       <div
-        className={`min-h-screen flex flex-col justify-between p-4 sm:p-6 font-sans antialiased selection:bg-[#00a2c7] selection:text-white transition-colors duration-200 ${
-          isMyStore
-            ? 'text-slate-800'
-            : 'bg-gradient-to-br from-[#0c1421] via-[#101b2b] to-[#152338] text-slate-100'
-        }`}
+        className={`min-h-screen flex flex-col justify-between p-4 sm:p-6 font-sans antialiased selection:bg-[#00a2c7] selection:text-white transition-colors duration-200 ${isMyStore
+          ? 'text-slate-800'
+          : 'bg-gradient-to-br from-[#0c1421] via-[#101b2b] to-[#152338] text-slate-100'
+          }`}
         style={isMyStore ? { backgroundColor: 'rgb(255, 249, 242)' } : undefined}
       >
         {/* Top Minimal Navigation Bar: Only shown on /store, hidden on /my-store */}
@@ -1097,11 +1095,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
         {/* Center Production Auth Card */}
         <main className="w-full max-w-[420px] mx-auto my-auto py-6">
           <div
-            className={`rounded-3xl p-7 sm:p-8 transition-all ${
-              isMyStore
-                ? 'bg-white border border-[#f0e6dc] shadow-2xl shadow-orange-950/5'
-                : 'bg-slate-900/95 border border-slate-800/90 shadow-2xl backdrop-blur-xl'
-            }`}
+            className={`rounded-3xl p-7 sm:p-8 transition-all ${isMyStore
+              ? 'bg-white border border-[#f0e6dc] shadow-2xl shadow-orange-950/5'
+              : 'bg-slate-900/95 border border-slate-800/90 shadow-2xl backdrop-blur-xl'
+              }`}
           >
             {/* Brand Header */}
             <div className="text-center space-y-2 mb-6">
@@ -1109,9 +1106,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <Store className="w-7 h-7" />
               </div>
               <h1
-                className={`text-xl font-extrabold font-heading tracking-tight ${
-                  isMyStore ? 'text-slate-900' : 'text-white'
-                }`}
+                className={`text-xl font-extrabold font-heading tracking-tight ${isMyStore ? 'text-slate-900' : 'text-white'
+                  }`}
               >
                 Store Terminal Login
               </h1>
@@ -1123,11 +1119,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
             {/* Error Message */}
             {loginError && (
               <div
-                className={`mb-5 p-3 rounded-xl border text-xs flex items-center gap-2.5 animate-in fade-in ${
-                  isMyStore
-                    ? 'bg-red-50 border-red-200 text-red-700'
-                    : 'bg-red-500/10 border-red-500/30 text-red-300'
-                }`}
+                className={`mb-5 p-3 rounded-xl border text-xs flex items-center gap-2.5 animate-in fade-in ${isMyStore
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : 'bg-red-500/10 border-red-500/30 text-red-300'
+                  }`}
               >
                 <AlertTriangle
                   className={`w-4 h-4 shrink-0 ${isMyStore ? 'text-red-500' : 'text-red-400'}`}
@@ -1143,15 +1138,14 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
               return (
                 <div
-                  className={`mb-5 p-4 rounded-2xl border text-xs space-y-2.5 animate-in fade-in shadow-xl ${
-                    isMyStore
-                      ? exp.isExpired
-                        ? 'bg-red-50 border-red-200 text-red-900'
-                        : 'bg-amber-50 border-amber-200 text-amber-900'
-                      : exp.isExpired
-                        ? 'bg-red-500/15 border-red-500/40 text-red-200'
-                        : 'bg-amber-500/15 border-amber-500/40 text-amber-200'
-                  }`}
+                  className={`mb-5 p-4 rounded-2xl border text-xs space-y-2.5 animate-in fade-in shadow-xl ${isMyStore
+                    ? exp.isExpired
+                      ? 'bg-red-50 border-red-200 text-red-900'
+                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                    : exp.isExpired
+                      ? 'bg-red-500/15 border-red-500/40 text-red-200'
+                      : 'bg-amber-500/15 border-amber-500/40 text-amber-200'
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-black">
@@ -1171,15 +1165,14 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       </span>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${
-                        isMyStore
-                          ? exp.isExpired
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-amber-100 text-amber-800'
-                          : exp.isExpired
-                            ? 'bg-red-500/25 text-red-300'
-                            : 'bg-amber-500/25 text-amber-300'
-                      }`}
+                      className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black ${isMyStore
+                        ? exp.isExpired
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-800'
+                        : exp.isExpired
+                          ? 'bg-red-500/25 text-red-300'
+                          : 'bg-amber-500/25 text-amber-300'
+                        }`}
                     >
                       {exp.daysRemaining < 0
                         ? `Expired ${Math.abs(exp.daysRemaining)}d ago`
@@ -1190,9 +1183,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   </div>
 
                   <p
-                    className={`text-[11px] leading-relaxed ${
-                      isMyStore ? 'text-slate-600' : 'text-slate-300'
-                    }`}
+                    className={`text-[11px] leading-relaxed ${isMyStore ? 'text-slate-600' : 'text-slate-300'
+                      }`}
                   >
                     Store <strong>{exp.storeName}</strong> ({exp.shopCode}) validity{' '}
                     {exp.isExpired ? 'expired on' : 'valid until'}{' '}
@@ -1212,11 +1204,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       setFoundStore(exp.store);
                       setIsRenewModalOpen(true);
                     }}
-                    className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
-                      exp.isExpired
-                        ? 'bg-red-600 hover:bg-red-500 text-white'
-                        : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black'
-                    }`}
+                    className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${exp.isExpired
+                      ? 'bg-red-600 hover:bg-red-500 text-white'
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black'
+                      }`}
                   >
                     <Zap className="w-4 h-4" />
                     <span>Renew / Extend Subscription Now</span>
@@ -1229,17 +1220,15 @@ export default function LandingPage({ defaultPage = 'home' }) {
             <form onSubmit={handleStoreLogin} className="space-y-4">
               <div>
                 <label
-                  className={`block text-xs font-semibold mb-1.5 ${
-                    isMyStore ? 'text-slate-700' : 'text-slate-300'
-                  }`}
+                  className={`block text-xs font-semibold mb-1.5 ${isMyStore ? 'text-slate-700' : 'text-slate-300'
+                    }`}
                 >
                   Store Code
                 </label>
                 <div className="relative">
                   <div
-                    className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${
-                      isMyStore ? 'text-slate-400' : 'text-slate-400'
-                    }`}
+                    className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${isMyStore ? 'text-slate-400' : 'text-slate-400'
+                      }`}
                   >
                     <Building2 className="w-4 h-4" />
                   </div>
@@ -1253,28 +1242,25 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     placeholder="e.g. SHP-XXXXXX"
                     autoFocus
                     required
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl font-mono text-xs font-bold tracking-wider placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition ${
-                      isMyStore
-                        ? 'bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white'
-                        : 'bg-slate-800/90 border border-slate-700 text-white placeholder:text-slate-500'
-                    }`}
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl font-mono text-xs font-bold tracking-wider placeholder:font-sans placeholder:font-normal focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition ${isMyStore
+                      ? 'bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                      : 'bg-slate-800/90 border border-slate-700 text-white placeholder:text-slate-500'
+                      }`}
                   />
                 </div>
               </div>
 
               <div>
                 <label
-                  className={`block text-xs font-semibold mb-1.5 ${
-                    isMyStore ? 'text-slate-700' : 'text-slate-300'
-                  }`}
+                  className={`block text-xs font-semibold mb-1.5 ${isMyStore ? 'text-slate-700' : 'text-slate-300'
+                    }`}
                 >
                   Password
                 </label>
                 <div className="relative">
                   <div
-                    className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${
-                      isMyStore ? 'text-slate-400' : 'text-slate-400'
-                    }`}
+                    className={`absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ${isMyStore ? 'text-slate-400' : 'text-slate-400'
+                      }`}
                   >
                     <Lock className="w-4 h-4" />
                   </div>
@@ -1287,20 +1273,18 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     }}
                     placeholder="Enter terminal password"
                     required
-                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl text-xs font-medium focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition ${
-                      isMyStore
-                        ? 'bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white'
-                        : 'bg-slate-800/90 border border-slate-700 text-white placeholder:text-slate-500'
-                    }`}
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl text-xs font-medium focus:outline-none focus:border-[#00a2c7] focus:ring-1 focus:ring-[#00a2c7] transition ${isMyStore
+                      ? 'bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white'
+                      : 'bg-slate-800/90 border border-slate-700 text-white placeholder:text-slate-500'
+                      }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition cursor-pointer ${
-                      isMyStore
-                        ? 'text-slate-400 hover:text-slate-700'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`absolute inset-y-0 right-0 pr-3.5 flex items-center transition cursor-pointer ${isMyStore
+                      ? 'text-slate-400 hover:text-slate-700'
+                      : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1309,17 +1293,15 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
               <div className="flex items-center justify-between text-[11px] pt-1">
                 <label
-                  className={`flex items-center gap-2 cursor-pointer select-none ${
-                    isMyStore ? 'text-slate-600' : 'text-slate-400'
-                  }`}
+                  className={`flex items-center gap-2 cursor-pointer select-none ${isMyStore ? 'text-slate-600' : 'text-slate-400'
+                    }`}
                 >
                   <input
                     type="checkbox"
                     checked={rememberTerminal}
                     onChange={(e) => setRememberTerminal(e.target.checked)}
-                    className={`rounded text-[#00a2c7] focus:ring-0 cursor-pointer ${
-                      isMyStore ? 'border-slate-300 bg-white' : 'border-slate-700 bg-slate-800'
-                    }`}
+                    className={`rounded text-[#00a2c7] focus:ring-0 cursor-pointer ${isMyStore ? 'border-slate-300 bg-white' : 'border-slate-700 bg-slate-800'
+                      }`}
                   />
                   <span>Remember Store Code</span>
                 </label>
@@ -1355,27 +1337,18 @@ export default function LandingPage({ defaultPage = 'home' }) {
             </form>
 
             <div
-              className={`pt-5 mt-5 border-t text-center text-[11px] ${
-                isMyStore ? 'border-slate-100 text-slate-500' : 'border-slate-800/80 text-slate-500'
-              }`}
+              className={`pt-5 mt-5 border-t text-center text-[11px] ${isMyStore ? 'border-slate-100 text-slate-500' : 'border-slate-800/80 text-slate-500'
+                }`}
             >
-              <span>Need help or new merchant activation?</span>
-              <br />
-              <button
-                onClick={() => navigateTo('contact')}
-                className="text-[#008ba3] hover:text-[#00a2c7] hover:underline font-semibold mt-1 cursor-pointer"
-              >
-                Contact Enexa Support Desk
-              </button>
+
             </div>
           </div>
         </main>
 
         {/* Minimal Footer */}
         <footer
-          className={`max-w-5xl mx-auto w-full text-center py-2 text-[11px] ${
-            isMyStore ? 'text-slate-400' : 'text-slate-500'
-          }`}
+          className={`max-w-5xl mx-auto w-full text-center py-2 text-[11px] ${isMyStore ? 'text-slate-400' : 'text-slate-500'
+            }`}
         >
           <span>© 2026 Enexa IT Solutions Private Limited • Enterprise Retail ERP</span>
         </footer>
@@ -1508,7 +1481,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
             </button>
 
             <button
-              onClick={() => navigateTo('store')}
+              onClick={() => navigateTo('my-store')}
               className="hidden sm:inline-flex enexa-btn-secondary !py-2 !px-4 !text-xs sm:!text-sm"
             >
               Store Login
@@ -1516,7 +1489,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
             <button
               onClick={() => handleStartOnboarding()}
-              className="enexa-btn-primary !py-2 !px-4 sm:!px-5 !text-xs sm:!text-sm"
+              className="enexa-btn-primary !py-2 !px-4 sm:!px-5 !text-xs sm:!text-sm hidden sm:inline-flex"
             >
               <span>Get Started</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -2081,11 +2054,10 @@ export default function LandingPage({ defaultPage = 'home' }) {
                             <button
                               key={tab.id}
                               onClick={() => setHeroPreviewTab(tab.id)}
-                              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
-                                heroPreviewTab === tab.id
-                                  ? 'bg-[#0EA5E9] text-white'
-                                  : 'bg-slate-800 text-slate-300 hover:text-white'
-                              }`}
+                              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${heroPreviewTab === tab.id
+                                ? 'bg-[#0EA5E9] text-white'
+                                : 'bg-slate-800 text-slate-300 hover:text-white'
+                                }`}
                             >
                               {tab.label}
                             </button>
@@ -2893,9 +2865,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
                     <button
                       key={dot}
                       onClick={() => setTestimonialIdx(dot)}
-                      className={`h-2 rounded-full transition-all cursor-pointer ${
-                        testimonialIdx === dot ? 'w-7 bg-[#0EA5E9]' : 'w-2 bg-slate-300 hover:bg-slate-400'
-                      }`}
+                      className={`h-2 rounded-full transition-all cursor-pointer ${testimonialIdx === dot ? 'w-7 bg-[#0EA5E9]' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                        }`}
                       aria-label={`Testimonial page ${dot + 1}`}
                     />
                   ))}
