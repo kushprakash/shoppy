@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import { 
@@ -6,7 +6,7 @@ import {
   CreditCard, Sparkles, AlertCircle, Search, Tag, X, User, MapPin, Phone,
   Layers, Palette, Maximize2, Check, ChevronRight, ChevronLeft, PackageCheck, Zap,
   Star, Heart, Eye, Clock, Flame, Percent, RotateCcw, BadgeCheck, Gift,
-  Filter, HelpCircle, Headphones, Share2, ThumbsUp
+  Filter, HelpCircle, Headphones, Share2, ThumbsUp, ChevronDown, CheckCheck
 } from 'lucide-react';
 import { 
   INITIAL_TOP_CATEGORIES, 
@@ -19,9 +19,9 @@ import { getActiveShopCode, installStoreFetchInterceptor, syncAxiosStoreHeaders 
 installStoreFetchInterceptor();
 
 // ============================================================================
-// FLIPKART-GRADE RICH PRODUCT CATALOG WITH CATEGORIES, DISCOUNTS & RATINGS
+// UNIQUE HYBRID E-COMMERCE CATALOG (RICH PRODUCT MASTER)
 // ============================================================================
-export const FLIPKART_CATALOG = [
+export const SHOPPY_PRODUCTS = [
   // 1. MOBILES & TECH
   {
     id: 'MOB-101',
@@ -34,10 +34,10 @@ export const FLIPKART_CATALOG = [
     rating: 4.8,
     rating_count: 14280,
     image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Shoppy Certified',
     is_deal_of_day: true,
     bank_offer: 'Flat ₹5,000 Off on HDFC Credit Card',
-    delivery_text: 'Free Delivery by Tomorrow, 2 PM',
+    delivery_text: 'Free Express Delivery by Tomorrow',
     stock: 18,
     specs: ['128 GB ROM', '15.49 cm (6.1 inch) Super Retina XDR Display', '48MP + 12MP + 12MP Camera', 'A17 Pro Chip Processor'],
     variants: [
@@ -57,10 +57,10 @@ export const FLIPKART_CATALOG = [
     rating: 4.7,
     rating_count: 9840,
     image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Shoppy Certified',
     is_deal_of_day: true,
     bank_offer: '10% Instant Discount on SBI Cards',
-    delivery_text: 'Free Delivery by Tomorrow',
+    delivery_text: 'Free Express Delivery by Tomorrow',
     stock: 25,
     specs: ['12 GB RAM | 256 GB ROM', '17.27 cm (6.8 inch) Dynamic AMOLED 2X', '200MP + 50MP + 12MP + 10MP Camera', 'Snapdragon 8 Gen 3'],
     variants: [
@@ -79,10 +79,10 @@ export const FLIPKART_CATALOG = [
     rating: 4.5,
     rating_count: 32410,
     image: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Shoppy Certified',
     is_deal_of_day: false,
     bank_offer: 'Save ₹1,500 with ICICI Bank Netbanking',
-    delivery_text: 'Free Express Delivery in 2 Days',
+    delivery_text: 'Free Delivery in 2 Days',
     stock: 45,
     specs: ['8 GB RAM | 128 GB ROM', '17.02 cm (6.7 inch) 120 Hz AMOLED', '50MP Sony LYT-600 with OIS', '5500 mAh with 100W SuperVOOC'],
     variants: [
@@ -101,7 +101,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.8,
     rating_count: 5120,
     image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Shoppy Certified',
     is_deal_of_day: true,
     bank_offer: 'Instant ₹2,000 Off on Prepaid Orders',
     delivery_text: 'Free Delivery by Thursday',
@@ -123,7 +123,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.3,
     rating_count: 88400,
     image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Hot Deal',
     is_deal_of_day: true,
     bank_offer: 'Special Price: 77% Off Today',
     delivery_text: 'Free Delivery by Tomorrow',
@@ -136,7 +136,7 @@ export const FLIPKART_CATALOG = [
     ]
   },
 
-  // 2. FASHION & LIFESTYLE
+  // 2. FASHION & APPAREL
   {
     id: 'FSH-201',
     name: "Men's Premium Slim Fit Casual Denim Shirt - 100% Breathable Cotton",
@@ -148,7 +148,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.3,
     rating_count: 14210,
     image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Popular Pick',
     is_deal_of_day: true,
     bank_offer: 'Buy 2 Get Extra 10% Off',
     delivery_text: 'Free Delivery by Tomorrow',
@@ -172,7 +172,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.6,
     rating_count: 18940,
     image: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Brand Original',
     is_deal_of_day: false,
     bank_offer: 'Flat ₹200 Coupon Auto-Applied',
     delivery_text: 'Free Delivery by Thursday',
@@ -196,7 +196,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.5,
     rating_count: 24150,
     image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Festive Special',
     is_deal_of_day: true,
     bank_offer: '62% Off Festive Special',
     delivery_text: 'Free Express Delivery in 2 Days',
@@ -220,7 +220,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.4,
     rating_count: 31200,
     image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Shoppy Certified',
     is_deal_of_day: true,
     bank_offer: 'Extra ₹100 Off on Prepaid UPI',
     delivery_text: 'Free Delivery by Tomorrow',
@@ -246,7 +246,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.5,
     rating_count: 22800,
     image: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Kitchen Top Seller',
     is_deal_of_day: true,
     bank_offer: '42% Off Mega Kitchen Deal',
     delivery_text: 'Free Delivery by Wednesday',
@@ -268,7 +268,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.4,
     rating_count: 16400,
     image: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Value Combo',
     is_deal_of_day: false,
     bank_offer: '53% Off Festival Combo',
     delivery_text: 'Free Delivery in 2 Days',
@@ -291,7 +291,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.7,
     rating_count: 54100,
     image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Super Saver',
     is_deal_of_day: true,
     bank_offer: 'Flat ₹50 Off on orders above ₹499',
     delivery_text: 'Free 2-Hour Express Delivery',
@@ -313,7 +313,7 @@ export const FLIPKART_CATALOG = [
     rating: 4.6,
     rating_count: 38200,
     image: 'https://images.unsplash.com/photo-1585994192701-49b80f1e0cf6?w=600&auto=format&fit=crop&q=80',
-    badge: 'Shoppy Assured',
+    badge: 'Purity Assured',
     is_deal_of_day: false,
     bank_offer: 'Buy 2 Get 5% Off',
     delivery_text: 'Free 2-Hour Express Delivery',
@@ -327,68 +327,72 @@ export const FLIPKART_CATALOG = [
 ];
 
 // ============================================================================
-// TOP CATEGORY STRIP (FLIPKART ICONIC ROW)
+// SNAPDEAL-STYLE LEFT SIDEBAR CATEGORIES
 // ============================================================================
-const FLIPKART_CATEGORIES = [
-  { id: 'ALL', name: 'All Offers', icon: '⚡', color: '#ff9f00' },
-  { id: 'CAT-GROCERY', name: 'Grocery', icon: '🛒', color: '#10b981' },
-  { id: 'CAT-MOBILES', name: 'Mobiles', icon: '📱', color: '#2563eb' },
-  { id: 'CAT-FASHION', name: 'Fashion', icon: '👔', color: '#ec4899' },
-  { id: 'CAT-ELECTRONICS', name: 'Electronics', icon: '💻', color: '#8b5cf6' },
-  { id: 'CAT-HOME', name: 'Home & Kitchen', icon: '🛋️', color: '#f97316' },
-  { id: 'CAT-APPLIANCES', name: 'Appliances', icon: '📺', color: '#06b6d4' },
-  { id: 'CAT-TRAVEL', name: 'Travel & Bags', icon: '✈️', color: '#3b82f6' },
-  { id: 'CAT-BEAUTY', name: 'Beauty & Toys', icon: '🧸', color: '#f43f5e' }
+const SIDEBAR_CATEGORIES = [
+  { id: 'ALL', name: 'All Departments', icon: '⚡', count: '1,200+' },
+  { id: 'CAT-MOBILES', name: 'Mobiles & Tablets', icon: '📱', count: '140+ Deals' },
+  { id: 'CAT-FASHION', name: "Men & Women's Fashion", icon: '👔', count: '450+ Styles' },
+  { id: 'CAT-ELECTRONICS', name: 'Electronics & Audio', icon: '💻', count: '280+ Items' },
+  { id: 'CAT-HOME', name: 'Home & Kitchenware', icon: '🛋️', count: '190+ Items' },
+  { id: 'CAT-APPLIANCES', name: 'TV & Home Appliances', icon: '📺', count: '90+ Models' },
+  { id: 'CAT-GROCERY', name: 'Grocery & Supermarket', icon: '🛒', count: '320+ Staples' },
+  { id: 'CAT-TRAVEL', name: 'Luggage & Backpacks', icon: '✈️', count: '75+ Styles' },
+  { id: 'CAT-BEAUTY', name: 'Beauty & Personal Care', icon: '🧸', count: '160+ Products' },
 ];
 
 // ============================================================================
-// DYNAMIC HERO CAROUSEL BANNERS
+// DYNAMIC PROMOTIONAL HERO BANNERS (SHOPPY HYBRID)
 // ============================================================================
 const HERO_BANNERS = [
   {
     id: 1,
-    tag: 'BIG BILLION SAVINGS 2026',
-    title: 'Mega Tech & Fashion Carnival',
-    subtitle: 'Up to 80% Off on Top Smartphones, Laptops & Trending Wardrobe Collections',
-    offer: '💳 10% Instant Discount up to ₹1,500 on HDFC & SBI Bank Cards',
-    bgGradient: 'from-[#0d47a1] via-[#1565c0] to-[#1e88e5]',
-    cta: 'Shop Mega Deals Now',
+    tag: 'FESTIVE MEGA BAZAAR 2026',
+    title: 'Brand Quality, Unbeatable Direct Rates',
+    subtitle: 'Up to 80% Off on Top Smartphones, Footwear, Audio Gear & Daily Supermarket Essentials',
+    badgeText: 'Instant 10% HDFC & SBI Bank Cashback',
+    bgGradient: 'from-[#0f172a] via-[#1e1b4b] to-[#312e81]',
+    accentColor: '#e11d48',
+    ctaText: 'Explore Mega Deals',
     categoryTarget: 'ALL'
   },
   {
     id: 2,
-    tag: 'FLAGSHIP 5G FESTIVAL',
-    title: 'Next-Gen Smartphones Unleashed',
-    subtitle: 'Apple iPhone 15 Pro, Samsung S24 Ultra & OnePlus • No Cost EMI from ₹1,499/mo',
-    offer: '⚡ Extra Exchange Bonus up to ₹5,000 + Free Screen Replacement',
-    bgGradient: 'from-[#1a237e] via-[#283593] to-[#3949ab]',
-    cta: 'Explore 5G Mobiles',
+    tag: '5G MOBILES & TECH BONANZA',
+    title: 'Next-Gen Smartphones & Audio',
+    subtitle: 'Apple iPhone 15 Pro, Samsung S24 Ultra & OnePlus • No Cost EMI starting at ₹1,499/mo',
+    badgeText: 'Extra Exchange Bonus up to ₹5,000',
+    bgGradient: 'from-[#881337] via-[#9f1239] to-[#be123c]',
+    accentColor: '#f59e0b',
+    ctaText: 'Shop Flagship Mobiles',
     categoryTarget: 'CAT-MOBILES'
   },
   {
     id: 3,
-    tag: 'FRESH SUPERMARKET EXPRESS',
-    title: 'Daily Groceries & Household Essentials',
-    subtitle: 'Pure Edible Oils, Desi Pulses, Premium Spices & Basmati Rice at Wholesale Rates',
-    offer: '🎉 Flat ₹100 Cashback on your First Order • Free 2-Hour Doorstep Delivery',
-    bgGradient: 'from-[#004d40] via-[#00695c] to-[#00897b]',
-    cta: 'Order Fresh Grocery',
+    tag: 'SUPERMARKET DIRECT EXPRESS',
+    title: 'Pure Kitchen Staples & Edible Oils',
+    subtitle: 'Fortune Sunflower Oil, Tata Sampann Pulses & Spices at Guaranteed Wholesale Rates',
+    badgeText: 'Flat ₹100 Cashback on 1st Order • 2-Hour Delivery',
+    bgGradient: 'from-[#064e3b] via-[#047857] to-[#059669]',
+    accentColor: '#34d399',
+    ctaText: 'Order Fresh Groceries',
     categoryTarget: 'CAT-GROCERY'
   },
   {
     id: 4,
-    tag: 'SUMMER & FESTIVE FASHION',
-    title: 'Curated Styles For Men & Women',
-    subtitle: 'Casual Denim Shirts, Levi’s Jeans, Anarkali Sets & Puma Sneakers at 50-70% Off',
-    offer: '🏷️ Use Coupon: FLIP150 for Extra ₹150 Off • Assured 7-Day Returns',
-    bgGradient: 'from-[#880e4f] via-[#ad1457] to-[#c2185b]',
-    cta: 'Shop Trending Looks',
+    tag: 'TRENDING WARDROBE FEST',
+    title: 'Premium Ethnic & Casual Collection',
+    subtitle: 'Levi’s Denim, Libas Anarkali Sets, Puma Sneakers & Fastrack Watches at 50% - 70% Off',
+    badgeText: 'Use Code: SHOPPY150 for Extra ₹150 Off',
+    bgGradient: 'from-[#4c1d95] via-[#5b21b6] to-[#6d28d9]',
+    accentColor: '#f43f5e',
+    ctaText: 'Discover Fashion Trends',
     categoryTarget: 'CAT-FASHION'
   }
 ];
 
 // ============================================================================
-// LIVE SOCIAL PROOF TICKER DATA
+// LIVE SOCIAL PROOF TICKER
 // ============================================================================
 const SOCIAL_PROOF_EVENTS = [
   { name: 'Amit Kumar', city: 'Patna', item: 'Apple iPhone 15 Pro', time: '1 min ago' },
@@ -405,13 +409,14 @@ export default function Storefront() {
   // Active Category & Search Filters
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('relevance'); // relevance, price_asc, price_desc, discount, rating
+  const [searchCategoryFilter, setSearchCategoryFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState('relevance');
 
   // Master Products & Variant Selection Map
-  const [products, setProducts] = useState(FLIPKART_CATALOG);
+  const [products, setProducts] = useState(SHOPPY_PRODUCTS);
   const [selectedVariants, setSelectedVariants] = useState(() => {
     const map = {};
-    FLIPKART_CATALOG.forEach((p) => {
+    SHOPPY_PRODUCTS.forEach((p) => {
       if (p.variants && p.variants.length > 0) {
         map[p.id] = p.variants[0];
       }
@@ -493,7 +498,7 @@ export default function Storefront() {
     return () => clearInterval(timer);
   }, []);
 
-  // First-Time Welcome Offer Popup (triggers after 2.5s if not closed previously in this session)
+  // First-Time Welcome Offer Popup
   useEffect(() => {
     const hasSeen = sessionStorage.getItem('shoppy_seen_welcome_popup');
     if (!hasSeen) {
@@ -511,7 +516,6 @@ export default function Storefront() {
     const interval = setInterval(() => {
       setSocialProof(SOCIAL_PROOF_EVENTS[index % SOCIAL_PROOF_EVENTS.length]);
       index++;
-      // Hide after 4.5 seconds
       setTimeout(() => {
         setSocialProof(null);
       }, 4500);
@@ -549,8 +553,8 @@ export default function Storefront() {
           mrp: parseFloat(item.mrp || (item.selling_price * 1.4) || 699),
           rating: 4.5,
           rating_count: 1200 + (idx * 350),
-          image: item.image || FLIPKART_CATALOG[idx % FLIPKART_CATALOG.length].image,
-          badge: 'Shoppy Assured',
+          image: item.image || SHOPPY_PRODUCTS[idx % SHOPPY_PRODUCTS.length].image,
+          badge: 'Shoppy Certified',
           is_deal_of_day: idx % 2 === 0,
           delivery_text: 'Free Delivery by Tomorrow',
           stock: item.stock ?? 50,
@@ -559,8 +563,7 @@ export default function Storefront() {
             { id: 'v1', size: 'Standard', color: 'Default', colorHex: '#2563eb', sellingPrice: parseFloat(item.selling_price || 499), mrp: parseFloat(item.mrp || 699), sku: item.sku || `SKU-${idx}` }
           ]
         }));
-        // Merge DB products with Flipkart default catalog
-        setProducts([...dbProducts, ...FLIPKART_CATALOG]);
+        setProducts([...dbProducts, ...SHOPPY_PRODUCTS]);
       }
     } catch (err) {
       setStoreInfo({
@@ -724,8 +727,8 @@ export default function Storefront() {
       return;
     }
 
-    if (code === 'FLIP150' || code === 'WELCOME10' || code === 'FLAT200' || code === 'FESTIVE25') {
-      const discountVal = code === 'FLIP150' ? 150 : (code === 'FLAT200' ? 200 : 10);
+    if (code === 'SHOPPY150' || code === 'WELCOME10' || code === 'FLAT200' || code === 'FESTIVE25') {
+      const discountVal = code === 'SHOPPY150' ? 150 : (code === 'FLAT200' ? 200 : 10);
       const isPct = (code === 'WELCOME10' || code === 'FESTIVE25');
       setAppliedCoupon({
         code,
@@ -737,7 +740,7 @@ export default function Storefront() {
       return;
     }
 
-    setCouponError(`Invalid promo code "${code}". Try: FLIP150, WELCOME10, or FLAT200`);
+    setCouponError(`Invalid promo code "${code}". Try: SHOPPY150, WELCOME10, or FLAT200`);
   };
 
   const handlePlaceOrder = async () => {
@@ -750,7 +753,7 @@ export default function Storefront() {
       localStorage.setItem('shoppy_customer_checkout_info', JSON.stringify(customerForm));
     } catch (e) {}
 
-    const orderNumber = `FLIP-${Math.floor(100000 + Math.random() * 900000)}`;
+    const orderNumber = `SHP-${Math.floor(100000 + Math.random() * 900000)}`;
     const invoiceNumber = `INV-GST-${Math.floor(10000 + Math.random() * 90000)}`;
     const isCod = selectedPayment === 'cod';
 
@@ -791,6 +794,7 @@ export default function Storefront() {
   const filteredProducts = useMemo(() => {
     let result = products.filter((p) => {
       if (activeCategory !== 'ALL' && p.topCategoryId !== activeCategory) return false;
+      if (searchCategoryFilter !== 'ALL' && p.topCategoryId !== searchCategoryFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = p.name.toLowerCase().includes(q);
@@ -811,37 +815,38 @@ export default function Storefront() {
       result.sort((a, b) => b.rating - a.rating);
     }
     return result;
-  }, [products, activeCategory, searchQuery, sortBy]);
+  }, [products, activeCategory, searchCategoryFilter, searchQuery, sortBy]);
 
   const dealProducts = useMemo(() => {
     return products.filter((p) => p.is_deal_of_day);
   }, [products]);
 
   return (
-    <div className="min-h-screen bg-[#f1f2f4] text-slate-900 font-sans flex flex-col antialiased selection:bg-[#2874f0] selection:text-white pb-20 md:pb-8">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans flex flex-col antialiased selection:bg-[#e11d48] selection:text-white pb-20 md:pb-8">
       
       {/* =========================================================================
-          1. TOP UTILITY STRIP (Delivery SLA & Official Verification)
+          1. TOP SNAPDEAL-STYLE UTILITY STRIP (Dark Luxury Navy #0f172a)
       ========================================================================== */}
-      <div className="bg-[#172337] text-white text-[11px] py-1.5 px-4 font-medium flex items-center justify-between border-b border-slate-800">
-        <div className="flex items-center gap-4 max-w-7xl mx-auto w-full justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-amber-300 font-bold">
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span>Flipkart-Grade Shoppy Omnichannel E-Commerce</span>
+      <div className="bg-[#0f172a] text-slate-300 text-[11px] py-1.5 px-4 font-medium border-b border-slate-800">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-rose-400 font-bold">
+              <Sparkles className="w-3.5 h-3.5 fill-current" />
+              <span>India&apos;s Smart Retail Hub • Brand Waali Quality, Wholesale Rates</span>
             </span>
-            <span className="hidden sm:inline text-slate-500">•</span>
-            <span className="hidden sm:inline text-slate-300">
-              ⚡ 100% Genuine Certified Products • Safe Doorstep Delivery
+            <span className="hidden md:inline text-slate-600">|</span>
+            <span className="hidden md:flex items-center gap-1 text-slate-300">
+              <Truck className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Free Delivery Above ₹499 • 100% Cash on Delivery</span>
             </span>
           </div>
 
           <div className="flex items-center gap-4 text-slate-300">
-            <span className="font-mono text-cyan-300 font-bold">
-              Store Code: {shopCode || 'SP-LIVE'}
+            <span className="font-mono text-amber-300 font-bold bg-slate-800 px-2 py-0.5 rounded">
+              Store ID: {shopCode || 'SP-LIVE'}
             </span>
-            <span className="hidden md:inline text-slate-600">|</span>
-            <a href="tel:+919546042639" className="hidden md:flex items-center gap-1 hover:text-white transition">
+            <span className="hidden sm:inline text-slate-600">|</span>
+            <a href="tel:+919546042639" className="hidden sm:flex items-center gap-1 hover:text-white transition">
               <Headphones className="w-3 h-3 text-emerald-400" />
               <span>Help: +91 95460 42639</span>
             </a>
@@ -850,93 +855,122 @@ export default function Storefront() {
       </div>
 
       {/* =========================================================================
-          2. FLIPKART SIGNATURE BLUE MAIN HEADER (#2874f0)
+          2. MAIN UNIQUE BRAND HEADER (Snapdeal Crimson + Royal Navy Fusion)
       ========================================================================== */}
-      <header className="bg-[#2874f0] text-white sticky top-0 z-40 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           
-          {/* Logo & Plus Badge */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="flex flex-col items-start leading-none cursor-pointer" onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }}>
+          {/* Brand Logo & Name */}
+          <div 
+            onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }}
+            className="flex items-center gap-2.5 cursor-pointer flex-shrink-0 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#e11d48] to-[#f43f5e] text-white flex items-center justify-center font-black text-xl shadow-md shadow-rose-500/20 group-hover:scale-105 transition-transform">
+              {storeInfo?.name ? storeInfo.name[0] : 'S'}
+            </div>
+            <div className="flex flex-col leading-none">
               <div className="flex items-center gap-1.5">
-                <span className="text-xl md:text-2xl font-black italic tracking-tight font-heading text-white">
+                <span className="text-xl md:text-2xl font-black font-heading text-slate-900 tracking-tight">
                   {storeInfo?.name ? storeInfo.name : 'Shoppy'}
                 </span>
-                <span className="text-xl md:text-2xl font-black text-[#ffe11b]">
-                  kart
+                <span className="text-xl md:text-2xl font-black text-[#e11d48]">
+                  Store
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-[10px] italic text-slate-200 hover:underline">
-                <span>Explore</span>
-                <span className="text-[#ffe11b] font-bold">Plus</span>
-                <Sparkles className="w-2.5 h-2.5 text-[#ffe11b] fill-current" />
+              <div className="flex items-center gap-1 pt-0.5">
+                <BadgeCheck className="w-3 h-3 text-emerald-600" />
+                <span className="text-[10px] font-bold text-slate-500">Official Merchant Portal</span>
               </div>
             </div>
           </div>
 
-          {/* Global Search Bar with Autocomplete & Clear Button */}
+          {/* Snapdeal-Style Search Bar with Left Category Dropdown + Search Button */}
           <div className="flex-1 max-w-2xl relative">
-            <div className="relative flex items-center bg-white rounded-sm shadow-sm overflow-hidden">
+            <div className="flex items-center bg-slate-50 border border-slate-300 rounded-lg overflow-hidden focus-within:border-[#e11d48] focus-within:ring-2 focus-within:ring-rose-500/10 transition">
+              
+              {/* Category Dropdown */}
+              <div className="hidden sm:flex items-center gap-1 pl-3 pr-2 py-2 text-xs font-bold text-slate-700 border-r border-slate-200 bg-slate-100 flex-shrink-0">
+                <select
+                  value={searchCategoryFilter}
+                  onChange={(e) => setSearchCategoryFilter(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Categories</option>
+                  <option value="CAT-MOBILES">Mobiles</option>
+                  <option value="CAT-FASHION">Fashion</option>
+                  <option value="CAT-ELECTRONICS">Electronics</option>
+                  <option value="CAT-GROCERY">Grocery</option>
+                  <option value="CAT-HOME">Home &amp; Kitchen</option>
+                </select>
+              </div>
+
+              {/* Input */}
               <input
                 type="text"
-                placeholder="Search for Products, Brands and More (e.g. iPhone, Denim Shirt, Shoes, Oil)..."
+                placeholder="Search products, brands, or daily essentials (e.g. Denim, iPhone, Saree, Oil)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full py-2.5 pl-4 pr-10 text-xs md:text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
+                className="w-full py-2.5 px-3 text-xs md:text-sm text-slate-900 placeholder-slate-400 bg-transparent focus:outline-none"
               />
-              {searchQuery ? (
+
+              {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="p-2 text-slate-400 hover:text-slate-600 transition"
+                  className="p-2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="w-4 h-4" />
                 </button>
-              ) : (
-                <div className="p-2.5 text-[#2874f0]">
-                  <Search className="w-4 h-4" />
-                </div>
               )}
+
+              {/* Snapdeal Search CTA Button */}
+              <button 
+                onClick={() => {}}
+                className="px-4 md:px-5 py-2.5 bg-[#e11d48] hover:bg-[#be123c] text-white flex items-center gap-1.5 text-xs font-black transition flex-shrink-0"
+              >
+                <Search className="w-4 h-4" />
+                <span className="hidden md:inline">Search</span>
+              </button>
             </div>
           </div>
 
-          {/* Delivery Location Pincode Selector */}
+          {/* Delivery Pincode */}
           <button 
             onClick={() => setPincodeModalOpen(true)}
-            className="hidden lg:flex items-center gap-1.5 text-xs text-slate-100 hover:text-white px-2.5 py-1.5 rounded hover:bg-white/10 transition"
+            className="hidden lg:flex items-center gap-2 text-xs text-slate-700 hover:text-[#e11d48] px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 transition"
           >
-            <MapPin className="w-3.5 h-3.5 text-[#ffe11b]" />
+            <MapPin className="w-4 h-4 text-[#e11d48]" />
             <div className="text-left leading-tight">
-              <span className="text-[10px] text-blue-200 block">Deliver to</span>
-              <span className="font-bold">{deliveryPincode} • Change</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">Deliver to</span>
+              <span className="font-extrabold text-slate-800">{deliveryPincode} • Change</span>
             </div>
           </button>
 
-          {/* Actions: Seller Login & Cart Trigger */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Actions: Merchant Terminal & Cart */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             <a
               href="/store"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-white bg-white/15 hover:bg-white/25 px-3 py-2 rounded-sm transition"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#e11d48] px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition"
             >
               <User className="w-3.5 h-3.5" />
-              <span>Merchant Login</span>
+              <span>Merchant Terminal</span>
             </a>
 
-            {/* Cart Button */}
+            {/* Shopping Cart Button */}
             <button
               onClick={() => setCartOpen(true)}
-              className="relative flex items-center gap-2 px-3 md:px-4 py-2 bg-white text-[#2874f0] hover:bg-slate-50 text-xs md:text-sm font-extrabold rounded-sm shadow-md transition active:scale-95"
+              className="relative flex items-center gap-2 px-3.5 md:px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs md:text-sm font-extrabold rounded-lg shadow-sm transition active:scale-95"
             >
               <div className="relative">
-                <ShoppingCart className="w-4 h-4 fill-current text-[#2874f0]" />
+                <ShoppingBag className="w-4 h-4 text-rose-400" />
                 {cart.length > 0 && (
-                  <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-[#ff6161] text-white text-[10px] font-black flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-[#e11d48] text-white text-[10px] font-black flex items-center justify-center animate-pulse">
                     {cart.reduce((a, b) => a + b.quantity, 0)}
                   </span>
                 )}
               </div>
-              <span className="hidden sm:inline">Cart</span>
+              <span className="hidden sm:inline">Bag</span>
               {cart.length > 0 && (
-                <span className="text-xs font-black text-emerald-600 hidden md:inline">
+                <span className="text-xs font-black text-amber-300 hidden md:inline">
                   • ₹{grandTotal.toFixed(0)}
                 </span>
               )}
@@ -946,173 +980,263 @@ export default function Storefront() {
         </div>
       </header>
 
-      {/* =========================================================================
-          3. ICONIC FLIPKART CATEGORY RIBBON (White Card Bar)
-      ========================================================================== */}
-      <nav className="bg-white shadow-sm border-b border-slate-200 mb-2">
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-          {FLIPKART_CATEGORIES.map((cat) => {
-            const isSelected = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  setSearchQuery('');
-                }}
-                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-all flex-shrink-0 group ${
-                  isSelected ? 'bg-blue-50 text-[#2874f0]' : 'text-slate-700 hover:text-[#2874f0]'
-                }`}
-              >
-                <div 
-                  className={`w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-sm transition-transform group-hover:scale-110 ${
-                    isSelected ? 'ring-2 ring-[#2874f0] bg-white' : 'bg-slate-100'
-                  }`}
-                >
-                  <span>{cat.icon}</span>
-                </div>
-                <span className={`text-[11px] font-bold whitespace-nowrap ${isSelected ? 'text-[#2874f0]' : 'text-slate-800'}`}>
-                  {cat.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-2 md:px-4 space-y-3 w-full">
+      <main className="max-w-7xl mx-auto px-3 md:px-4 space-y-4 w-full mt-3">
 
         {/* =========================================================================
-            4. HERO CAROUSEL BANNER (Auto-advancing with Bank Discounts)
+            3. SNAPDEAL SIGNATURE 3-COLUMN HERO SECTION
+            (Left Categories Sidebar + Center Dynamic Banner + Right Spotlight Perks)
         ========================================================================== */}
-        <section className="relative rounded-lg overflow-hidden shadow-sm bg-gradient-to-r text-white">
-          <div className={`p-6 md:p-10 bg-gradient-to-r ${HERO_BANNERS[activeBanner].bgGradient} transition-all duration-700 min-h-[220px] md:min-h-[280px] flex flex-col justify-between relative`}>
-            
-            <div className="max-w-2xl space-y-2 z-10">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur text-[11px] font-black uppercase tracking-wider text-[#ffe11b]">
-                <Flame className="w-3.5 h-3.5 fill-current" />
-                {HERO_BANNERS[activeBanner].tag}
-              </span>
-              <h2 className="text-2xl md:text-4xl font-black font-heading tracking-tight leading-tight text-white drop-shadow-sm">
-                {HERO_BANNERS[activeBanner].title}
-              </h2>
-              <p className="text-xs md:text-sm text-slate-100 line-clamp-2 max-w-xl font-medium">
-                {HERO_BANNERS[activeBanner].subtitle}
-              </p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+          
+          {/* 3A. Left Categories Sidebar (Snapdeal Signature Feature) */}
+          <aside className="hidden lg:block lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm p-3 overflow-hidden">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#e11d48]" />
+                <span>TOP CATEGORIES</span>
+              </h3>
+              <span className="text-[10px] bg-rose-50 text-[#e11d48] font-bold px-1.5 py-0.5 rounded">Live</span>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 z-10">
-              <div className="flex items-center gap-2 bg-black/30 backdrop-blur px-3.5 py-1.5 rounded-md text-xs font-bold text-amber-300 border border-white/10">
-                <Gift className="w-4 h-4 text-[#ffe11b]" />
-                <span>{HERO_BANNERS[activeBanner].offer}</span>
+            <ul className="space-y-1">
+              {SIDEBAR_CATEGORIES.map((cat) => {
+                const isSelected = activeCategory === cat.id;
+                return (
+                  <li key={cat.id}>
+                    <button
+                      onClick={() => {
+                        setActiveCategory(cat.id);
+                        setSearchQuery('');
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold flex items-center justify-between transition group ${
+                        isSelected 
+                          ? 'bg-rose-50 text-[#e11d48] font-black shadow-sm' 
+                          : 'text-slate-700 hover:bg-slate-50 hover:text-[#e11d48]'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base">{cat.icon}</span>
+                        <span className="line-clamp-1">{cat.name}</span>
+                      </span>
+                      <span className={`text-[10px] font-semibold transition ${isSelected ? 'text-[#e11d48]' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                        {cat.count}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="mt-4 p-2.5 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-center space-y-1">
+              <span className="text-[10px] uppercase font-black text-amber-800 tracking-wider block">Special Coupon</span>
+              <p className="text-xs font-black text-slate-900">Use Code: <span className="font-mono text-[#e11d48]">SHOPPY150</span></p>
+              <button
+                onClick={() => handleApplyCoupon('SHOPPY150')}
+                className="text-[10px] font-black text-[#e11d48] hover:underline"
+              >
+                Click to Apply ₹150 Off
+              </button>
+            </div>
+          </aside>
+
+          {/* 3B. Center Dynamic Hero Carousel */}
+          <div className="lg:col-span-6 relative rounded-xl overflow-hidden shadow-sm flex flex-col justify-between min-h-[280px] md:min-h-[340px]">
+            <div className={`w-full h-full p-6 md:p-8 bg-gradient-to-br ${HERO_BANNERS[activeBanner].bgGradient} text-white flex flex-col justify-between transition-all duration-700 relative`}>
+              
+              <div className="space-y-2 max-w-lg z-10">
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-[10px] font-black tracking-wider uppercase text-amber-300">
+                  <Flame className="w-3 h-3 fill-current" />
+                  {HERO_BANNERS[activeBanner].tag}
+                </span>
+
+                <h2 className="text-2xl md:text-3xl font-black font-heading leading-tight tracking-tight text-white drop-shadow">
+                  {HERO_BANNERS[activeBanner].title}
+                </h2>
+
+                <p className="text-xs md:text-sm text-slate-200 line-clamp-2 font-medium">
+                  {HERO_BANNERS[activeBanner].subtitle}
+                </p>
               </div>
 
-              <button
-                onClick={() => {
-                  if (HERO_BANNERS[activeBanner].categoryTarget !== 'ALL') {
-                    setActiveCategory(HERO_BANNERS[activeBanner].categoryTarget);
-                  }
-                  window.scrollTo({ top: 500, behavior: 'smooth' });
-                }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm bg-[#ffe11b] hover:bg-amber-400 text-[#172337] text-xs md:text-sm font-black shadow-lg shadow-black/20 transition active:scale-95"
-              >
-                <span>{HERO_BANNERS[activeBanner].cta}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 z-10">
+                <div className="bg-black/30 backdrop-blur px-3 py-1.5 rounded-md text-[11px] font-bold text-amber-300 border border-white/10 flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{HERO_BANNERS[activeBanner].badgeText}</span>
+                </div>
 
-            {/* Slider Dots */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-              {HERO_BANNERS.map((b, idx) => (
                 <button
-                  key={b.id}
-                  onClick={() => setActiveBanner(idx)}
-                  className={`h-2 rounded-full transition-all ${activeBanner === idx ? 'w-6 bg-[#ffe11b]' : 'w-2 bg-white/50'}`}
-                  aria-label={`Slide ${idx + 1}`}
-                />
-              ))}
+                  onClick={() => {
+                    if (HERO_BANNERS[activeBanner].categoryTarget !== 'ALL') {
+                      setActiveCategory(HERO_BANNERS[activeBanner].categoryTarget);
+                    }
+                    window.scrollTo({ top: 480, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2.5 rounded-lg bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-black shadow-lg shadow-black/20 transition active:scale-95 flex items-center gap-1.5"
+                >
+                  <span>{HERO_BANNERS[activeBanner].ctaText}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Slide Dots Indicator */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+                {HERO_BANNERS.map((b, idx) => (
+                  <button
+                    key={b.id}
+                    onClick={() => setActiveBanner(idx)}
+                    className={`h-2 rounded-full transition-all ${activeBanner === idx ? 'w-6 bg-[#e11d48]' : 'w-2 bg-white/50'}`}
+                    aria-label={`Slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Prev / Next controls */}
+              <button
+                onClick={() => setActiveBanner((prev) => (prev - 1 + HERO_BANNERS.length) % HERO_BANNERS.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur transition z-20"
+                aria-label="Previous Banner"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setActiveBanner((prev) => (prev + 1) % HERO_BANNERS.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur transition z-20"
+                aria-label="Next Banner"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+            </div>
+          </div>
+
+          {/* 3C. Right Column (Snapdeal Quick Perks & Trust Widget) */}
+          <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 uppercase">Trust Pay Guarantee</h4>
+                  <p className="text-[10px] text-slate-500">100% Payment &amp; Item Protection</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-rose-50 text-[#e11d48] flex items-center justify-center flex-shrink-0">
+                    <Truck className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-800">Free Doorstep Shipping</p>
+                    <p className="text-[10px] text-slate-500">On all prepaid &amp; COD orders above ₹499</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-800">7-Day Easy Replacement</p>
+                    <p className="text-[10px] text-slate-500">No questions asked doorstep return</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-800">Instant UPI &amp; COD</p>
+                    <p className="text-[10px] text-slate-500">Zero surcharge on all payment modes</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Prev/Next arrows */}
-            <button
-              onClick={() => setActiveBanner((prev) => (prev - 1 + HERO_BANNERS.length) % HERO_BANNERS.length)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-r-md bg-black/30 hover:bg-black/60 text-white backdrop-blur transition z-20"
-              aria-label="Previous Slide"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setActiveBanner((prev) => (prev + 1) % HERO_BANNERS.length)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-l-md bg-black/30 hover:bg-black/60 text-white backdrop-blur transition z-20"
-              aria-label="Next Slide"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            {/* Daily Spotlight Deal Preview */}
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center gap-3">
+              <img
+                src={dealProducts[0]?.image}
+                alt="Spotlight"
+                className="w-14 h-14 object-cover rounded-md bg-white border border-slate-200"
+              />
+              <div className="flex-1 space-y-0.5">
+                <span className="text-[9px] font-black uppercase text-[#e11d48] bg-rose-50 px-1.5 py-0.5 rounded">Hot Spotlight</span>
+                <p className="text-[11px] font-bold text-slate-800 line-clamp-1">{dealProducts[0]?.name}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-slate-900">₹{dealProducts[0]?.selling_price}</span>
+                  <span className="text-[10px] text-slate-400 line-through">₹{dealProducts[0]?.mrp}</span>
+                </div>
+              </div>
+            </div>
 
           </div>
-        </section>
+
+        </div>
 
         {/* =========================================================================
-            5. DYNAMIC BANK & PROMO OFFER STRIP (Flipkart Ads)
+            4. SNAPDEAL VALUE STRIP (Bank Cards & UPI Offers)
         ========================================================================== */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <div className="bg-white p-3 rounded shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-blue-50 text-[#2874f0] flex items-center justify-center flex-shrink-0">
-              <CreditCard className="w-5 h-5" />
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-rose-50 text-[#e11d48] flex items-center justify-center flex-shrink-0">
+              <CreditCard className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-800">10% Bank Discount</p>
+              <p className="text-xs font-black text-slate-900">10% Bank Discount</p>
               <p className="text-[10px] text-slate-500">HDFC, SBI &amp; ICICI Cards</p>
             </div>
           </div>
 
-          <div className="bg-white p-3 rounded shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <Truck className="w-5 h-5" />
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+              <Zap className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-800">Free Express Delivery</p>
+              <p className="text-xs font-black text-slate-900">Instant UPI Cashback</p>
+              <p className="text-[10px] text-slate-500">PhonePe, Paytm &amp; Google Pay</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <Truck className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900">Free Express Delivery</p>
               <p className="text-[10px] text-slate-500">On all orders above ₹499</p>
             </div>
           </div>
 
-          <div className="bg-white p-3 rounded shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-800">Instant UPI Cashback</p>
-              <p className="text-[10px] text-slate-500">PhonePe &amp; Google Pay QR</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded shadow-sm border border-slate-200 flex items-center gap-3">
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+              <Tag className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-800">7 Days Easy Return</p>
-              <p className="text-[10px] text-slate-500">100% Guaranteed Refund</p>
+              <p className="text-xs font-black text-slate-900">Voucher: SHOPPY150</p>
+              <p className="text-[10px] text-slate-500">Flat ₹150 OFF on first order</p>
             </div>
           </div>
         </section>
 
         {/* =========================================================================
-            6. FLIPKART DEALS OF THE DAY WITH LIVE COUNTDOWN TIMER
+            5. LIGHTNING FLASH DEALS WITH LIVE COUNTDOWN TIMER
         ========================================================================== */}
-        <section className="bg-white rounded shadow-sm border border-slate-200 p-4">
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-lg font-black font-heading text-slate-900">
-                <span className="p-1 rounded bg-amber-400 text-slate-900">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#e11d48] text-white">
                   <Flame className="w-4 h-4 fill-current" />
                 </span>
-                <span>Deals of the Day</span>
+                <span className="text-base md:text-lg font-black font-heading text-slate-900">
+                  Lightning Deals of the Day
+                </span>
               </div>
 
               {/* Live Ticking Countdown */}
-              <div className="flex items-center gap-1.5 bg-blue-50 text-[#2874f0] px-2.5 py-1 rounded text-xs font-bold border border-blue-200">
+              <div className="flex items-center gap-1.5 bg-rose-50 text-[#e11d48] px-2.5 py-1 rounded-md text-xs font-bold border border-rose-200">
                 <Clock className="w-3.5 h-3.5" />
                 <span className="font-mono">
                   {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s Left
@@ -1122,7 +1246,7 @@ export default function Storefront() {
 
             <button 
               onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }}
-              className="text-xs font-extrabold text-white bg-[#2874f0] hover:bg-blue-600 px-4 py-2 rounded-sm shadow-sm transition"
+              className="text-xs font-black text-white bg-[#e11d48] hover:bg-[#be123c] px-4 py-2 rounded-lg shadow-sm transition"
             >
               VIEW ALL DEALS
             </button>
@@ -1136,24 +1260,24 @@ export default function Storefront() {
                 <div
                   key={deal.id}
                   onClick={() => setQuickViewProduct(deal)}
-                  className="group flex flex-col justify-between p-2.5 rounded border border-slate-100 hover:border-blue-200 hover:shadow-md transition cursor-pointer bg-white"
+                  className="group flex flex-col justify-between p-2.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:shadow-md transition cursor-pointer bg-white"
                 >
-                  <div className="relative aspect-square overflow-hidden rounded bg-slate-50 flex items-center justify-center mb-2">
+                  <div className="relative aspect-square overflow-hidden rounded-md bg-slate-50 flex items-center justify-center mb-2">
                     <img
                       src={deal.image}
                       alt={deal.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <span className="absolute top-1 left-1 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded">
+                    <span className="absolute top-1 left-1 bg-[#e11d48] text-white text-[9px] font-black px-1.5 py-0.5 rounded">
                       {discount}% OFF
                     </span>
                   </div>
 
                   <div className="space-y-1">
-                    <h3 className="text-xs font-semibold text-slate-800 line-clamp-1 group-hover:text-[#2874f0]">
+                    <h3 className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-[#e11d48]">
                       {deal.name}
                     </h3>
-                    <p className="text-[11px] font-bold text-emerald-600">
+                    <p className="text-[11px] font-black text-[#e11d48]">
                       Min {discount}% Off
                     </p>
                     <div className="flex items-center gap-1.5">
@@ -1168,50 +1292,50 @@ export default function Storefront() {
         </section>
 
         {/* =========================================================================
-            7. MAIN CATALOG PRODUCT GRID WITH VARIANTS & FLIPKART BADGES
+            6. MAIN CURATED CATALOG WITH MODERN SNAPDEAL-STYLE CARDS
         ========================================================================== */}
-        <section className="bg-white rounded shadow-sm border border-slate-200 p-4">
+        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
           
           {/* Header & Sort Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200">
             <div>
               <h2 className="text-lg md:text-xl font-black font-heading text-slate-900 flex items-center gap-2">
-                <span>{activeCategory === 'ALL' ? 'All Handpicked Products' : FLIPKART_CATEGORIES.find(c => c.id === activeCategory)?.name || 'Products'}</span>
+                <span>{activeCategory === 'ALL' ? 'All Handpicked Products' : SIDEBAR_CATEGORIES.find(c => c.id === activeCategory)?.name || 'Products'}</span>
                 <span className="text-xs font-medium text-slate-500">
-                  ({filteredProducts.length} items found)
+                  ({filteredProducts.length} items available)
                 </span>
               </h2>
               {searchQuery && (
-                <p className="text-xs text-[#2874f0] font-medium">
+                <p className="text-xs text-[#e11d48] font-medium">
                   Showing search matches for &ldquo;{searchQuery}&rdquo;
                 </p>
               )}
             </div>
 
-            {/* Sorting Tabs like Flipkart */}
-            <div className="flex items-center gap-2 text-xs">
-              <span className="font-bold text-slate-500 hidden sm:inline">Sort By:</span>
+            {/* Sorting Tabs */}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-bold text-slate-500 hidden sm:inline">Sort:</span>
               <button 
                 onClick={() => setSortBy('relevance')}
-                className={`px-2.5 py-1 rounded-sm font-semibold transition ${sortBy === 'relevance' ? 'text-[#2874f0] border-b-2 border-[#2874f0] font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${sortBy === 'relevance' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
               >
-                Relevance
+                Popular
               </button>
               <button 
                 onClick={() => setSortBy('price_asc')}
-                className={`px-2.5 py-1 rounded-sm font-semibold transition ${sortBy === 'price_asc' ? 'text-[#2874f0] border-b-2 border-[#2874f0] font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${sortBy === 'price_asc' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
               >
-                Price -- Low to High
+                Price: Low to High
               </button>
               <button 
                 onClick={() => setSortBy('price_desc')}
-                className={`px-2.5 py-1 rounded-sm font-semibold transition ${sortBy === 'price_desc' ? 'text-[#2874f0] border-b-2 border-[#2874f0] font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${sortBy === 'price_desc' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
               >
-                Price -- High to Low
+                Price: High to Low
               </button>
               <button 
                 onClick={() => setSortBy('discount')}
-                className={`px-2.5 py-1 rounded-sm font-semibold transition ${sortBy === 'discount' ? 'text-[#2874f0] border-b-2 border-[#2874f0] font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${sortBy === 'discount' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 Discount
               </button>
@@ -1224,11 +1348,11 @@ export default function Storefront() {
               <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Search className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold text-slate-800">No products found matching your search.</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">Try checking your spelling or use more general category filters.</p>
+              <h3 className="text-base font-bold text-slate-800">No products found matching your filter.</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">Try resetting your search query or department filter.</p>
               <button
-                onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }}
-                className="px-4 py-2 bg-[#2874f0] text-white text-xs font-bold rounded-sm shadow transition"
+                onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); setSearchCategoryFilter('ALL'); }}
+                className="px-4 py-2 bg-[#e11d48] text-white text-xs font-bold rounded-lg shadow transition"
               >
                 Reset All Filters
               </button>
@@ -1251,20 +1375,20 @@ export default function Storefront() {
                 return (
                   <div
                     key={product.id}
-                    className="group bg-white rounded-md border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-200 flex flex-col justify-between overflow-hidden relative"
+                    className="group bg-white rounded-xl border border-slate-200 hover:border-rose-200 hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden relative"
                   >
                     {/* Top Action Icons: Wishlist & Quick View */}
-                    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
+                    <div className="absolute top-2.5 right-2.5 z-10 flex flex-col gap-1.5">
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }}
-                        className="p-1.5 rounded-full bg-white/90 shadow hover:bg-white text-slate-400 hover:text-rose-500 transition"
+                        className="p-2 rounded-full bg-white/95 shadow-md hover:bg-white text-slate-400 hover:text-rose-500 transition"
                         title="Add to Wishlist"
                       >
                         <Heart className={`w-4 h-4 ${isWished ? 'fill-rose-500 text-rose-500' : ''}`} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setQuickViewProduct(product); }}
-                        className="p-1.5 rounded-full bg-white/90 shadow hover:bg-white text-slate-600 hover:text-[#2874f0] transition"
+                        className="p-2 rounded-full bg-white/95 shadow-md hover:bg-white text-slate-600 hover:text-[#e11d48] transition"
                         title="Quick View Details"
                       >
                         <Eye className="w-4 h-4" />
@@ -1283,37 +1407,36 @@ export default function Storefront() {
                         loading="lazy"
                       />
                       {discount > 0 && (
-                        <span className="absolute bottom-2 left-2 bg-[#ffe11b] text-[#172337] text-[10px] font-black px-2 py-0.5 rounded shadow-sm">
+                        <span className="absolute bottom-2 left-2 bg-[#e11d48] text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
                           {discount}% OFF
                         </span>
                       )}
                     </div>
 
                     {/* Content Section */}
-                    <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                    <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between">
                       
                       <div className="space-y-1">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                             {product.brand || product.category}
                           </span>
-                          {/* Flipkart Assured Badge */}
-                          <span className="inline-flex items-center gap-1 text-[9px] font-black text-[#2874f0] italic bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                            <span>f-Assured</span>
-                            <Sparkles className="w-2.5 h-2.5 fill-current text-[#ffe11b]" />
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <BadgeCheck className="w-3 h-3 text-emerald-600" />
+                            <span>Shoppy Verified</span>
                           </span>
                         </div>
 
                         <h3 
                           onClick={() => setQuickViewProduct(product)}
-                          className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 hover:text-[#2874f0] cursor-pointer transition leading-snug"
+                          className="text-xs md:text-sm font-bold text-slate-800 line-clamp-2 hover:text-[#e11d48] cursor-pointer transition leading-snug"
                         >
                           {product.name}
                         </h3>
 
                         {/* Star Rating Badge */}
                         <div className="flex items-center gap-2 pt-0.5">
-                          <span className="inline-flex items-center gap-1 bg-[#388e3c] text-white text-[11px] font-black px-1.5 py-0.5 rounded">
+                          <span className="inline-flex items-center gap-1 bg-amber-400 text-slate-950 text-[11px] font-black px-1.5 py-0.5 rounded">
                             <span>{product.rating}</span>
                             <Star className="w-2.5 h-2.5 fill-current" />
                           </span>
@@ -1337,7 +1460,7 @@ export default function Storefront() {
                                   <button
                                     key={col}
                                     onClick={() => handleSelectColor(product.id, col)}
-                                    className={`w-3.5 h-3.5 rounded-full border transition ${isSelected ? 'ring-2 ring-[#2874f0] ring-offset-1 scale-110' : 'border-slate-300'}`}
+                                    className={`w-3.5 h-3.5 rounded-full border transition ${isSelected ? 'ring-2 ring-[#e11d48] ring-offset-1 scale-110' : 'border-slate-300'}`}
                                     style={{ backgroundColor: vObj?.colorHex || '#2563eb' }}
                                     title={col}
                                   />
@@ -1355,8 +1478,8 @@ export default function Storefront() {
                                 <button
                                   key={sz}
                                   onClick={() => handleSelectSize(product.id, sz)}
-                                  className={`px-1.5 py-0.5 text-[9px] font-bold rounded border transition ${
-                                    isSelected ? 'bg-[#2874f0] text-white border-[#2874f0]' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-400'
+                                  className={`px-2 py-0.5 text-[10px] font-bold rounded border transition ${
+                                    isSelected ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-400'
                                   }`}
                                 >
                                   {sz}
@@ -1376,8 +1499,8 @@ export default function Storefront() {
                           <span className="text-xs text-slate-400 line-through">
                             ₹{mrp.toLocaleString('en-IN')}
                           </span>
-                          <span className="text-xs font-black text-[#388e3c]">
-                            {discount}% off
+                          <span className="text-xs font-black text-[#e11d48]">
+                            {discount}% OFF
                           </span>
                         </div>
 
@@ -1387,21 +1510,21 @@ export default function Storefront() {
                         </p>
                       </div>
 
-                      {/* Action Buttons: Add to Cart & Buy Now */}
+                      {/* Action Buttons: Add to Bag & Buy Now */}
                       <div className="pt-2 grid grid-cols-2 gap-2">
                         <button
                           onClick={() => addToCart(product)}
-                          className="py-2 px-2.5 rounded-sm bg-[#ff9f00] hover:bg-amber-600 text-white text-xs font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-1"
+                          className="py-2.5 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-extrabold shadow-sm transition active:scale-95 flex items-center justify-center gap-1"
                         >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          <span>ADD TO CART</span>
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>Add to Bag</span>
                         </button>
                         <button
                           onClick={() => buyNow(product)}
-                          className="py-2 px-2.5 rounded-sm bg-[#fb641b] hover:bg-orange-600 text-white text-xs font-black shadow-sm transition active:scale-95 flex items-center justify-center gap-1"
+                          className="py-2.5 px-2.5 rounded-lg bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-black shadow-md shadow-rose-500/20 transition active:scale-95 flex items-center justify-center gap-1"
                         >
                           <Zap className="w-3.5 h-3.5 fill-current" />
-                          <span>BUY NOW</span>
+                          <span>Buy Now</span>
                         </button>
                       </div>
 
@@ -1416,19 +1539,19 @@ export default function Storefront() {
       </main>
 
       {/* =========================================================================
-          8. FLIPKART FOOTER (Customer Policy & Payment Badges)
+          7. SHOPPY + SNAPDEAL FOOTER
       ========================================================================== */}
-      <footer className="bg-[#172337] text-white mt-8 border-t border-slate-800 text-xs">
+      <footer className="bg-[#0f172a] text-white mt-10 border-t border-slate-800 text-xs">
         <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
           
           <div className="space-y-3">
             <h4 className="text-slate-400 font-extrabold uppercase tracking-wider text-[11px]">ABOUT SHOPPY STORE</h4>
             <p className="text-slate-300 leading-relaxed text-[11px]">
-              {storeInfo?.name || 'Shoppy ERP Store'} is India&apos;s leading omnichannel retail business platform powered by Enexa IT Solutions Private Limited.
+              {storeInfo?.name || 'Shoppy ERP Store'} is India&apos;s leading verified omnichannel retail marketplace powered by Enexa IT Solutions Private Limited.
             </p>
             <div className="flex items-center gap-2 text-slate-400 text-[11px]">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>GST Verified Seller Portal</span>
+              <span>100% Payment &amp; Authentic Seller Guarantee</span>
             </div>
           </div>
 
@@ -1446,7 +1569,7 @@ export default function Storefront() {
             <h4 className="text-slate-400 font-extrabold uppercase tracking-wider text-[11px]">CONSUMER POLICY</h4>
             <ul className="space-y-1.5 text-slate-300 text-[11px]">
               <li><a href="#" className="hover:text-white transition">Terms Of Use &amp; Service</a></li>
-              <li><a href="#" className="hover:text-white transition">Security &amp; Encryption</a></li>
+              <li><a href="#" className="hover:text-white transition">Security &amp; 128-bit Encryption</a></li>
               <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
               <li><a href="#" className="hover:text-white transition">GST Tax Invoice Policy</a></li>
             </ul>
@@ -1468,7 +1591,7 @@ export default function Storefront() {
         </div>
 
         {/* Bottom Rights & Payment Icons */}
-        <div className="border-t border-slate-800 py-4 px-4 bg-[#121c2d]">
+        <div className="border-t border-slate-800 py-4 px-4 bg-[#0a0f1d]">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 text-[11px] text-slate-400">
             <div>
               &copy; {new Date().getFullYear()} {storeInfo?.name || 'Shoppy ERP'} • Enexa IT Solutions Private Limited. All Rights Reserved.
@@ -1486,12 +1609,12 @@ export default function Storefront() {
       </footer>
 
       {/* =========================================================================
-          9. FLIPKART MOBILE BOTTOM NAV (Home, Categories, Deals, Cart)
+          8. MOBILE BOTTOM NAVIGATION BAR
       ========================================================================== */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 py-2 px-4 flex items-center justify-around shadow-lg">
         <button 
           onClick={() => { setActiveCategory('ALL'); setSearchQuery(''); }}
-          className="flex flex-col items-center gap-1 text-[#2874f0]"
+          className="flex flex-col items-center gap-1 text-[#e11d48]"
         >
           <Sparkles className="w-5 h-5" />
           <span className="text-[10px] font-bold">Home</span>
@@ -1501,48 +1624,48 @@ export default function Storefront() {
             const nextCat = activeCategory === 'CAT-MOBILES' ? 'CAT-FASHION' : 'CAT-MOBILES';
             setActiveCategory(nextCat);
           }}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#2874f0]"
+          className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#e11d48]"
         >
           <Layers className="w-5 h-5" />
-          <span className="text-[10px] font-bold">Categories</span>
+          <span className="text-[10px] font-bold">Departments</span>
         </button>
         <button 
           onClick={() => {
             const dealSec = document.querySelector('section');
             if (dealSec) dealSec.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#2874f0]"
+          className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#e11d48]"
         >
           <Flame className="w-5 h-5 text-amber-500" />
           <span className="text-[10px] font-bold">Deals</span>
         </button>
         <button 
           onClick={() => setCartOpen(true)}
-          className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#2874f0] relative"
+          className="flex flex-col items-center gap-1 text-slate-600 hover:text-[#e11d48] relative"
         >
-          <ShoppingCart className="w-5 h-5" />
+          <ShoppingBag className="w-5 h-5" />
           {cart.length > 0 && (
-            <span className="absolute -top-1 right-2 w-4 h-4 rounded-full bg-[#ff6161] text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 right-2 w-4 h-4 rounded-full bg-[#e11d48] text-white text-[9px] font-bold flex items-center justify-center">
               {cart.reduce((a, b) => a + b.quantity, 0)}
             </span>
           )}
-          <span className="text-[10px] font-bold">Cart</span>
+          <span className="text-[10px] font-bold">Bag</span>
         </button>
       </div>
 
       {/* =========================================================================
-          10. SLIDE-OVER FLIPKART CART DRAWER
+          9. SLIDE-OVER CART DRAWER
       ========================================================================== */}
       {cartOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
             
             {/* Header */}
-            <div className="p-4 bg-[#2874f0] text-white flex items-center justify-between shadow">
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between shadow">
               <div className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5" />
+                <ShoppingBag className="w-5 h-5 text-rose-400" />
                 <h3 className="text-base font-black font-heading">
-                  My Cart ({cart.reduce((a, b) => a + b.quantity, 0)} Items)
+                  My Shopping Bag ({cart.reduce((a, b) => a + b.quantity, 0)} Items)
                 </h3>
               </div>
               <button 
@@ -1557,26 +1680,26 @@ export default function Storefront() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.length === 0 ? (
                 <div className="py-20 text-center space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-blue-50 text-[#2874f0] flex items-center justify-center mx-auto">
+                  <div className="w-16 h-16 rounded-full bg-rose-50 text-[#e11d48] flex items-center justify-center mx-auto">
                     <ShoppingBag className="w-8 h-8" />
                   </div>
-                  <h4 className="text-base font-bold text-slate-800">Your Cart is Empty!</h4>
-                  <p className="text-xs text-slate-500">Explore deals and add trending products to your cart.</p>
+                  <h4 className="text-base font-bold text-slate-800">Your Bag is Empty!</h4>
+                  <p className="text-xs text-slate-500">Explore lightning deals and add items to your cart.</p>
                   <button 
                     onClick={() => setCartOpen(false)}
-                    className="px-5 py-2.5 bg-[#2874f0] text-white text-xs font-bold rounded-sm shadow"
+                    className="px-5 py-2.5 bg-[#e11d48] text-white text-xs font-bold rounded-lg shadow"
                   >
-                    SHOP NOW
+                    START SHOPPING
                   </button>
                 </div>
               ) : (
                 <>
                   {cart.map((item) => (
-                    <div key={item.cartItemId} className="p-3 rounded border border-slate-200 bg-white shadow-sm flex gap-3">
+                    <div key={item.cartItemId} className="p-3 rounded-xl border border-slate-200 bg-white shadow-sm flex gap-3">
                       <img 
                         src={item.image} 
                         alt={item.name} 
-                        className="w-16 h-16 object-cover rounded bg-slate-50 flex-shrink-0"
+                        className="w-16 h-16 object-cover rounded-lg bg-slate-50 flex-shrink-0"
                       />
                       <div className="flex-1 space-y-1">
                         <h4 className="text-xs font-bold text-slate-800 line-clamp-1">{item.name}</h4>
@@ -1599,7 +1722,7 @@ export default function Storefront() {
                         >
                           Remove
                         </button>
-                        <div className="flex items-center border border-slate-300 rounded overflow-hidden">
+                        <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
                           <button 
                             onClick={() => updateCartQty(item.cartItemId, -1)}
                             className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold"
@@ -1619,23 +1742,23 @@ export default function Storefront() {
                   ))}
 
                   {/* Promo Coupon Box */}
-                  <div className="p-3 rounded border border-dashed border-[#2874f0] bg-blue-50/60 space-y-2">
-                    <span className="text-xs font-black text-[#2874f0] flex items-center gap-1.5">
+                  <div className="p-3.5 rounded-xl border border-dashed border-[#e11d48] bg-rose-50/50 space-y-2">
+                    <span className="text-xs font-black text-[#e11d48] flex items-center gap-1.5">
                       <Tag className="w-3.5 h-3.5" />
-                      <span>Apply Discount Coupon</span>
+                      <span>Apply Voucher Coupon</span>
                     </span>
 
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Enter FLIP150 or WELCOME10"
+                        placeholder="Enter SHOPPY150 or WELCOME10"
                         value={couponCodeInput}
                         onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
-                        className="flex-1 px-3 py-1.5 text-xs rounded border border-blue-200 uppercase font-mono font-bold focus:outline-none"
+                        className="flex-1 px-3 py-2 text-xs rounded-lg border border-rose-200 uppercase font-mono font-bold focus:outline-none"
                       />
                       <button
                         onClick={() => handleApplyCoupon()}
-                        className="px-3.5 py-1.5 bg-[#2874f0] hover:bg-blue-600 text-white text-xs font-bold rounded-sm shadow-sm transition"
+                        className="px-4 py-2 bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-black rounded-lg shadow-sm transition"
                       >
                         Apply
                       </button>
@@ -1647,36 +1770,36 @@ export default function Storefront() {
                     {/* Quick Coupon Pills */}
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       <button 
-                        onClick={() => handleApplyCoupon('FLIP150')}
-                        className="text-[10px] px-2 py-0.5 rounded bg-white border border-blue-300 font-bold text-[#2874f0] hover:bg-blue-100"
+                        onClick={() => handleApplyCoupon('SHOPPY150')}
+                        className="text-[10px] px-2 py-1 rounded-md bg-white border border-rose-300 font-bold text-[#e11d48] hover:bg-rose-100"
                       >
-                        FLIP150 (Flat ₹150 Off)
+                        SHOPPY150 (Flat ₹150 Off)
                       </button>
                       <button 
                         onClick={() => handleApplyCoupon('WELCOME10')}
-                        className="text-[10px] px-2 py-0.5 rounded bg-white border border-blue-300 font-bold text-[#2874f0] hover:bg-blue-100"
+                        className="text-[10px] px-2 py-1 rounded-md bg-white border border-rose-300 font-bold text-[#e11d48] hover:bg-rose-100"
                       >
                         WELCOME10 (10% Off)
                       </button>
                     </div>
                   </div>
 
-                  {/* Price Breakdown like Flipkart */}
-                  <div className="p-3.5 rounded border border-slate-200 bg-slate-50 space-y-2 text-xs">
-                    <h5 className="font-extrabold text-slate-700 uppercase tracking-wider text-[11px] border-b border-slate-200 pb-1.5">
+                  {/* Price Breakdown */}
+                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
+                    <h5 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px] border-b border-slate-200 pb-1.5">
                       PRICE DETAILS
                     </h5>
                     <div className="flex justify-between text-slate-600">
-                      <span>Price ({cart.reduce((a, b) => a + b.quantity, 0)} items)</span>
+                      <span>Total MRP ({cart.reduce((a, b) => a + b.quantity, 0)} items)</span>
                       <span>₹{totalMrp.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between text-emerald-600 font-bold">
-                      <span>Discount</span>
+                      <span>Product Discount</span>
                       <span>- ₹{totalProductDiscount.toLocaleString('en-IN')}</span>
                     </div>
                     {couponDiscount > 0 && (
                       <div className="flex justify-between text-emerald-600 font-bold">
-                        <span>Coupon Discount ({appliedCoupon?.code})</span>
+                        <span>Voucher Discount ({appliedCoupon?.code})</span>
                         <span>- ₹{couponDiscount.toLocaleString('en-IN')}</span>
                       </div>
                     )}
@@ -1687,7 +1810,7 @@ export default function Storefront() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm font-black text-slate-900 border-t border-dashed border-slate-300 pt-2">
-                      <span>Total Amount</span>
+                      <span>Total Payable</span>
                       <span>₹{grandTotal.toFixed(0)}</span>
                     </div>
                     <p className="text-[11px] font-bold text-emerald-600 pt-1">
@@ -1702,7 +1825,7 @@ export default function Storefront() {
             {cart.length > 0 && (
               <div className="p-4 border-t border-slate-200 bg-white flex items-center justify-between gap-4 shadow-lg">
                 <div>
-                  <span className="text-[10px] text-slate-500 uppercase block font-bold">Total Payable</span>
+                  <span className="text-[10px] text-slate-500 uppercase block font-bold">Grand Total</span>
                   <span className="text-lg font-black text-slate-900">₹{grandTotal.toFixed(0)}</span>
                 </div>
                 <button
@@ -1711,9 +1834,9 @@ export default function Storefront() {
                     setCartOpen(false);
                     setCheckoutOpen(true);
                   }}
-                  className="flex-1 py-3 px-6 bg-[#fb641b] hover:bg-orange-600 text-white text-sm font-black rounded-sm shadow-md transition active:scale-95 text-center flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-6 bg-[#e11d48] hover:bg-[#be123c] text-white text-sm font-black rounded-xl shadow-lg shadow-rose-500/20 transition active:scale-95 text-center flex items-center justify-center gap-2"
                 >
-                  <span>PLACE ORDER</span>
+                  <span>PROCEED TO CHECKOUT</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -1724,16 +1847,16 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          11. ONE-PAGE CHECKOUT MODAL (COD + UPI QR + Cards)
+          10. ONE-PAGE CHECKOUT MODAL
       ========================================================================== */}
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-white rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             
             {/* Header */}
-            <div className="bg-[#2874f0] text-white p-4 flex items-center justify-between">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-[#ffe11b]" />
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-base font-black font-heading">
                   100% Secure Checkout • {storeInfo?.name || 'Shoppy Store'}
                 </h3>
@@ -1751,7 +1874,7 @@ export default function Storefront() {
               {/* Step 1: Delivery Address */}
               <div className="space-y-3">
                 <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 pb-2">
-                  <MapPin className="w-4 h-4 text-[#2874f0]" />
+                  <MapPin className="w-4 h-4 text-[#e11d48]" />
                   <span>1. Delivery Address</span>
                 </h4>
 
@@ -1763,7 +1886,7 @@ export default function Storefront() {
                       placeholder="e.g. Rahul Sharma"
                       value={customerForm.name}
                       onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded border border-slate-300 focus:outline-none focus:border-[#2874f0]"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-[#e11d48]"
                       required
                     />
                   </div>
@@ -1775,7 +1898,7 @@ export default function Storefront() {
                       placeholder="e.g. 9876543210"
                       value={customerForm.phone}
                       onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded border border-slate-300 focus:outline-none focus:border-[#2874f0]"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-[#e11d48]"
                       required
                     />
                   </div>
@@ -1787,7 +1910,7 @@ export default function Storefront() {
                       placeholder="Flat/House No., Building, Street Name, Landmark"
                       value={customerForm.address}
                       onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded border border-slate-300 focus:outline-none focus:border-[#2874f0]"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-[#e11d48]"
                       required
                     />
                   </div>
@@ -1798,7 +1921,7 @@ export default function Storefront() {
                       type="text"
                       value={customerForm.city}
                       onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded border border-slate-300 focus:outline-none focus:border-[#2874f0]"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-[#e11d48]"
                     />
                   </div>
 
@@ -1808,7 +1931,7 @@ export default function Storefront() {
                       type="text"
                       value={customerForm.pincode}
                       onChange={(e) => setCustomerForm({ ...customerForm, pincode: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded border border-slate-300 focus:outline-none focus:border-[#2874f0]"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-[#e11d48]"
                     />
                   </div>
                 </div>
@@ -1817,7 +1940,7 @@ export default function Storefront() {
               {/* Step 2: Payment Method */}
               <div className="space-y-3">
                 <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 pb-2">
-                  <CreditCard className="w-4 h-4 text-[#2874f0]" />
+                  <CreditCard className="w-4 h-4 text-[#e11d48]" />
                   <span>2. Select Payment Option</span>
                 </h4>
 
@@ -1827,8 +1950,8 @@ export default function Storefront() {
                     return (
                       <label
                         key={pm.code}
-                        className={`flex items-start gap-3 p-3 rounded border cursor-pointer transition ${
-                          isSelected ? 'bg-blue-50/70 border-[#2874f0] ring-1 ring-[#2874f0]' : 'border-slate-200 hover:bg-slate-50'
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${
+                          isSelected ? 'bg-rose-50/70 border-[#e11d48] ring-1 ring-[#e11d48]' : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
                         <input
@@ -1836,15 +1959,15 @@ export default function Storefront() {
                           name="payment_opt"
                           checked={isSelected}
                           onChange={() => setSelectedPayment(pm.code)}
-                          className="mt-1 text-[#2874f0]"
+                          className="mt-1 text-[#e11d48]"
                         />
                         <div className="flex-1">
                           <p className="text-xs font-black text-slate-900">{pm.name}</p>
                           <p className="text-[11px] text-slate-500">{pm.description}</p>
                         </div>
                         {pm.code === 'cod' && (
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
-                            Most Popular
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                            Zero Advance Required
                           </span>
                         )}
                       </label>
@@ -1854,7 +1977,7 @@ export default function Storefront() {
               </div>
 
               {/* Step 3: Order Summary Review */}
-              <div className="p-3.5 bg-slate-50 rounded border border-slate-200 space-y-2 text-xs">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
                 <div className="flex justify-between font-bold text-slate-700">
                   <span>Total Amount Payable:</span>
                   <span className="text-base font-black text-slate-900">₹{grandTotal.toFixed(0)}</span>
@@ -1868,7 +1991,7 @@ export default function Storefront() {
               {/* Place Order CTA */}
               <button
                 onClick={handlePlaceOrder}
-                className="w-full py-3.5 bg-[#fb641b] hover:bg-orange-600 text-white text-sm font-black rounded-sm shadow-lg transition active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-[#e11d48] hover:bg-[#be123c] text-white text-sm font-black rounded-xl shadow-lg shadow-rose-500/20 transition active:scale-95 flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 <span>CONFIRM ORDER (₹{grandTotal.toFixed(0)})</span>
@@ -1881,11 +2004,11 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          12. FLIPKART SPECIAL OFFER WELCOME MODAL (POPUP)
+          11. EXCLUSIVE WELCOME OFFER MODAL (POPUP)
       ========================================================================== */}
       {welcomePopupOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 border-2 border-[#ffe11b]">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200 border-2 border-rose-300">
             <button
               onClick={() => setWelcomePopupOpen(false)}
               className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition z-10"
@@ -1894,45 +2017,45 @@ export default function Storefront() {
             </button>
 
             {/* Banner Header */}
-            <div className="bg-gradient-to-r from-[#2874f0] to-[#1259c3] p-6 text-white text-center space-y-2 relative">
-              <span className="inline-block px-3 py-1 rounded-full bg-[#ffe11b] text-slate-900 text-[10px] font-black uppercase tracking-wider">
-                🎉 EXCLUSIVE WELCOME GIFT
+            <div className="bg-gradient-to-r from-[#0f172a] via-[#1e1b4b] to-[#e11d48] p-6 text-white text-center space-y-2 relative">
+              <span className="inline-block px-3 py-1 rounded-full bg-amber-400 text-slate-900 text-[10px] font-black uppercase tracking-wider">
+                🎉 EXCLUSIVE STORE GIFT
               </span>
               <h3 className="text-2xl font-black font-heading">
                 Flat ₹150 OFF On Your 1st Order!
               </h3>
-              <p className="text-xs text-blue-100">
-                Welcome to {storeInfo?.name || 'Shoppy Store'}! Valid on all Mobiles, Fashion &amp; Groceries.
+              <p className="text-xs text-slate-200">
+                Welcome to {storeInfo?.name || 'Shoppy Store'}! Valid on all Mobiles, Fashion, Audio &amp; Groceries.
               </p>
             </div>
 
             {/* Voucher Body */}
             <div className="p-6 text-center space-y-4">
-              <div className="p-4 rounded-lg bg-amber-50 border-2 border-dashed border-amber-400 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider block">Use Promo Code</span>
+              <div className="p-4 rounded-xl bg-rose-50 border-2 border-dashed border-[#e11d48] space-y-1">
+                <span className="text-[10px] uppercase font-bold text-rose-700 tracking-wider block">Use Promo Code</span>
                 <span className="font-mono text-2xl font-black text-slate-900 tracking-widest block">
-                  FLIP150
+                  SHOPPY150
                 </span>
-                <span className="text-[11px] text-amber-800 font-semibold block">
-                  ⏳ Expires in 15 Minutes
+                <span className="text-[11px] text-rose-800 font-semibold block">
+                  ⏳ Limited Time First-Visit Voucher
                 </span>
               </div>
 
               <button
                 onClick={() => {
-                  handleApplyCoupon('FLIP150');
+                  handleApplyCoupon('SHOPPY150');
                   setWelcomePopupOpen(false);
                 }}
-                className="w-full py-3 bg-[#fb641b] hover:bg-orange-600 text-white text-sm font-black rounded-sm shadow-md transition active:scale-95"
+                className="w-full py-3 bg-[#e11d48] hover:bg-[#be123c] text-white text-sm font-black rounded-xl shadow-md shadow-rose-500/20 transition active:scale-95"
               >
-                APPLY COUPON &amp; START SHOPPING
+                APPLY VOUCHER &amp; SHOP NOW
               </button>
 
               <button
                 onClick={() => setWelcomePopupOpen(false)}
                 className="text-xs text-slate-400 hover:text-slate-600 font-semibold"
               >
-                No thanks, continue browsing
+                Continue browsing store
               </button>
             </div>
           </div>
@@ -1940,16 +2063,16 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          13. QUICK VIEW PRODUCT DETAILS MODAL
+          12. QUICK VIEW PRODUCT MODAL
       ========================================================================== */}
       {quickViewProduct && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl bg-white rounded-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 relative">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 relative">
             <button
               onClick={() => setQuickViewProduct(null)}
               className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition z-10"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-2">
@@ -1958,7 +2081,7 @@ export default function Storefront() {
                 <img
                   src={quickViewProduct.image}
                   alt={quickViewProduct.name}
-                  className="max-h-72 object-contain rounded"
+                  className="max-h-72 object-contain rounded-xl"
                 />
               </div>
 
@@ -1967,8 +2090,8 @@ export default function Storefront() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-400 uppercase">{quickViewProduct.brand}</span>
-                    <span className="text-[9px] bg-blue-50 text-[#2874f0] font-black px-1.5 py-0.5 rounded border border-blue-200">
-                      f-Assured
+                    <span className="text-[9px] bg-emerald-50 text-emerald-700 font-black px-2 py-0.5 rounded-full border border-emerald-200">
+                      Shoppy Certified
                     </span>
                   </div>
 
@@ -1977,12 +2100,12 @@ export default function Storefront() {
                   </h3>
 
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 bg-[#388e3c] text-white text-xs font-black px-1.5 py-0.5 rounded">
+                    <span className="inline-flex items-center gap-1 bg-amber-400 text-slate-900 text-xs font-black px-1.5 py-0.5 rounded">
                       <span>{quickViewProduct.rating}</span>
                       <Star className="w-3 h-3 fill-current" />
                     </span>
                     <span className="text-xs text-slate-500 font-medium">
-                      {quickViewProduct.rating_count.toLocaleString('en-IN')} Ratings &amp; Reviews
+                      {quickViewProduct.rating_count.toLocaleString('en-IN')} Verified Reviews
                     </span>
                   </div>
 
@@ -1994,15 +2117,15 @@ export default function Storefront() {
                     <span className="text-sm text-slate-400 line-through">
                       ₹{quickViewProduct.mrp.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-sm font-black text-[#388e3c]">
-                      {Math.round(((quickViewProduct.mrp - quickViewProduct.selling_price) / quickViewProduct.mrp) * 100)}% off
+                    <span className="text-sm font-black text-[#e11d48]">
+                      {Math.round(((quickViewProduct.mrp - quickViewProduct.selling_price) / quickViewProduct.mrp) * 100)}% OFF
                     </span>
                   </div>
 
                   {/* Highlights/Specs */}
                   {quickViewProduct.specs && (
                     <div className="pt-2 border-t border-slate-100">
-                      <p className="text-xs font-bold text-slate-700 mb-1">Key Highlights:</p>
+                      <p className="text-xs font-bold text-slate-700 mb-1">Key Specifications:</p>
                       <ul className="text-xs text-slate-600 space-y-1 list-disc pl-4">
                         {quickViewProduct.specs.map((s, i) => (
                           <li key={i}>{s}</li>
@@ -2019,18 +2142,18 @@ export default function Storefront() {
                       addToCart(quickViewProduct);
                       setQuickViewProduct(null);
                     }}
-                    className="py-2.5 px-4 rounded-sm bg-[#ff9f00] hover:bg-amber-600 text-white text-xs font-black shadow transition"
+                    className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-black transition"
                   >
-                    ADD TO CART
+                    Add to Bag
                   </button>
                   <button
                     onClick={() => {
                       buyNow(quickViewProduct);
                       setQuickViewProduct(null);
                     }}
-                    className="py-2.5 px-4 rounded-sm bg-[#fb641b] hover:bg-orange-600 text-white text-xs font-black shadow transition"
+                    className="py-2.5 px-4 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-black shadow-md shadow-rose-500/20 transition"
                   >
-                    BUY NOW
+                    Buy Now
                   </button>
                 </div>
 
@@ -2042,15 +2165,15 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          14. PINCODE DELIVERY SELECTOR MODAL
+          13. PINCODE DELIVERY SELECTOR MODAL
       ========================================================================== */}
       {pincodeModalOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white rounded-lg p-5 space-y-4 shadow-2xl">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-[#2874f0]" />
-                <span>Select Delivery Pincode</span>
+                <MapPin className="w-4 h-4 text-[#e11d48]" />
+                <span>Check Delivery Pincode</span>
               </h4>
               <button onClick={() => setPincodeModalOpen(false)}>
                 <X className="w-4 h-4 text-slate-500" />
@@ -2058,7 +2181,7 @@ export default function Storefront() {
             </div>
 
             <p className="text-xs text-slate-500">
-              Enter your 6-digit postal pincode to check product delivery timelines and express courier availability.
+              Enter your 6-digit postal pincode to check instant doorstep delivery timelines and express courier availability.
             </p>
 
             <div className="flex gap-2">
@@ -2067,7 +2190,7 @@ export default function Storefront() {
                 maxLength={6}
                 value={pincodeInput}
                 onChange={(e) => setPincodeInput(e.target.value)}
-                className="flex-1 px-3 py-2 text-xs rounded border border-slate-300 font-mono font-bold focus:outline-none focus:border-[#2874f0]"
+                className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono font-bold focus:outline-none focus:border-[#e11d48]"
                 placeholder="e.g. 800001"
               />
               <button
@@ -2079,7 +2202,7 @@ export default function Storefront() {
                     alert('Please enter a valid 6-digit pincode');
                   }
                 }}
-                className="px-4 py-2 bg-[#2874f0] text-white text-xs font-bold rounded-sm shadow"
+                className="px-4 py-2 bg-[#e11d48] text-white text-xs font-bold rounded-lg shadow"
               >
                 Verify
               </button>
@@ -2089,16 +2212,16 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          15. LIVE SOCIAL PROOF TOAST (Bottom-Left)
+          14. LIVE SOCIAL PROOF TOAST (Bottom-Left)
       ========================================================================== */}
       {socialProof && (
-        <div className="fixed bottom-16 md:bottom-6 left-4 z-40 bg-white/95 backdrop-blur rounded-lg shadow-xl border border-slate-200 p-3 max-w-xs animate-in slide-in-from-bottom duration-300 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+        <div className="fixed bottom-16 md:bottom-6 left-4 z-40 bg-white/95 backdrop-blur rounded-xl shadow-xl border border-slate-200 p-3 max-w-xs animate-in slide-in-from-bottom duration-300 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-rose-50 text-[#e11d48] flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <div className="text-[11px] leading-snug">
             <p className="text-slate-800 font-bold">
-              <span className="text-[#2874f0]">{socialProof.name}</span> from {socialProof.city}
+              <span className="text-[#e11d48]">{socialProof.name}</span> from {socialProof.city}
             </p>
             <p className="text-slate-500 line-clamp-1">Ordered {socialProof.item}</p>
             <span className="text-[10px] text-emerald-600 font-medium">{socialProof.time}</span>
@@ -2107,11 +2230,11 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
-          16. ORDER SUCCESSFUL MODAL
+          15. ORDER CONFIRMED MODAL
       ========================================================================== */}
       {orderSuccess && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-10 h-10" />
             </div>
@@ -2125,7 +2248,7 @@ export default function Storefront() {
               </p>
             </div>
 
-            <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-500">Order Number:</span>
                 <span className="font-mono font-bold text-slate-900">{orderSuccess.order_number}</span>
@@ -2150,7 +2273,7 @@ export default function Storefront() {
 
             <button
               onClick={() => setOrderSuccess(null)}
-              className="w-full py-3 rounded-sm bg-[#2874f0] hover:bg-blue-600 text-white text-xs font-bold shadow-md transition"
+              className="w-full py-3 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-bold shadow-md transition"
             >
               CONTINUE SHOPPING
             </button>

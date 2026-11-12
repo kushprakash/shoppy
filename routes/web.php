@@ -171,11 +171,11 @@ Route::get('/shop/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
     $resp = response()
         ->view('app', [
             'entry' => 'storefront',
-            'title' => $shopName . ' — Official Online Store | Flipkart-Grade Best Deals & Offers',
+            'title' => $shopName . ' — Official Online Store | Exclusive Deals & Fast Delivery',
             'faviconUrl' => $seo['favicon_url'] ?? '/favicon.png',
             'shopCode' => $normalizedCode,
-            'htmlClass' => 'h-full bg-[#f1f2f4] text-slate-900',
-            'bodyClass' => 'min-h-full flex flex-col bg-[#f1f2f4] text-slate-900 selection:bg-[#2874f0] selection:text-white',
+            'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
+            'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',
         ])
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 
@@ -235,11 +235,11 @@ Route::get('/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
         return response()
             ->view('app', [
                 'entry' => 'storefront',
-                'title' => $shop['name'] . ' — Official Online Store | Flipkart-Grade Best Deals & Offers',
+                'title' => $shop['name'] . ' — Official Online Store | Exclusive Deals & Fast Delivery',
                 'faviconUrl' => $seo['favicon_url'] ?? '/favicon.png',
                 'shopCode' => $normalizedCode,
-                'htmlClass' => 'h-full bg-[#f1f2f4] text-slate-900',
-                'bodyClass' => 'min-h-full flex flex-col bg-[#f1f2f4] text-slate-900 selection:bg-[#2874f0] selection:text-white',
+                'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
+                'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',
             ])
             ->cookie(StoreToken::CODE_COOKIE, $normalizedCode, 60 * 24 * 30, '/', null, false, false)
             ->cookie('shoppy_active_store_code', $normalizedCode, 60 * 24 * 30, '/', null, false, false)
