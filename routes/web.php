@@ -150,9 +150,49 @@ Route::get('/my-store', function () use ($loadWebsiteMeta) {
     return $resp;
 });
 
+// Dedicated Direct E-Commerce Storefront Routes:
+// 1. http://domain/shop/{storeCode} (Instant Direct Access)
+// 2. http://domain/{storeCode}/shop
+// 3. http://domain/{storeCode}?ecom=1
+Route::get('/shop/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
+    $normalizedCode = strtoupper(trim($storeCode));
+    $dbShop = null;
+    try {
+        $dbShop = DB::connection('mysql')->table('shops')->where('shop_code', $normalizedCode)->first();
+    } catch (\Throwable $e) {}
+
+    $shopName = $dbShop ? $dbShop->name : $normalizedCode;
+    $seo = $loadWebsiteMeta();
+
+    if (request()->hasSession()) {
+        session(['active_store_code' => $normalizedCode]);
+    }
+
+    $resp = response()
+        ->view('app', [
+            'entry' => 'storefront',
+            'title' => $shopName . ' — Official Online Store | Flipkart-Grade Best Deals & Offers',
+            'faviconUrl' => $seo['favicon_url'] ?? '/favicon.png',
+            'shopCode' => $normalizedCode,
+            'htmlClass' => 'h-full bg-[#f1f2f4] text-slate-900',
+            'bodyClass' => 'min-h-full flex flex-col bg-[#f1f2f4] text-slate-900 selection:bg-[#2874f0] selection:text-white',
+        ])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    $resp->cookie(StoreToken::CODE_COOKIE, $normalizedCode, 60 * 24 * 30, '/', null, false, false)
+         ->cookie('shoppy_active_store_code', $normalizedCode, 60 * 24 * 30, '/', null, false, false)
+         ->cookie('shoppy_ecom_' . $normalizedCode, '1', 60 * 24 * 30, '/', null, false, false);
+
+    return $resp;
+})->where('storeCode', '^[0-9A-Za-z_\-]+$');
+
+Route::get('/{storeCode}/shop', function ($storeCode) {
+    return redirect('/shop/' . strtoupper(trim($storeCode)));
+})->where('storeCode', '^(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$');
+
 // Store Code dynamic URL routing (http://domain/{storeCode})
 // Rule: Jab o ecommerce lega tabhi uske url pe ecommerce aayega, nahi to login page aayega and billing software open hoga
-Route::get('/{storeCode}', function ($storeCode) {
+Route::get('/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
     $normalizedCode = strtoupper(trim($storeCode));
 
     $dbShop = null;
@@ -170,6 +210,12 @@ Route::get('/{storeCode}', function ($storeCode) {
 
     $settings = json_decode($dbShop->settings, true) ?: [];
     $hasEcommerce = !empty($settings['has_ecommerce']);
+    
+    // Allow instant override via URL parameters ?ecom=1, ?shop=1, or ?store=1
+    if (request()->has('ecom') || request()->has('shop') || request()->has('storefront') || request()->has('store')) {
+        $hasEcommerce = true;
+    }
+
     $shop = [
         'name' => $dbShop->name,
         'plan' => $settings['plan_name'] ?? 'Shoppy ERP Package',
@@ -182,16 +228,22 @@ Route::get('/{storeCode}', function ($storeCode) {
         $hasEcommerce = ($cookieOverride === '1');
     }
 
+    $seo = $loadWebsiteMeta();
+
     // If subscribed to Ecommerce -> Open Online Ecommerce Storefront
     if ($hasEcommerce) {
         return response()
             ->view('app', [
                 'entry' => 'storefront',
-                'title' => $shop['name'] . ' — Online Storefront',
+                'title' => $shop['name'] . ' — Official Online Store | Flipkart-Grade Best Deals & Offers',
+                'faviconUrl' => $seo['favicon_url'] ?? '/favicon.png',
                 'shopCode' => $normalizedCode,
+                'htmlClass' => 'h-full bg-[#f1f2f4] text-slate-900',
+                'bodyClass' => 'min-h-full flex flex-col bg-[#f1f2f4] text-slate-900 selection:bg-[#2874f0] selection:text-white',
             ])
             ->cookie(StoreToken::CODE_COOKIE, $normalizedCode, 60 * 24 * 30, '/', null, false, false)
-            ->cookie('shoppy_active_store_code', $normalizedCode, 60 * 24 * 30, '/', null, false, false);
+            ->cookie('shoppy_active_store_code', $normalizedCode, 60 * 24 * 30, '/', null, false, false)
+            ->cookie('shoppy_ecom_' . $normalizedCode, '1', 60 * 24 * 30, '/', null, false, false);
     }
 
     // If NOT subscribed to Ecommerce -> Open Billing Software Login Page

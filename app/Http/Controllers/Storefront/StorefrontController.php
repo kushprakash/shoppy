@@ -16,26 +16,42 @@ class StorefrontController extends Controller
     public function getStoreInfo(Request $request): JsonResponse
     {
         $shop = $request->attributes->get('tenant');
+        $code = $request->query('code') ?: ($shop ? $shop->shop_code : null);
+        if (!$shop && $code) {
+            $shop = DB::connection('mysql')->table('shops')->where('shop_code', strtoupper($code))->first();
+        }
 
-        $categories = DB::connection('tenant')->table('categories')
-            ->where('is_active', true)
-            ->get();
+        $categories = [];
+        $businessCategories = [];
 
-        $businessCategories = DB::connection('tenant')->table('business_categories')
-            ->where('is_active', true)
-            ->get();
+        try {
+            if (DB::connection('tenant')->getSchemaBuilder()->hasTable('categories')) {
+                $categories = DB::connection('tenant')->table('categories')
+                    ->where('is_active', true)
+                    ->get();
+            }
+            if (DB::connection('tenant')->getSchemaBuilder()->hasTable('business_categories')) {
+                $businessCategories = DB::connection('tenant')->table('business_categories')
+                    ->where('is_active', true)
+                    ->get();
+            }
+        } catch (\Throwable $e) {}
+
+        $rawSettings = is_string($shop?->settings ?? null)
+            ? (json_decode($shop->settings, true) ?: [])
+            : (array) ($shop?->settings ?? []);
 
         return response()->json([
             'success' => true,
             'store' => [
-                'name' => $shop->name,
-                'slug' => $shop->slug,
-                'shop_code' => $shop->shop_code,
-                'phone' => $shop->owner_phone,
-                'email' => $shop->owner_email,
-                'settings' => $shop->settings ?? [
-                    'theme_color' => '#2563eb',
-                    'banner_text' => 'Welcome to ' . $shop->name,
+                'name' => $shop ? $shop->name : 'Shoppy Store',
+                'slug' => $shop ? ($shop->slug ?? Str::slug($shop->name)) : 'store',
+                'shop_code' => $shop ? $shop->shop_code : $code,
+                'phone' => $shop ? $shop->owner_phone : '',
+                'email' => $shop ? $shop->owner_email : '',
+                'settings' => $rawSettings ?: [
+                    'theme_color' => '#2874f0',
+                    'banner_text' => 'Welcome to ' . ($shop ? $shop->name : 'Shoppy Store'),
                 ],
             ],
             'categories' => $categories,
@@ -48,23 +64,28 @@ class StorefrontController extends Controller
      */
     public function getCatalog(Request $request): JsonResponse
     {
-        $query = DB::connection('tenant')->table('products')
-            ->where('is_active', true);
+        $products = [];
+        try {
+            if (DB::connection('tenant')->getSchemaBuilder()->hasTable('products')) {
+                $query = DB::connection('tenant')->table('products')
+                    ->where('is_active', true);
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->query('category_id'));
-        }
+                if ($request->has('category_id')) {
+                    $query->where('category_id', $request->query('category_id'));
+                }
 
-        if ($request->has('search')) {
-            $search = $request->query('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%");
-            });
-        }
+                if ($request->has('search')) {
+                    $search = $request->query('search');
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                          ->orWhere('sku', 'like', "%{$search}%")
+                          ->orWhere('barcode', 'like', "%{$search}%");
+                    });
+                }
 
-        $products = $query->latest()->paginate(16);
+                $products = $query->latest()->paginate(24);
+            }
+        } catch (\Throwable $e) {}
 
         return response()->json([
             'success' => true,

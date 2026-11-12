@@ -76,8 +76,7 @@ class IdentifyTenant
                 $shopCode = $refParams['code'] ?? $refParams['shop_code'] ?? null;
             }
             if (!$shopCode && $refPath) {
-                $refSegment = trim($refPath, '/');
-                if (preg_match('/^(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$/i', $refSegment, $matches)) {
+                if (preg_match('/(?:shop\/|^)(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)/i', $refPath, $matches)) {
                     $shopCode = $matches[1];
                 }
             }
