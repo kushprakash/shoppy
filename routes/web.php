@@ -162,7 +162,9 @@ Route::get('/shop/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
     } catch (\Throwable $e) {}
 
     $shopName = $dbShop ? $dbShop->name : $normalizedCode;
+    $shopSettings = json_decode($dbShop?->settings ?? '{}', true) ?: [];
     $seo = $loadWebsiteMeta();
+    $faviconUrl = !empty($shopSettings['favicon']) ? $shopSettings['favicon'] : ($seo['favicon_url'] ?? '/favicon.png');
 
     if (request()->hasSession()) {
         session(['active_store_code' => $normalizedCode]);
@@ -172,7 +174,7 @@ Route::get('/shop/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
         ->view('app', [
             'entry' => 'storefront',
             'title' => $shopName . ' — Official Online Store | Exclusive Deals & Fast Delivery',
-            'faviconUrl' => $seo['favicon_url'] ?? '/favicon.png',
+            'faviconUrl' => $faviconUrl,
             'shopCode' => $normalizedCode,
             'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
             'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',
@@ -230,13 +232,15 @@ Route::get('/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
 
     $seo = $loadWebsiteMeta();
 
+    $storeFavicon = !empty($settings['favicon']) ? $settings['favicon'] : ($seo['favicon_url'] ?? '/favicon.png');
+
     // If subscribed to Ecommerce -> Open Online Ecommerce Storefront
     if ($hasEcommerce) {
         return response()
             ->view('app', [
                 'entry' => 'storefront',
                 'title' => $shop['name'] . ' — Official Online Store | Exclusive Deals & Fast Delivery',
-                'faviconUrl' => $seo['favicon_url'] ?? '/favicon.png',
+                'faviconUrl' => $storeFavicon,
                 'shopCode' => $normalizedCode,
                 'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
                 'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',

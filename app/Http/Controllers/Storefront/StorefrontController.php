@@ -41,6 +41,11 @@ class StorefrontController extends Controller
             ? (json_decode($shop->settings, true) ?: [])
             : (array) ($shop?->settings ?? []);
 
+        $logo = $rawSettings['logo'] ?? null;
+        $footerLogo = $rawSettings['footer_logo'] ?? null;
+        $favicon = $rawSettings['favicon'] ?? null;
+        $ecomTheme = $rawSettings['ecom_theme'] ?? ($rawSettings['theme_template'] ?? 'snapdeal');
+
         return response()->json([
             'success' => true,
             'store' => [
@@ -49,8 +54,12 @@ class StorefrontController extends Controller
                 'shop_code' => $shop ? $shop->shop_code : $code,
                 'phone' => $shop ? $shop->owner_phone : '',
                 'email' => $shop ? $shop->owner_email : '',
+                'logo' => $logo,
+                'footer_logo' => $footerLogo,
+                'favicon' => $favicon,
+                'ecom_theme' => $ecomTheme,
                 'settings' => $rawSettings ?: [
-                    'theme_color' => '#2874f0',
+                    'theme_color' => '#e11d48',
                     'banner_text' => 'Welcome to ' . ($shop ? $shop->name : 'Shoppy Store'),
                 ],
             ],

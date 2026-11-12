@@ -240,6 +240,7 @@ class SettingsController extends Controller
             'meta_description' => $settings['meta_description'] ?? "Explore exclusive collection of apparel, designer wear, and accessories at {$shop->name}. Instant billing, fast express courier delivery and secure UPI/COD payment options.",
             'theme_color' => $settings['theme_color'] ?? '#00a2c7',
             'secondary_color' => $settings['secondary_color'] ?? '#06b6d4',
+            'ecom_theme' => $settings['ecom_theme'] ?? ($settings['theme_template'] ?? 'snapdeal'),
             'sms_settings' => [
                 'is_enabled' => !empty($settings['sms_settings']['is_enabled']),
                 'provider' => $settings['sms_settings']['provider'] ?? 'fast2sms',
@@ -313,6 +314,7 @@ class SettingsController extends Controller
             'meta_description' => 'required|string|max:1000',
             'theme_color' => 'required|string|max:32',
             'secondary_color' => 'nullable|string|max:32',
+            'ecom_theme' => 'nullable|string|max:32',
             'sms_settings' => 'nullable|array',
             'smtp_settings' => 'nullable|array',
         ]);
@@ -358,6 +360,7 @@ class SettingsController extends Controller
             'meta_description' => $validated['meta_description'],
             'theme_color' => $validated['theme_color'],
             'secondary_color' => $validated['secondary_color'] ?? '#06b6d4',
+            'ecom_theme' => $validated['ecom_theme'] ?? ($currentSettings['ecom_theme'] ?? 'snapdeal'),
             'sms_settings' => $smsSettings,
             'smtp_settings' => $smtpSettings,
             'updated_at' => now()->toIso8601String(),

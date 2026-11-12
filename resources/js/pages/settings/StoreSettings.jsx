@@ -47,6 +47,7 @@ import {
   Clock,
   Receipt,
   Zap,
+  ShoppingBag,
   AlertTriangle
 } from 'lucide-react';
 
@@ -241,6 +242,7 @@ export default function StoreSettings() {
     favicon: isCleanUrl(storeSettings?.favicon) ? storeSettings?.favicon : '/favicon.png',
     theme_color: storeSettings?.theme_color || '#00a2c7',
     secondary_color: storeSettings?.secondary_color || '#06b6d4',
+    ecom_theme: storeSettings?.ecom_theme || 'snapdeal',
 
     // 2. GST & Business Details
     owner_name: storeSettings?.owner_name || 'Ramesh Sundaram',
@@ -352,6 +354,7 @@ export default function StoreSettings() {
             meta_description: d.meta_description || prev.meta_description,
             theme_color: d.theme_color || prev.theme_color,
             secondary_color: d.secondary_color || prev.secondary_color,
+            ecom_theme: d.ecom_theme || prev.ecom_theme || 'snapdeal',
             sms_settings: {
               ...prev.sms_settings,
               ...(d.sms_settings || {})
@@ -465,6 +468,7 @@ export default function StoreSettings() {
           meta_title: formData.meta_title,
           logo: formData.logo,
           favicon: formData.favicon,
+          ecom_theme: formData.ecom_theme || 'snapdeal',
           a4_items_per_page: formData.hardware.a4_items_per_page,
           a4_paging_mode: formData.hardware.a4_paging_mode,
           default_invoice_format: formData.hardware.default_invoice_format
@@ -502,6 +506,7 @@ export default function StoreSettings() {
         meta_title: formData.meta_title,
         logo: formData.logo,
         favicon: formData.favicon,
+        ecom_theme: formData.ecom_theme || 'snapdeal',
         a4_items_per_page: formData.hardware.a4_items_per_page,
         a4_paging_mode: formData.hardware.a4_paging_mode,
         default_invoice_format: formData.hardware.default_invoice_format
@@ -607,6 +612,7 @@ export default function StoreSettings() {
 
   const tabs = [
     { id: 'branding', label: 'Store Branding & Logos', icon: Palette, count: '6 fields' },
+    { id: 'ecom', label: 'E-Commerce Themes', icon: ShoppingBag, count: '5 Marketplace Themes' },
     { id: 'gst', label: 'GST & Legal Entity', icon: ShieldCheck, count: 'All GST fields' },
     { id: 'footer', label: 'Footer & Contact', icon: MapPin, count: '8 fields*' },
     { id: 'seo', label: 'Home Meta & SEO', icon: Globe, count: '3 fields*' },
@@ -1268,6 +1274,207 @@ export default function StoreSettings() {
                 <Save className="w-4 h-4" />
                 <span>Apply Branding Changes</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* TAB 1B: E-COMMERCE STOREFRONT THEMES (5 MARKETPLACE TEMPLATES)     */}
+      {/* =================================================================== */}
+      {activeTab === 'ecom' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-rose-50 dark:bg-rose-950/60 text-[#e11d48] border border-rose-200 dark:border-rose-800 mb-2">
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>5 Top Indian Marketplace Templates</span>
+                </div>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                  Choose E-Commerce Storefront Theme
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Select the e-commerce layout and visual design template for your public online storefront. All templates fully support live catalog, cart, coupons, and orders.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <a
+                  href={`/shop/${formData.shop_code || getActiveShopCode()}?theme=${formData.ecom_theme || 'snapdeal'}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-cyan-600" />
+                  <span>Preview Active Theme</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  disabled={isSaving}
+                  className="px-5 py-2 rounded-xl bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-bold shadow-md shadow-rose-600/20 flex items-center gap-2 cursor-pointer transition"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSaving ? 'Saving...' : 'Save & Activate Theme'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 5 Themes Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-6">
+              {[
+                {
+                  id: 'snapdeal',
+                  name: 'Shoppy Snapdeal Hybrid',
+                  badge: 'DEFAULT • HIGH CONVERTING',
+                  badgeColor: 'bg-rose-100 text-[#e11d48] border-rose-200',
+                  accentColor: '#e11d48',
+                  headerBg: 'bg-[#0f172a]',
+                  cardBorder: formData.ecom_theme === 'snapdeal' ? 'border-[#e11d48] ring-2 ring-rose-500/20' : 'border-slate-200 dark:border-slate-800',
+                  swatches: ['#0f172a', '#e11d48', '#f59e0b'],
+                  features: ['3-Column Top Departments', '⚡ Lightning Deals Ticker', 'TrustPay Guarantee Strip', 'Crimson Coral Buy Buttons'],
+                  desc: 'Snapdeal signature top department navigation, live deal countdown timer, TrustPay guarantee badges, and high-conversion crimson-coral buy actions.'
+                },
+                {
+                  id: 'flipkart',
+                  name: 'Flipkart Style',
+                  badge: 'POPULAR INDIAN MARKETPLACE',
+                  badgeColor: 'bg-blue-100 text-[#2874f0] border-blue-200',
+                  accentColor: '#2874f0',
+                  headerBg: 'bg-[#2874f0]',
+                  cardBorder: formData.ecom_theme === 'flipkart' ? 'border-[#2874f0] ring-2 ring-blue-500/20' : 'border-slate-200 dark:border-slate-800',
+                  swatches: ['#2874f0', '#ffe500', '#fb641b'],
+                  features: ['Flipkart Signature Royal Blue', 'Explore Plus & Assured Badges', 'Dual Yellow & Orange Buttons', 'Classic Gray Slate Backdrop'],
+                  desc: 'Flipkart signature royal blue header, bold yellow accents, "Shoppy Assured" quality tags, and high-volume Indian e-commerce layout.'
+                },
+                {
+                  id: 'jiomart',
+                  name: 'JioMart Fresh & Essentials',
+                  badge: 'GROCERY & OMNICHANNEL',
+                  badgeColor: 'bg-emerald-100 text-[#0c831f] border-emerald-200',
+                  accentColor: '#0078ad',
+                  headerBg: 'bg-[#0078ad]',
+                  cardBorder: formData.ecom_theme === 'jiomart' ? 'border-[#0078ad] ring-2 ring-cyan-500/20' : 'border-slate-200 dark:border-slate-800',
+                  swatches: ['#0078ad', '#0c831f', '#e4252a'],
+                  features: ['Jio Blue & Leaf Green Palette', 'Department Pill Capsules', 'Smart Bazaar Fresh Deals', 'Clean Rounded Action Buttons'],
+                  desc: 'JioMart fresh blue & emerald green palette, department pill capsules, fresh grocery & essentials marketplace aesthetic with clean rounded buttons.'
+                },
+                {
+                  id: 'amazon',
+                  name: 'Amazon India Style',
+                  badge: 'GLOBAL RETAIL CLASSIC',
+                  badgeColor: 'bg-amber-100 text-[#f08804] border-amber-200',
+                  accentColor: '#f08804',
+                  headerBg: 'bg-[#131921]',
+                  cardBorder: formData.ecom_theme === 'amazon' ? 'border-[#f08804] ring-2 ring-amber-500/20' : 'border-slate-200 dark:border-slate-800',
+                  swatches: ['#131921', '#febd69', '#f08804'],
+                  features: ['Iconic Dark Nav (#131921)', 'Prime Gold Rating Stars', 'Yellow & Amber Buy Buttons', 'Amazon Deal of the Day Banner'],
+                  desc: 'Amazon iconic dark nav (#131921), Prime gold rating stars, amber "Add to Cart" & "Buy Now" buttons, and classic e-commerce card layout.'
+                },
+                {
+                  id: 'tatacliq',
+                  name: 'Tata CLiQ Luxury & Fashion',
+                  badge: 'PREMIUM LUXURY CURATION',
+                  badgeColor: 'bg-pink-100 text-[#da1c5c] border-pink-200',
+                  accentColor: '#da1c5c',
+                  headerBg: 'bg-[#111111]',
+                  cardBorder: formData.ecom_theme === 'tatacliq' ? 'border-[#da1c5c] ring-2 ring-pink-500/20' : 'border-slate-200 dark:border-slate-800',
+                  swatches: ['#111111', '#da1c5c', '#ffffff'],
+                  features: ['Obsidian Black & Luxury Magenta', 'Minimalist High-Fashion Typography', 'Curated Designer Edit Badges', 'Refined Luxury Product Cards'],
+                  desc: 'Tata CLiQ minimalist black & magenta luxury fashion layout with refined typography, sleek luxury product cards, and curated aesthetic.'
+                }
+              ].map((theme) => {
+                const isSelected = (formData.ecom_theme || 'snapdeal') === theme.id;
+                return (
+                  <div
+                    key={theme.id}
+                    onClick={() => handleChange('ecom_theme', theme.id)}
+                    className={`rounded-2xl border p-5 flex flex-col justify-between cursor-pointer transition-all hover:shadow-lg relative bg-white dark:bg-slate-900 ${theme.cardBorder}`}
+                  >
+                    {isSelected && (
+                      <div className="absolute -top-3 right-4 px-3 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                        <span>ACTIVE TEMPLATE</span>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {/* Mini Header Preview Banner */}
+                      <div className={`w-full h-14 rounded-xl ${theme.headerBg} p-2.5 flex items-center justify-between text-white shadow-inner`}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center text-[10px] font-black">
+                            S
+                          </div>
+                          <span className="text-xs font-black tracking-tight">{theme.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {theme.swatches.map((color, cIdx) => (
+                            <span
+                              key={cIdx}
+                              className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs"
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                            {theme.name}
+                          </h3>
+                          <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${theme.badgeColor}`}>
+                            {theme.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                          {theme.desc}
+                        </p>
+                      </div>
+
+                      {/* Feature Bullets */}
+                      <ul className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        {theme.features.map((feat, fIdx) => (
+                          <li key={fIdx} className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-5 mt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold text-slate-400">
+                        Code: <span className="font-mono text-slate-700 dark:text-slate-300">{theme.id}</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleChange('ecom_theme', theme.id);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        {isSelected ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Selected</span>
+                          </>
+                        ) : (
+                          <span>Select Template</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
