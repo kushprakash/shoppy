@@ -631,6 +631,8 @@ export default function Storefront() {
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const [addedToCartNotification, setAddedToCartNotification] = useState(null);
+  const addedToCartTimerRef = useRef(null);
   const [welcomePopupOpen, setWelcomePopupOpen] = useState(false);
   const [pincodeModalOpen, setPincodeModalOpen] = useState(false);
   const [deliveryPincode, setDeliveryPincode] = useState('800001');
@@ -871,14 +873,73 @@ export default function Storefront() {
       ];
     });
 
-    setCartOpen(true);
+    // DO NOT force-open the full cart drawer. Instead, show middle center notification toast!
+    if (addedToCartTimerRef.current) {
+      clearTimeout(addedToCartTimerRef.current);
+    }
+
+    setAddedToCartNotification({
+      name: product.name,
+      brand: product.brand,
+      image: product.image,
+      price: variant.sellingPrice,
+      mrp: variant.mrp,
+      size: variant.size,
+      color: variant.color,
+    });
+
+    addedToCartTimerRef.current = setTimeout(() => {
+      setAddedToCartNotification(null);
+    }, 2800);
   };
 
   // Buy Now
   const handleBuyNow = (product, e) => {
     if (e) e.stopPropagation();
-    handleAddToCart(product);
+    const variant = selectedVariants[product.id] || (product.variants && product.variants[0]) || {
+      id: 'default',
+      size: 'Standard',
+      color: 'Default',
+      sellingPrice: product.selling_price,
+      mrp: product.mrp,
+      sku: product.id
+    };
+
+    setCart((prevCart) => {
+      const existingIdx = prevCart.findIndex(
+        (ci) => ci.id === product.id && ci.variantId === variant.id
+      );
+
+      if (existingIdx > -1) {
+        const next = [...prevCart];
+        next[existingIdx] = {
+          ...next[existingIdx],
+          quantity: next[existingIdx].quantity + 1,
+        };
+        return next;
+      }
+
+      return [
+        ...prevCart,
+        {
+          cartItemId: `${product.id}_${variant.id}_${Date.now()}`,
+          id: product.id,
+          variantId: variant.id,
+          name: product.name,
+          brand: product.brand,
+          size: variant.size,
+          color: variant.color,
+          colorHex: variant.colorHex,
+          selling_price: variant.sellingPrice,
+          mrp: variant.mrp,
+          image: product.image,
+          quantity: 1,
+        }
+      ];
+    });
+
     setCartOpen(false);
+    setAddedToCartNotification(null);
     setCheckoutOpen(true);
   };
 
@@ -2507,6 +2568,75 @@ export default function Storefront() {
             </p>
             <p className="text-slate-500 line-clamp-1">Ordered {socialProof.item}</p>
             <span className="text-[10px] text-emerald-600 font-medium">{socialProof.time}</span>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          14B. MIDDLE CENTER NOTIFICATION TOAST (Item Added to Bag)
+      ========================================================================== */}
+      {addedToCartNotification && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center p-4">
+          <div className="pointer-events-auto bg-slate-900/95 text-white backdrop-blur-md px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 max-w-sm w-full mx-auto animate-in zoom-in-95 fade-in duration-200 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-wider">
+                <CheckCircle2 className="w-4 h-4 fill-emerald-500/20 text-emerald-400" />
+                <span>Added to Bag Successfully!</span>
+              </div>
+              <button
+                onClick={() => setAddedToCartNotification(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-md transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <img
+                src={addedToCartNotification.image}
+                alt={addedToCartNotification.name}
+                className="w-12 h-12 rounded-xl object-cover bg-white/10 border border-white/10 shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase block">{addedToCartNotification.brand}</span>
+                <h4 className="text-xs font-bold text-white truncate">{addedToCartNotification.name}</h4>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-black text-white">
+                    ₹{addedToCartNotification.price?.toLocaleString('en-IN')}
+                  </span>
+                  {addedToCartNotification.mrp && addedToCartNotification.mrp > addedToCartNotification.price && (
+                    <span className="text-[10px] text-slate-400 line-through">
+                      ₹{addedToCartNotification.mrp?.toLocaleString('en-IN')}
+                    </span>
+                  )}
+                  {addedToCartNotification.size && addedToCartNotification.size !== 'Standard' && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-semibold">
+                      {addedToCartNotification.size}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => setAddedToCartNotification(null)}
+                className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition text-center"
+              >
+                Continue Shopping
+              </button>
+              <button
+                onClick={() => {
+                  setAddedToCartNotification(null);
+                  setCartOpen(true);
+                }}
+                className="py-2 px-3 rounded-xl text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md"
+                style={{ backgroundColor: theme.accentColor }}
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>View Bag ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
