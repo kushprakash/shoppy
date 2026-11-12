@@ -127,7 +127,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-Dy31p1GA.css",
+    "file": "assets/app-BHB_L2wy.css",
     "name": "app",
     "names": [
       "app.css"
@@ -136,7 +136,7 @@
     "isEntry": true
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-B_aNo3cm.js",
+    "file": "assets/app-Bg8YKAsk.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -161,7 +161,7 @@
     ],
     "css": [
       "assets/app-CTK1v1F-.css",
-      "assets/app-Dy31p1GA.css"
+      "assets/app-BHB_L2wy.css"
     ]
   },
   "resources/js/entries/banking-panel.jsx": {

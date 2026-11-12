@@ -26,6 +26,7 @@ import {
   X,
   FileText,
   Printer,
+  Download,
   Barcode,
   Truck,
   TrendingUp,
@@ -1464,6 +1465,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
               Pricing
             </button>
             <button
+              onClick={() => {
+                if (currentPage !== 'home') {
+                  navigateTo('home');
+                  setTimeout(() => {
+                    document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 150);
+                } else {
+                  document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="enexa-nav-link cursor-pointer"
+            >
+              Apps
+            </button>
+            <button
               onClick={() => navigateTo('blog')}
               className={`enexa-nav-link cursor-pointer ${currentPage === 'blog' ? 'active font-semibold' : ''}`}
             >
@@ -1537,6 +1553,7 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   { id: 'about', label: 'About Us', icon: Building2 },
                   { id: 'services', label: 'Services & Billing Modules', icon: Boxes },
                   { id: 'pricing', label: 'Pricing & Packages', icon: CreditCard },
+                  { id: 'downloads', label: 'Download Apps (Win & APK)', icon: Download },
                   { id: 'blog', label: 'Blog & Insights', icon: FileText },
                   { id: 'contact', label: 'Contact & Book Demo', icon: Phone },
                   { id: 'store', label: 'Store Merchant Login', icon: Lock }
@@ -1546,7 +1563,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => navigateTo(item.id)}
+                      onClick={() => {
+                        if (item.id === 'downloads') {
+                          setMobileMenuOpen(false);
+                          if (currentPage !== 'home') {
+                            navigateTo('home');
+                            setTimeout(() => {
+                              document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 150);
+                          } else {
+                            document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                          return;
+                        }
+                        navigateTo(item.id);
+                      }}
                       className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition text-left cursor-pointer ${isActive
                         ? 'bg-sky-50 text-[#0284C7] font-semibold border border-sky-100'
                         : 'text-slate-700 hover:bg-slate-50 hover:text-[#0EA5E9]'
@@ -1827,6 +1858,200 @@ export default function LandingPage({ defaultPage = 'home' }) {
                       <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">99.9% Uptime</span>
                       <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">Online Store</span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ============================================================= */}
+            {/* 2.5 DOWNLOAD SHOPPY ERP APPS (Windows Setup & Mobile APK)      */}
+            {/* ============================================================= */}
+            <section id="downloads" className="py-20 bg-gradient-to-b from-slate-50 via-sky-50/30 to-white relative overflow-hidden">
+              {/* Background Glow Accents */}
+              <div className="absolute top-0 right-1/4 w-96 h-96 bg-cyan-100/40 rounded-full blur-3xl pointer-events-none -z-10" />
+              <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-emerald-100/40 rounded-full blur-3xl pointer-events-none -z-10" />
+
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Section Header */}
+                <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
+                  <span className="enexa-pill-badge">
+                    <Download className="w-3.5 h-3.5 text-[#00a2c7]" />
+                    <span>Cross-Platform Retail Suite</span>
+                  </span>
+                  <h2 className="enexa-section-title">
+                    Download Shoppy ERP for Windows &amp; Android
+                  </h2>
+                  <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                    Operate high-speed billing on your counter PC with thermal printing drivers, or manage sales, inventory, and customer WhatsApp bills from your mobile device.
+                  </p>
+                </div>
+
+                {/* 2 Big Action Cards (Windows Setup & Mobile APK) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                  {/* Windows Setup Card */}
+                  <div className="bg-white rounded-3xl border border-sky-100/80 p-7 sm:p-9 shadow-xl shadow-sky-900/5 hover:shadow-2xl hover:border-sky-300 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden">
+                    <div className="absolute -top-12 -right-12 w-36 h-36 bg-sky-50 rounded-full blur-2xl group-hover:bg-sky-100 transition-all pointer-events-none" />
+
+                    <div>
+                      {/* Top Header Strip */}
+                      <div className="flex items-start justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] text-white flex items-center justify-center shadow-lg shadow-sky-500/25">
+                            <Monitor className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-bold text-[#0284c7] uppercase tracking-wider">
+                              Desktop Edition
+                            </span>
+                            <h3 className="text-xl font-extrabold text-slate-900 font-heading">
+                              Windows PC Setup
+                            </h3>
+                          </div>
+                        </div>
+
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-[#0284c7] border border-sky-100 shrink-0">
+                          64-bit Official
+                        </span>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Built for counter billing operators. Includes native ESC/POS thermal printer engine, barcode gun wedge, weighing scale RS-232 support, and instant keyboard hotkeys.
+                      </p>
+
+                      {/* Feature Bullet Points */}
+                      <div className="space-y-2.5 mb-7 bg-slate-50/70 rounded-2xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>50mm &amp; 80mm ESC/POS Thermal Receipt Printing</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Barcode Scanner Gun &amp; Cash Drawer Kick Support</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>F1-F12 Rapid Counter Keyboard Shortcuts</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Dedicated Isolated Cloud MySQL Synchronization</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Metadata & Download CTA */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-4 px-1">
+                        <span>Version: <strong className="text-slate-800 font-mono">v2.4.0</strong></span>
+                        <span>Size: <strong className="text-slate-800 font-mono">116.5 MB</strong></span>
+                        <span>OS: <strong className="text-slate-800">Win 10/11</strong></span>
+                      </div>
+
+                      <a
+                        href="/Shoppy_ERP_Setup.exe"
+                        download="Shoppy_ERP_Setup.exe"
+                        className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0284c7] to-[#00a2c7] hover:from-[#0369a1] hover:to-[#008ba3] text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 hover:shadow-sky-500/35 hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-2.5 cursor-pointer"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download Windows Setup (.exe)</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Android APK Card */}
+                  <div className="bg-white rounded-3xl border border-emerald-100/80 p-7 sm:p-9 shadow-xl shadow-emerald-900/5 hover:shadow-2xl hover:border-emerald-300 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden">
+                    <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-all pointer-events-none" />
+
+                    <div>
+                      {/* Top Header Strip */}
+                      <div className="flex items-start justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#059669] to-[#34d399] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                            <Smartphone className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+                              Mobile Edition
+                            </span>
+                            <h3 className="text-xl font-extrabold text-slate-900 font-heading">
+                              Android Mobile APK
+                            </h3>
+                          </div>
+                        </div>
+
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0">
+                          Universal APK
+                        </span>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Carry your store in your pocket. Track live daily sales, view profit/loss reports, send instant WhatsApp PDF bills, check warehouse inventory, and bill customers on the go.
+                      </p>
+
+                      {/* Feature Bullet Points */}
+                      <div className="space-y-2.5 mb-7 bg-slate-50/70 rounded-2xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Real-Time Sales, Revenue &amp; Shift Analytics</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>1-Click WhatsApp PDF Invoicing &amp; Payment Links</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Mobile Camera Barcode &amp; Product Stock Lookup</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Ultra-Lightweight (~210 KB) &amp; Battery Friendly</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Metadata & Download CTA */}
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-4 px-1">
+                        <span>Version: <strong className="text-slate-800 font-mono">v2.4.0</strong></span>
+                        <span>Size: <strong className="text-slate-800 font-mono">210 KB</strong></span>
+                        <span>OS: <strong className="text-slate-800">Android 8.0+</strong></span>
+                      </div>
+
+                      <a
+                        href="/Shoppy_ERP.apk"
+                        download="Shoppy_ERP.apk"
+                        className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#059669] to-[#10b981] hover:from-[#047857] hover:to-[#059669] text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/35 hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-2.5 cursor-pointer"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download Android APK (.apk)</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trust & Guarantee Banner */}
+                <div className="mt-12 max-w-4xl mx-auto bg-slate-900 text-slate-300 rounded-2xl p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4 border border-slate-800 shadow-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-[#38BDF8] flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-white text-xs sm:text-sm font-bold">
+                        100% Virus-Free &amp; Digitally Verified Binaries
+                      </p>
+                      <p className="text-slate-400 text-[11px] sm:text-xs">
+                        Direct official builds packaged and signed by Enexa IT Solutions Private Limited.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
+                    <span className="flex items-center gap-1.5 text-emerald-400">
+                      <Check className="w-3.5 h-3.5" /> Auto Cloud Sync
+                    </span>
+                    <span className="flex items-center gap-1.5 text-sky-400">
+                      <Check className="w-3.5 h-3.5" /> Single Login Account
+                    </span>
                   </div>
                 </div>
               </div>
@@ -4426,6 +4651,21 @@ export default function LandingPage({ defaultPage = 'home' }) {
                 <li><button onClick={() => navigateTo('about')} className="enexa-footer-link cursor-pointer">About Us</button></li>
                 <li><button onClick={() => navigateTo('services')} className="enexa-footer-link cursor-pointer">Services</button></li>
                 <li><button onClick={() => navigateTo('pricing')} className="enexa-footer-link cursor-pointer">Pricing</button></li>
+                <li>
+                  <button
+                    onClick={() => {
+                      if (currentPage !== 'home') {
+                        navigateTo('home');
+                        setTimeout(() => document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth' }), 150);
+                      } else {
+                        document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="enexa-footer-link cursor-pointer text-[#38bdf8] font-medium"
+                  >
+                    Download Apps (Win &amp; APK)
+                  </button>
+                </li>
                 <li><button onClick={() => navigateTo('blog')} className="enexa-footer-link cursor-pointer">Blog &amp; Insights</button></li>
                 <li><button onClick={() => navigateTo('contact')} className="enexa-footer-link cursor-pointer">Contact Us</button></li>
               </ul>
