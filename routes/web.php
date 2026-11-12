@@ -113,13 +113,12 @@ Route::get('/master/{any?}', function () use ($loadWebsiteMeta) {
 })->where('any', '.*');
 
 // Merchant Store Login Portal (http://domain/store)
+// White-label Merchant Store Login Portal (http://domain/my-store)
 Route::get('/store', function () use ($loadWebsiteMeta) {
     $code = strtoupper(trim((string) (request()->query('code') ?: request()->query('shop_code') ?: '')));
     if ($code !== '' && request()->hasSession()) {
         session(['active_store_code' => $code]);
     }
-    $theme = request()->cookie('shoppy_erp_theme', 'light');
-    $isDark = ($theme === 'dark');
     $seo = $loadWebsiteMeta();
     $resp = response()
         ->view('app', [
@@ -127,8 +126,8 @@ Route::get('/store', function () use ($loadWebsiteMeta) {
             'title' => 'Merchant Store Login — Shoppy ERP',
             'faviconUrl' => $seo['favicon_url'],
             'shopCode' => $code,
-            'htmlClass' => $isDark ? 'h-full bg-slate-950 text-slate-100 dark' : 'h-full bg-[#f4f7fa] text-slate-800',
-            'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white' : 'min-h-full flex flex-col bg-[#f4f7fa] text-slate-800 selection:bg-cyan-500 selection:text-white',
+            'htmlClass' => 'h-full bg-[#fff9f2] text-slate-800',
+            'bodyClass' => 'min-h-full flex flex-col bg-[#fff9f2] text-slate-800 selection:bg-cyan-500 selection:text-white',
         ])
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 
