@@ -45,7 +45,7 @@ return [
             'port' => (int) env('MAIL_PORT', 465),
             'encryption' => env('MAIL_ENCRYPTION', 'ssl'),
             'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
-            'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
+            'password' => env('MAIL_PASSWORD', 'lgjuvwsxcrsdnrqf'),
             'timeout' => 25,
             'local_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
             'stream' => [
@@ -63,7 +63,7 @@ return [
             'port' => (int) env('MAIL_PORT', 587),
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
-            'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
+            'password' => env('MAIL_PASSWORD', 'lgjuvwsxcrsdnrqf'),
             'timeout' => 25,
             'local_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
             'stream' => [
@@ -81,7 +81,7 @@ return [
             'port' => 465,
             'encryption' => 'ssl',
             'username' => env('MAIL_USERNAME', 'contact@enexa.in'),
-            'password' => env('MAIL_PASSWORD', 'tmdvzyexqjermrfp'),
+            'password' => env('MAIL_PASSWORD', 'lgjuvwsxcrsdnrqf'),
             'timeout' => 25,
             'local_domain' => env('MAIL_EHLO_DOMAIN', 'enexa.in'),
             'stream' => [

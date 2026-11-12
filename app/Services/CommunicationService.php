@@ -309,7 +309,7 @@ class CommunicationService
     {
         $host = config('services.enexa_mail.host', 'smtp.gmail.com');
         $username = config('services.enexa_mail.username', 'contact@enexa.in');
-        $passwordVal = config('services.enexa_mail.password', 'tmdvzyexqjermrfp');
+        $passwordVal = config('services.enexa_mail.password', 'lgjuvwsxcrsdnrqf');
         $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
         $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
         $ehloDomain = config('services.enexa_mail.ehlo_domain', 'enexa.in');
