@@ -66,6 +66,23 @@ class IdentifyTenant
             ?? $request->cookie(StoreToken::LEGACY_CODE_COOKIE)
             ?? ($request->hasSession() ? session('active_store_code') : null);
 
+        // Check Referer header if available (e.g. AJAX request from /SP20261110124405 or ?code=SP...)
+        if (!$shopCode && $request->headers->has('referer')) {
+            $referer = (string) $request->header('referer');
+            $refPath = parse_url($referer, PHP_URL_PATH) ?? '';
+            $refQuery = parse_url($referer, PHP_URL_QUERY) ?? '';
+            if ($refQuery) {
+                parse_str($refQuery, $refParams);
+                $shopCode = $refParams['code'] ?? $refParams['shop_code'] ?? null;
+            }
+            if (!$shopCode && $refPath) {
+                $refSegment = trim($refPath, '/');
+                if (preg_match('/^(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$/i', $refSegment, $matches)) {
+                    $shopCode = $matches[1];
+                }
+            }
+        }
+
         if ($shopCode) {
             $shop = Shop::where('shop_code', strtoupper(trim((string) $shopCode)))->first();
             if ($shop) {

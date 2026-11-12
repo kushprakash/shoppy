@@ -106,9 +106,10 @@ export default function Storefront() {
   const fetchStoreData = async () => {
     try {
       setLoading(true);
+      const params = shopCode ? { code: shopCode } : {};
       const [infoRes, catalogRes] = await Promise.all([
-        axios.get('/api/storefront/info'),
-        axios.get('/api/storefront/catalog'),
+        axios.get('/api/storefront/info', { params }),
+        axios.get('/api/storefront/catalog', { params }),
       ]);
 
       if (infoRes.data.success) {
@@ -134,7 +135,8 @@ export default function Storefront() {
 
   const fetchPaymentMethods = async () => {
     try {
-      const res = await axios.get('/api/storefront/payment-methods');
+      const params = shopCode ? { code: shopCode } : {};
+      const res = await axios.get('/api/storefront/payment-methods', { params });
       if (res.data.success) {
         setPaymentMethods(res.data.payment_methods || []);
         if (res.data.payment_methods.length > 0) {
@@ -389,6 +391,7 @@ export default function Storefront() {
     } catch (e) {}
 
     try {
+      const params = shopCode ? { code: shopCode } : {};
       const res = await axios.post('/api/storefront/order', {
         customer_name: customerForm.name,
         customer_phone: customerForm.phone,
@@ -402,7 +405,7 @@ export default function Storefront() {
         coupon_discount: couponDiscount,
         shipping_fee: rawShippingFee,
         items: cart.map((i) => ({ product_id: i.productId || 101, quantity: i.quantity, variant_sku: i.variantSku })),
-      });
+      }, { params });
 
       if (appliedCoupon) {
         try {

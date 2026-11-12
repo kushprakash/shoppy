@@ -115,10 +115,13 @@ Route::get('/master/{any?}', function () use ($loadWebsiteMeta) {
 // Merchant Store Login Portal (http://domain/store)
 Route::get('/store', function () use ($loadWebsiteMeta) {
     $code = strtoupper(trim((string) (request()->query('code') ?: request()->query('shop_code') ?: '')));
+    if ($code !== '' && request()->hasSession()) {
+        session(['active_store_code' => $code]);
+    }
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
     $seo = $loadWebsiteMeta();
-    return response()
+    $resp = response()
         ->view('app', [
             'entry' => 'app',
             'title' => 'Merchant Store Login — Shoppy ERP',
@@ -128,6 +131,13 @@ Route::get('/store', function () use ($loadWebsiteMeta) {
             'bodyClass' => $isDark ? 'min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white' : 'min-h-full flex flex-col bg-[#f4f7fa] text-slate-800 selection:bg-cyan-500 selection:text-white',
         ])
         ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    if ($code !== '') {
+        $resp->cookie(StoreToken::CODE_COOKIE, $code, 60 * 24 * 30, '/', null, false, false)
+             ->cookie('shoppy_active_store_code', $code, 60 * 24 * 30, '/', null, false, false);
+    }
+
+    return $resp;
 });
 
 Route::get('/store-login', function () {
@@ -137,7 +147,7 @@ Route::get('/store-login', function () {
 // Store Code dynamic URL routing (http://domain/{storeCode})
 // Rule: Jab o ecommerce lega tabhi uske url pe ecommerce aayega, nahi to login page aayega and billing software open hoga
 Route::get('/{storeCode}', function ($storeCode) {
-    $normalizedCode = strtoupper($storeCode);
+    $normalizedCode = strtoupper(trim($storeCode));
 
     $dbShop = null;
     try {
@@ -146,6 +156,10 @@ Route::get('/{storeCode}', function ($storeCode) {
 
     if (!$dbShop) {
         return redirect('/store?code=' . $normalizedCode);
+    }
+
+    if (request()->hasSession()) {
+        session(['active_store_code' => $normalizedCode]);
     }
 
     $settings = json_decode($dbShop->settings, true) ?: [];
@@ -164,15 +178,20 @@ Route::get('/{storeCode}', function ($storeCode) {
 
     // If subscribed to Ecommerce -> Open Online Ecommerce Storefront
     if ($hasEcommerce) {
-        return view('app', [
-            'entry' => 'storefront',
-            'title' => $shop['name'] . ' — Online Storefront',
-            'shopCode' => $normalizedCode,
-        ]);
+        return response()
+            ->view('app', [
+                'entry' => 'storefront',
+                'title' => $shop['name'] . ' — Online Storefront',
+                'shopCode' => $normalizedCode,
+            ])
+            ->cookie(StoreToken::CODE_COOKIE, $normalizedCode, 60 * 24 * 30, '/', null, false, false)
+            ->cookie('shoppy_active_store_code', $normalizedCode, 60 * 24 * 30, '/', null, false, false);
     }
 
     // If NOT subscribed to Ecommerce -> Open Billing Software Login Page
-    return redirect('/store?code=' . $normalizedCode);
+    return redirect('/store?code=' . $normalizedCode)
+        ->cookie(StoreToken::CODE_COOKIE, $normalizedCode, 60 * 24 * 30, '/', null, false, false)
+        ->cookie('shoppy_active_store_code', $normalizedCode, 60 * 24 * 30, '/', null, false, false);
 })->where('storeCode', '^(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$');
 
 // PayU Web Callback handler for external browser redirects

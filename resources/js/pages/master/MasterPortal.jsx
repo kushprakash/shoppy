@@ -2420,15 +2420,27 @@ export default function MasterPortal() {
                               </td>
 
                               <td className="py-3.5 text-right">
-                                <a
-                                  href={`/${shop.shop_code}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="px-2.5 py-1 rounded bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] hover:bg-cyan-100 text-[11px] font-bold inline-flex items-center gap-1 transition"
-                                >
-                                  <span>Launch</span>
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <a
+                                    href={`/${shop.shop_code}?code=${shop.shop_code}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2.5 py-1 rounded bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] hover:bg-cyan-100 text-[11px] font-bold inline-flex items-center gap-1 transition"
+                                    title="Open Storefront"
+                                  >
+                                    <span>Launch</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                  <a
+                                    href={`/store?code=${shop.shop_code}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-[10px] font-semibold inline-flex items-center gap-1 transition"
+                                    title="Store Login & Billing Terminal"
+                                  >
+                                    <span>Admin</span>
+                                  </a>
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -2969,15 +2981,27 @@ export default function MasterPortal() {
                           </td>
 
                           <td className="px-4 py-3.5 text-right">
-                            <a
-                              href={`/${shop.shop_code}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#00a2c7] hover:text-white text-slate-700 dark:text-slate-300 font-bold text-xs inline-flex items-center gap-1 transition"
-                            >
-                              <span>/{shop.shop_code}</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <a
+                                href={`/${shop.shop_code}?code=${shop.shop_code}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-[#00a2c7] hover:text-white text-slate-700 dark:text-slate-300 font-bold text-xs inline-flex items-center gap-1 transition"
+                                title="Open Storefront"
+                              >
+                                <span>/{shop.shop_code}</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                              <a
+                                href={`/store?code=${shop.shop_code}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2 py-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-950/60 text-[#00a2c7] hover:bg-cyan-100 text-[11px] font-bold inline-flex items-center gap-1 transition"
+                                title="Store Login & Billing Terminal"
+                              >
+                                <span>Admin</span>
+                              </a>
+                            </div>
                           </td>
                         </tr>
                       ))}

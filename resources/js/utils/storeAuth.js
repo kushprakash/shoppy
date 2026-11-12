@@ -70,34 +70,88 @@ export function clearPerStoreLocalCaches() {
 
 export function getActiveShopCode() {
   try {
+    // 1. Explicit URL Query Parameter: ?code=SP... or ?shop_code=SP...
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search);
-      const urlCode = (sp.get('code') || sp.get('shop_code') || '').trim().toUpperCase();
-      if (urlCode) return urlCode;
+      const urlCode = (sp.get('code') || sp.get('shop_code') || sp.get('store_code') || '').trim().toUpperCase();
+      if (urlCode) {
+        if (typeof localStorage !== 'undefined') {
+          const current = (localStorage.getItem(STORE_CODE_KEY) || '').trim().toUpperCase();
+          if (current !== urlCode) {
+            clearPerStoreLocalCaches();
+            localStorage.removeItem(STORE_DATA_KEY);
+            localStorage.setItem(STORE_CODE_KEY, urlCode);
+            if (typeof document !== 'undefined') {
+              document.cookie = `${STORE_CODE_KEY}=${encodeURIComponent(urlCode)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+              document.cookie = `shoppy_active_store=${encodeURIComponent(urlCode)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+            }
+          }
+        }
+        return urlCode;
+      }
     }
 
+    // 2. Explicit URL Pathname: /SP20261110124405 or /STORE123456 or /SHP-ABC123
+    if (typeof window !== 'undefined') {
+      const rawPath = (window.location.pathname || '').replace(/^\/+|\/+$/g, '');
+      const firstSegment = rawPath.split('/')[0] || '';
+      const pathMatch = firstSegment.match(/^(SP[0-9A-Z]+|STORE[0-9A-Z]+|SHP-[0-9A-Z]+)$/i);
+      if (pathMatch && pathMatch[1]) {
+        const pathCode = pathMatch[1].toUpperCase();
+        if (typeof localStorage !== 'undefined') {
+          const current = (localStorage.getItem(STORE_CODE_KEY) || '').trim().toUpperCase();
+          if (current !== pathCode) {
+            clearPerStoreLocalCaches();
+            localStorage.removeItem(STORE_DATA_KEY);
+            localStorage.setItem(STORE_CODE_KEY, pathCode);
+            if (typeof document !== 'undefined') {
+              document.cookie = `${STORE_CODE_KEY}=${encodeURIComponent(pathCode)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+              document.cookie = `shoppy_active_store=${encodeURIComponent(pathCode)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+            }
+          }
+        }
+        return pathCode;
+      }
+    }
+
+    // 3. Server-provided data-shop-code attribute on #root (from Laravel blade matching route)
+    if (typeof document !== 'undefined') {
+      const dsCode = (document.getElementById('root')?.dataset?.shopCode || '').trim().toUpperCase();
+      if (dsCode && dsCode !== 'MASTER-ROOT') {
+        if (typeof localStorage !== 'undefined') {
+          const current = (localStorage.getItem(STORE_CODE_KEY) || '').trim().toUpperCase();
+          if (current !== dsCode) {
+            clearPerStoreLocalCaches();
+            localStorage.removeItem(STORE_DATA_KEY);
+            localStorage.setItem(STORE_CODE_KEY, dsCode);
+            document.cookie = `${STORE_CODE_KEY}=${encodeURIComponent(dsCode)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+            document.cookie = `shoppy_active_store=${encodeURIComponent(dsCode)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+          }
+        }
+        return dsCode;
+      }
+    }
+
+    // 4. Authenticated store token payload (for logged-in merchant admin)
     const token = getStoredStoreToken();
     const tokenPayload = decodeTokenPayload(token);
     if (tokenPayload?.code) {
       return String(tokenPayload.code).trim().toUpperCase();
     }
 
+    // 5. Previously active store in localStorage
     if (typeof localStorage !== 'undefined') {
       const lsCode = (localStorage.getItem(STORE_CODE_KEY) || '').trim().toUpperCase();
       if (lsCode) return lsCode;
     }
 
+    // 6. Cookie fallback
     const cookieCode = (
       getCookieValue(STORE_CODE_KEY) ||
       getCookieValue('shoppy_active_store') ||
       ''
     ).trim().toUpperCase();
     if (cookieCode) return cookieCode;
-
-    if (typeof document !== 'undefined') {
-      const dsCode = (document.getElementById('root')?.dataset?.shopCode || '').trim().toUpperCase();
-      if (dsCode && dsCode !== 'MASTER-ROOT') return dsCode;
-    }
   } catch (e) {}
   return '';
 }
