@@ -281,7 +281,7 @@ class CommunicationService
                 Log::info("sendOtpEmail: Skipping dummy domain email '{$cleanEmail}'");
                 return [
                     'status' => 0,
-                    'message' => 'Skipping placeholder dummy email.'
+                    'message' => 'Skipping placeholder dummy email (' . $cleanEmail . ').'
                 ];
             }
 
@@ -307,12 +307,29 @@ class CommunicationService
      */
     public static function sendMailWithFallback(string $toEmail, \Illuminate\Mail\Mailable $mailable, string $context = 'Mail'): array
     {
-        $host = config('services.enexa_mail.host', 'smtp.gmail.com');
-        $username = config('services.enexa_mail.username', 'contact@enexa.in');
-        $passwordVal = config('services.enexa_mail.password', 'lgjuvwsxcrsdnrqf');
-        $fromAddress = config('services.enexa_mail.from_address', 'contact@enexa.in');
-        $fromName = config('services.enexa_mail.from_name', 'Shoppy ERP - Enexa IT Solutions Private Limited');
-        $ehloDomain = config('services.enexa_mail.ehlo_domain', 'enexa.in');
+        // Resilient parameter resolution: never allow localhost / 127.0.0.1 or empty/null credentials
+        $rawHost = config('services.enexa_mail.host') ?: env('MAIL_HOST', 'smtp.gmail.com');
+        $host = (empty($rawHost) || in_array(strtolower(trim((string)$rawHost)), ['127.0.0.1', 'localhost', 'mailhog', 'mailpit', 'null', '']))
+            ? 'smtp.gmail.com'
+            : trim((string)$rawHost);
+
+        $rawUser = config('services.enexa_mail.username') ?: env('MAIL_USERNAME', 'contact@enexa.in');
+        $username = (empty($rawUser) || in_array(strtolower(trim((string)$rawUser)), ['null', '']))
+            ? 'contact@enexa.in'
+            : trim((string)$rawUser);
+
+        $rawPass = config('services.enexa_mail.password') ?: env('MAIL_PASSWORD', 'lgjuvwsxcrsdnrqf');
+        $passwordVal = (empty($rawPass) || in_array(strtolower(trim((string)$rawPass)), ['null', '']))
+            ? 'lgjuvwsxcrsdnrqf'
+            : trim((string)$rawPass);
+
+        $rawFrom = config('services.enexa_mail.from_address') ?: env('MAIL_FROM_ADDRESS', 'contact@enexa.in');
+        $fromAddress = (empty($rawFrom) || str_contains((string)$rawFrom, 'example.com') || in_array(strtolower(trim((string)$rawFrom)), ['null', '']))
+            ? 'contact@enexa.in'
+            : trim((string)$rawFrom);
+
+        $fromName = config('services.enexa_mail.from_name') ?: env('MAIL_FROM_NAME', 'Shoppy ERP - Enexa IT Solutions Private Limited');
+        $ehloDomain = config('services.enexa_mail.ehlo_domain') ?: env('MAIL_EHLO_DOMAIN', 'enexa.in');
 
         Config::set('mail.from', [
             'address' => $fromAddress,
@@ -326,7 +343,7 @@ class CommunicationService
             'encryption' => $encryption,
             'username' => $username,
             'password' => $passwordVal,
-            'timeout' => 25,
+            'timeout' => 20,
             'local_domain' => $ehloDomain,
             'stream' => [
                 'ssl' => [
@@ -337,6 +354,9 @@ class CommunicationService
             ],
         ];
 
+        // 1. SSL on Port 465 (Primary Google SMTP)
+        // 2. TLS on Port 587 (Secondary Google SMTP)
+        // 3. Fallback SMTP
         $mailers = [
             'enexa_smtp_ssl' => $buildMailerConfig(465, 'ssl'),
             'enexa_smtp' => $buildMailerConfig(587, 'tls'),
@@ -372,7 +392,7 @@ class CommunicationService
 
         return [
             'status' => 0,
-            'message' => 'Mail delivery failed on all transports.',
+            'message' => 'Mail delivery failed on all transports: ' . implode(' | ', $transportErrors),
             'transport_errors' => $transportErrors
         ];
     }

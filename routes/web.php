@@ -207,6 +207,32 @@ Route::match(['get', 'post'], '/payu/callback/{result}', [\App\Http\Controllers\
 Route::get('/credential-mail-send', [\App\Http\Controllers\Central\PaytmController::class, 'sendCredentialMailByShopCode']);
 Route::get('/invoice-mail-send', [\App\Http\Controllers\Central\PaytmController::class, 'sendInvoiceMailByShopCode']);
 
+// Direct Test OTP Email Trigger for Diagnostics
+Route::get('/test-otp-mail', function () {
+    $email = request()->query('email', 'contact@enexa.in');
+    $shopCode = request()->query('shop', 'SP20261110124405');
+    $otp = (string) random_int(100000, 999999);
+
+    $res = \App\Services\CommunicationService::sendOtpEmail(
+        ownerName: 'Store Merchant',
+        ownerEmail: $email,
+        otp: $otp,
+        storeCode: $shopCode,
+        storeName: 'Shoppy Verification Test'
+    );
+
+    return response()->json([
+        'success' => (($res['status'] ?? 0) === 1),
+        'timestamp' => now()->toIso8601String(),
+        'target_email' => $email,
+        'otp' => $otp,
+        'communication_result' => $res,
+        'resolved_host' => config('services.enexa_mail.host'),
+        'resolved_port' => config('services.enexa_mail.port'),
+        'resolved_user' => config('services.enexa_mail.username'),
+    ]);
+});
+
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)
 // Handles direct URLs: /shop-admin, /shop-admin/products, /shop-admin/orders, /shop-admin/inventory, etc.
 Route::get('/{any}', function () use ($resolveWebShopCode, $loadWebsiteMeta) {

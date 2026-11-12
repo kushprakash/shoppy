@@ -47,6 +47,78 @@ if (isset($_POST['apply_db_perms']) || isset($_GET['apply_db_perms'])) {
     }
 }
 
+// Auto-sync Production Mail Configuration into .env
+$mail_sync_feedback = null;
+if (file_exists($env_file)) {
+    $cur_env = @file_get_contents($env_file) ?: '';
+    $mail_replacements = [
+        'MAIL_MAILER' => 'smtp',
+        'MAIL_HOST' => 'smtp.gmail.com',
+        'MAIL_PORT' => '465',
+        'MAIL_USERNAME' => 'contact@enexa.in',
+        'MAIL_PASSWORD' => 'lgjuvwsxcrsdnrqf',
+        'MAIL_ENCRYPTION' => 'ssl',
+        'MAIL_FROM_ADDRESS' => 'contact@enexa.in',
+        'MAIL_FROM_NAME' => '"Shoppy ERP - Enexa IT Solutions Private Limited"',
+    ];
+    $needs_write = false;
+    foreach ($mail_replacements as $mk => $mv) {
+        $re = "/^{$mk}=.*$/m";
+        if (preg_match($re, $cur_env)) {
+            $cur_env = preg_replace($re, "{$mk}={$mv}", $cur_env);
+            $needs_write = true;
+        } else {
+            $cur_env .= "\n{$mk}={$mv}";
+            $needs_write = true;
+        }
+    }
+    if ($needs_write) {
+        @file_put_contents($env_file, $cur_env);
+        $mail_sync_feedback = "Synced Gmail SMTP settings (contact@enexa.in, Port 465 SSL) into .env";
+    }
+}
+
+// Test OTP Email Dispatcher
+$test_mail_result = null;
+$target_test_mail = trim((string) ($_POST['test_mail_recipient'] ?? $_GET['test_mail_recipient'] ?? ''));
+if (!empty($target_test_mail) && (isset($_POST['send_test_email']) || isset($_GET['send_test_email']))) {
+    try {
+        $autoload_file = $project_path . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+        $app_file = $project_path . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
+        if (file_exists($autoload_file) && file_exists($app_file)) {
+            require_once $autoload_file;
+            $app_inst = require_once $app_file;
+            $app_inst->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+            $otp_code = (string) random_int(100000, 999999);
+            $res = \App\Services\CommunicationService::sendOtpEmail(
+                ownerName: 'Store Merchant',
+                ownerEmail: $target_test_mail,
+                otp: $otp_code,
+                storeCode: 'DEPLOYTEST',
+                storeName: 'Shoppy Production Deployment Test'
+            );
+
+            $test_mail_result = [
+                'success' => (($res['status'] ?? 0) === 1),
+                'message' => (($res['status'] ?? 0) === 1)
+                    ? "SUCCESS: Test OTP ({$otp_code}) dispatched to {$target_test_mail} via {$res['mailer']} (Port {$res['port']})!"
+                    : "FAILED: " . ($res['message'] ?? 'Unknown error') . " (" . json_encode($res['transport_errors'] ?? []) . ")",
+            ];
+        } else {
+            $test_mail_result = [
+                'success' => false,
+                'message' => 'Autoload or bootstrap file not found.',
+            ];
+        }
+    } catch (\Throwable $e) {
+        $test_mail_result = [
+            'success' => false,
+            'message' => "Exception: " . $e->getMessage(),
+        ];
+    }
+}
+
 // Common server PATH additions for cPanel / Linux / NVM Node
 if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
     putenv("PATH=" . getenv("PATH") . ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/" . get_current_user() . "/.nvm/versions/node/v20.0.0/bin:/home/" . get_current_user() . "/.nvm/versions/node/v18.0.0/bin");
@@ -357,6 +429,35 @@ if (!$has_error) {
                 FLUSH PRIVILEGES;
             </div>
         </details>
+    </div>
+
+    <!-- Live SMTP Email Diagnostic Tool -->
+    <div style="margin-top: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px;">
+        <h3 style="font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <span>📧 Live Gmail SMTP Email Test & Verification Tool</span>
+        </h3>
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 16px;">
+            Test dispatch of real 6-digit OTP email via <code>smtp.gmail.com:465 (SSL)</code> with sender <code>contact@enexa.in</code>.
+        </p>
+
+        <?php if (!empty($test_mail_result)): ?>
+            <div style="padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; font-weight: 600; <?php echo $test_mail_result['success'] ? 'background: #064e3b; color: #6ee7b7; border: 1px solid #059669;' : 'background: #881337; color: #fca5a5; border: 1px solid #e11d48;'; ?>">
+                <?php echo $test_mail_result['success'] ? '✔ ' : '❌ '; ?><?php echo htmlspecialchars($test_mail_result['message']); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($mail_sync_feedback)): ?>
+            <div style="padding: 8px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 11px; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+                ℹ️ <?php echo htmlspecialchars($mail_sync_feedback); ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" action="?test_email_action=1" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="email" name="test_mail_recipient" required value="<?php echo htmlspecialchars($target_test_mail ?: 'contact@enexa.in'); ?>" placeholder="Enter recipient email (e.g. contact@enexa.in)" style="background: #0f172a; border: 1px solid #475569; color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; min-width: 320px;">
+            <button type="submit" name="send_test_email" value="1" class="btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 12px; padding: 10px 18px;">
+                ⚡ Send Live Test OTP Email
+            </button>
+        </form>
     </div>
 
 </div>

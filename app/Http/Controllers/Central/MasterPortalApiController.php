@@ -1603,6 +1603,7 @@ class MasterPortalApiController extends Controller
     {
         $validated = $request->validate([
             'identifier' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
         ]);
 
         $identifier = trim($validated['identifier']);
@@ -1615,6 +1616,16 @@ class MasterPortalApiController extends Controller
                   ->orWhere('owner_phone', $identifier);
             })
             ->first();
+
+        // If not found yet, try searching by clean phone digits
+        if (!$shop) {
+            $cleanDigits = preg_replace('/[^0-9]/', '', $identifier);
+            if (strlen($cleanDigits) >= 10) {
+                $shop = DB::connection('mysql')->table('shops')
+                    ->where('owner_phone', 'like', "%{$cleanDigits}%")
+                    ->first();
+            }
+        }
 
         if (!$shop) {
             return response()->json([
@@ -1643,17 +1654,63 @@ class MasterPortalApiController extends Controller
             'expires_at' => now()->addMinutes(10)->timestamp,
         ], now()->addMinutes(10));
 
+        // Resolve Target Email: prioritize valid user input, fallback to central DB, fallback to tenant DB
+        $targetEmail = null;
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $targetEmail = strtolower($identifier);
+        } elseif (!empty($validated['email']) && filter_var($validated['email'], FILTER_VALIDATE_EMAIL)) {
+            $targetEmail = strtolower(trim($validated['email']));
+        } elseif (!empty($shop->owner_email) && !str_ends_with(strtolower($shop->owner_email), '.shoppy.io')) {
+            $targetEmail = trim($shop->owner_email);
+        }
+
+        // If email is still dummy or missing, search tenant DB's users table
+        if (empty($targetEmail) && !empty($shop->database_name)) {
+            try {
+                $sanitizedDb = preg_replace('/[^a-zA-Z0-9_\-]/', '', $shop->database_name);
+                Config::set('database.connections.tenant.database', $sanitizedDb);
+                DB::purge('tenant');
+                $tenantUser = DB::connection('tenant')->table('users')
+                    ->whereNotNull('email')
+                    ->where('email', '!=', '')
+                    ->whereRaw("LOWER(email) NOT LIKE '%.shoppy.io'")
+                    ->orderBy('id', 'asc')
+                    ->first();
+                if ($tenantUser && filter_var($tenantUser->email, FILTER_VALIDATE_EMAIL)) {
+                    $targetEmail = strtolower(trim($tenantUser->email));
+                }
+            } catch (\Throwable $e) {
+                Log::info("Could not lookup email in tenant database: " . $e->getMessage());
+            }
+        }
+
+        // If a valid email was found and central DB was placeholder/empty, update central DB
+        if (!empty($targetEmail) && (empty($shop->owner_email) || str_ends_with(strtolower($shop->owner_email), '.shoppy.io'))) {
+            try {
+                DB::connection('mysql')->table('shops')->where('id', $shop->id)->update([
+                    'owner_email' => $targetEmail,
+                    'updated_at' => now(),
+                ]);
+                $shop->owner_email = $targetEmail;
+            } catch (\Throwable $e) {
+                Log::warning("Could not persist resolved owner_email: " . $e->getMessage());
+            }
+        }
+
         // Format masked phone & email
         $phone = (string) $shop->owner_phone;
         $maskedPhone = (strlen($phone) >= 10)
             ? str_repeat('*', strlen($phone) - 4) . substr($phone, -4)
             : '******' . substr($phone, -2);
 
-        $email = (string) $shop->owner_email;
-        $emailParts = explode('@', $email);
-        $maskedEmail = (strlen($emailParts[0]) > 2)
-            ? substr($emailParts[0], 0, 2) . '***@' . ($emailParts[1] ?? 'domain.com')
-            : '*@' . ($emailParts[1] ?? 'domain.com');
+        $emailToMask = $targetEmail ?: (string) $shop->owner_email;
+        $maskedEmail = '***';
+        if (!empty($emailToMask)) {
+            $emailParts = explode('@', $emailToMask);
+            $maskedEmail = (strlen($emailParts[0]) > 2)
+                ? substr($emailParts[0], 0, 2) . '***@' . ($emailParts[1] ?? 'gmail.com')
+                : '*@' . ($emailParts[1] ?? 'gmail.com');
+        }
 
         // Dispatch SMS via Buzzify HTTP API
         try {
@@ -1666,25 +1723,41 @@ class MasterPortalApiController extends Controller
         }
 
         // Dispatch Email via Gmail SMTP
-        try {
-            \App\Services\CommunicationService::sendOtpEmail(
-                ownerName: $shop->owner_name ?: $shop->name,
-                ownerEmail: $shop->owner_email,
-                otp: $otp,
-                storeCode: $shop->shop_code,
-                storeName: $shop->name
-            );
-        } catch (\Throwable $e) {
-            Log::error("forgotPasswordSendOtp Email error: " . $e->getMessage());
+        $emailDispatched = false;
+        $emailError = null;
+        if (!empty($targetEmail) && filter_var($targetEmail, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $emailRes = \App\Services\CommunicationService::sendOtpEmail(
+                    ownerName: $shop->owner_name ?: $shop->name,
+                    ownerEmail: $targetEmail,
+                    otp: $otp,
+                    storeCode: $shop->shop_code,
+                    storeName: $shop->name
+                );
+                $emailDispatched = (($emailRes['status'] ?? 0) === 1);
+                if (!$emailDispatched) {
+                    $emailError = $emailRes['message'] ?? 'Failed to deliver email.';
+                    Log::warning("forgotPasswordSendOtp Email delivery warning for {$targetEmail}: " . json_encode($emailRes));
+                }
+            } catch (\Throwable $e) {
+                $emailError = $e->getMessage();
+                Log::error("forgotPasswordSendOtp Email error: " . $e->getMessage());
+            }
         }
+
+        $msg = !empty($targetEmail)
+            ? "Verification OTP has been sent to your registered Mobile ({$maskedPhone}) and Email ({$maskedEmail}). It is valid for 10 minutes."
+            : "Verification OTP has been sent to your registered Mobile ({$maskedPhone}). It is valid for 10 minutes.";
 
         return response()->json([
             'success' => true,
-            'message' => "Verification OTP has been sent to your registered Mobile ({$maskedPhone}) and Email ({$maskedEmail}). It is valid for 10 minutes.",
+            'message' => $msg,
             'shop_code' => $shop->shop_code,
             'shop_name' => $shop->name,
             'masked_phone' => $maskedPhone,
-            'masked_email' => $maskedEmail,
+            'masked_email' => !empty($targetEmail) ? $maskedEmail : null,
+            'email_sent' => $emailDispatched,
+            'email_error' => $emailError,
         ]);
     }
 
