@@ -40,17 +40,52 @@ class DomainProvisioningService
         $isLinux = (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN');
 
         if ($isLinux) {
-            // Step 1: Attempt registering in CloudPanel UI via clpctl CLI if available
-            $this->registerInCloudPanel($domain, $storeCode);
+            // =========================================================================
+            // STEP 1: Add Reverse-Proxy Site into CloudPanel (Appears in CloudPanel UI)
+            // =========================================================================
+            $clpResult = $this->registerInCloudPanel($domain, $storeCode);
+            if ($clpResult['success']) {
+                $domainModel->log('cloudpanel', 'success', "Site registered in CloudPanel dashboard.");
+            } else {
+                $domainModel->log('cloudpanel', 'warning', "CloudPanel CLI notice: " . ($clpResult['error'] ?? 'Proceeding with Nginx configuration.'));
+            }
 
-            // Step 2: Write Nginx virtual host with exact reverse-proxy + sub_filter rules
-            $configPath = is_file("/etc/nginx/sites-available/{$domain}.conf")
-                ? "/etc/nginx/sites-available/{$domain}.conf"
-                : "{$this->nginxConfigDir}/shoppy-domain-{$domain}.conf";
-            $symlinkPath = "/etc/nginx/sites-enabled/" . basename($configPath);
+            // Identify VHost config path (In CloudPanel, sites are in /etc/nginx/sites-enabled/)
+            $configPath = is_file("/etc/nginx/sites-enabled/{$domain}.conf")
+                ? "/etc/nginx/sites-enabled/{$domain}.conf"
+                : (is_file("/etc/nginx/sites-available/{$domain}.conf")
+                    ? "/etc/nginx/sites-available/{$domain}.conf"
+                    : "{$this->nginxConfigDir}/shoppy-domain-{$domain}.conf");
 
-            $httpConfig = $this->generateHttpConfig($serverNameStr, $storeCode);
-            $writeSuccess = $this->atomicWriteNginxConfig($configPath, $httpConfig, $symlinkPath);
+            $symlinkPath = (dirname($configPath) === '/etc/nginx/sites-enabled')
+                ? null
+                : "/etc/nginx/sites-enabled/" . basename($configPath);
+
+            // =========================================================================
+            // STEP 2: Issue & Install Let's Encrypt SSL Certificate
+            // Uses CloudPanel's: clpctl lets-encrypt:install:certificate --domainName=...
+            // =========================================================================
+            $domainModel->update(['status' => 'ssl_pending']);
+            $domainModel->log('ssl_issue', 'info', "Installing Let's Encrypt SSL certificate for {$serverNameStr}...");
+
+            $sslResult = $this->issueLetsEncryptCertificate($domain, $serverNames);
+
+            // =========================================================================
+            // STEP 3: Update Nginx VHost with Reverse-Proxy & sub_filter URL Rewriting
+            // =========================================================================
+            if ($sslResult['success']) {
+                $vhostConfig = $this->generateHttpsConfig(
+                    $serverNameStr,
+                    $sslResult['cert_path'],
+                    $sslResult['key_path'],
+                    $storeCode
+                );
+            } else {
+                // If SSL has not finished yet, deploy HTTP reverse-proxy so site works immediately
+                $vhostConfig = $this->generateHttpConfig($serverNameStr, $storeCode);
+            }
+
+            $writeSuccess = $this->atomicWriteNginxConfig($configPath, $vhostConfig, $symlinkPath);
             if (!$writeSuccess['success']) {
                 $domainModel->update([
                     'status' => 'failed',
@@ -61,53 +96,36 @@ class DomainProvisioningService
             }
 
             $domainModel->update(['nginx_config_path' => $configPath]);
-            $domainModel->log('provisioning', 'success', "Nginx HTTP reverse-proxy virtual host installed and verified with 'nginx -t'.");
-
-            // Step 3: Request Let's Encrypt SSL certificate via Certbot / CloudPanel ACME
-            $domainModel->update(['status' => 'ssl_pending']);
-            $domainModel->log('ssl_issue', 'info', "Issuing Let's Encrypt SSL certificate for {$serverNameStr}...");
-
-            $sslResult = $this->issueLetsEncryptCertificate($domain, $serverNames);
+            $domainModel->log('provisioning', 'success', "Nginx VHost successfully updated with reverse-proxy rules.");
 
             if ($sslResult['success']) {
-                // Step 4: Upgrade to full HTTPS configuration with exact sub_filter and proxy rules
-                $httpsConfig = $this->generateHttpsConfig(
-                    $serverNameStr,
-                    $sslResult['cert_path'],
-                    $sslResult['key_path'],
-                    $storeCode
-                );
-
-                $upgradeResult = $this->atomicWriteNginxConfig($configPath, $httpsConfig, $symlinkPath);
-                if ($upgradeResult['success']) {
-                    $domainModel->update([
-                        'ssl_status' => 'active',
-                        'status' => 'active',
-                        'activated_at' => now(),
-                        'ssl_expiry_at' => now()->addDays(89),
-                        'error_message' => null,
-                    ]);
-                    $domainModel->log('activated', 'success', "Domain {$domain} is LIVE with active HTTPS reverse-proxy to {$storeCode}!");
-                    return [
-                        'success' => true,
-                        'message' => "Custom domain {$domain} provisioned and activated successfully with HTTPS!",
-                        'status' => 'active',
-                    ];
-                }
+                $domainModel->update([
+                    'ssl_status' => 'active',
+                    'status' => 'active',
+                    'activated_at' => now(),
+                    'ssl_expiry_at' => now()->addDays(89),
+                    'error_message' => null,
+                ]);
+                $domainModel->log('activated', 'success', "Domain {$domain} is LIVE with active CloudPanel HTTPS reverse-proxy to {$storeCode}!");
+                return [
+                    'success' => true,
+                    'message' => "Domain {$domain} successfully added to CloudPanel, SSL installed, and VHost updated!",
+                    'status' => 'active',
+                ];
             }
 
-            // Fallback: If SSL challenge is still propagating, HTTP reverse-proxy is active
+            // Fallback if SSL pending
             $domainModel->update([
                 'ssl_status' => 'pending',
                 'status' => 'active',
                 'activated_at' => now(),
-                'error_message' => "HTTP is active. SSL pending DNS propagation: " . ($sslResult['error'] ?? 'ACME challenge in progress.'),
+                'error_message' => "CloudPanel VHost active (HTTP). SSL pending: " . ($sslResult['error'] ?? 'ACME challenge in progress.'),
             ]);
             $domainModel->log('ssl_issue', 'warning', "SSL challenge pending. HTTP proxy is live.");
 
             return [
                 'success' => true,
-                'message' => "Domain connected via HTTP. SSL certificate will activate upon DNS propagation.",
+                'message' => "Domain connected in CloudPanel. VHost updated with HTTP. SSL in progress.",
                 'status' => 'active',
             ];
         }
@@ -131,27 +149,58 @@ class DomainProvisioningService
     }
 
     /**
-     * Attempt registering site in CloudPanel database/UI via clpctl CLI
+     * Register reverse-proxy site in CloudPanel via clpctl CLI
+     * Official CloudPanel Syntax:
+     * clpctl site:add:reverse-proxy --domainName=... --reverseProxyUrl=... --siteUser=... --siteUserPassword=...
      */
-    protected function registerInCloudPanel(string $domain, string $storeCode): void
+    protected function registerInCloudPanel(string $domain, string $storeCode): array
     {
-        $clpCandidates = ['/usr/local/bin/clpctl', '/usr/bin/clpctl', 'clpctl'];
         $clpBin = null;
-        foreach ($clpCandidates as $cand) {
+        $candidates = ['/usr/local/bin/clpctl', '/usr/bin/clpctl', 'clpctl'];
+        foreach ($candidates as $cand) {
             if (@is_executable($cand)) {
                 $clpBin = $cand;
                 break;
             }
         }
-
-        if ($clpBin) {
-            $cmd = "{$clpBin} site:add:reverse-proxy --domainName=" . escapeshellarg($domain) . " --reverseProxyUrl=" . escapeshellarg("https://shoppy.live/{$storeCode}") . " 2>&1";
-            @exec($cmd, $out, $code);
-            if ($code !== 0) {
-                // Try with sudo -n if permitted in sudoers
-                @exec("sudo -n {$cmd} 2>&1");
-            }
+        if (!$clpBin) {
+            $clpBin = '/usr/local/bin/clpctl';
         }
+
+        // Generate isolated siteUser and strong password required by CloudPanel
+        $cleanPart = preg_replace('/[^a-z0-9]/i', '', explode('.', $domain)[0]);
+        $siteUser = strtolower(substr('cp_' . ($cleanPart ?: 'site'), 0, 16));
+        $sitePassword = 'Sp!' . bin2hex(random_bytes(6)) . '9#';
+
+        // Check if site already exists in CloudPanel
+        $checkCmd = "{$clpBin} site:get --domainName=" . escapeshellarg($domain) . " 2>&1";
+        @exec($checkCmd, $cOut, $cCode);
+        if ($cCode !== 0) {
+            @exec("sudo -n {$checkCmd} 2>&1", $cOut, $cCode);
+        }
+
+        if ($cCode === 0) {
+            return ['success' => true, 'already_exists' => true];
+        }
+
+        // Add site in CloudPanel
+        $addCmd = "{$clpBin} site:add:reverse-proxy --domainName=" . escapeshellarg($domain) . " --reverseProxyUrl=" . escapeshellarg("https://shoppy.live/{$storeCode}") . " --siteUser=" . escapeshellarg($siteUser) . " --siteUserPassword=" . escapeshellarg($sitePassword) . " 2>&1";
+        $out = [];
+        $code = 0;
+        @exec($addCmd, $out, $code);
+        if ($code !== 0) {
+            $out = [];
+            @exec("sudo -n {$addCmd} 2>&1", $out, $code);
+        }
+
+        if ($code === 0) {
+            return ['success' => true, 'output' => implode("\n", $out)];
+        }
+
+        return [
+            'success' => false,
+            'error' => implode("\n", $out) ?: "CloudPanel CLI command failed.",
+        ];
     }
 
     /**
@@ -291,27 +340,37 @@ class DomainProvisioningService
     }
 
     /**
-     * Issue Let's Encrypt certificate using Certbot Webroot or CloudPanel
+     * Issue Let's Encrypt certificate using CloudPanel CLI or Certbot Webroot
+     * Official CloudPanel Syntax:
+     * clpctl lets-encrypt:install:certificate --domainName=...
      */
     protected function issueLetsEncryptCertificate(string $mainDomain, array $allDomains): array
     {
-        // 1. Try CloudPanel CLI SSL command first if available
-        $cmdClp = "clpctl site:install:certificate:lets-encrypt --domainName=" . escapeshellarg($mainDomain) . " 2>&1";
+        $clpBin = is_executable('/usr/local/bin/clpctl') ? '/usr/local/bin/clpctl' : 'clpctl';
+
+        // 1. Try CloudPanel's official SSL installer command:
+        // clpctl lets-encrypt:install:certificate --domainName=...
+        $cmdClp = "{$clpBin} lets-encrypt:install:certificate --domainName=" . escapeshellarg($mainDomain) . " 2>&1";
+        $outClp = [];
+        $codeClp = 0;
         @exec($cmdClp, $outClp, $codeClp);
         if ($codeClp !== 0) {
+            $outClp = [];
             @exec("sudo -n {$cmdClp} 2>&1", $outClp, $codeClp);
         }
 
-        // Check default certificate locations
+        // Check default certificate locations in CloudPanel and Nginx
         $certCandidates = [
-            "/etc/letsencrypt/live/{$mainDomain}/fullchain.pem",
             "/etc/nginx/ssl-certificates/{$mainDomain}/fullchain.pem",
+            "/etc/nginx/ssl-certificates/{$mainDomain}/certificate.crt",
             "/home/cloudpanel/certificates/{$mainDomain}/certificate.crt",
+            "/etc/letsencrypt/live/{$mainDomain}/fullchain.pem",
         ];
         $keyCandidates = [
-            "/etc/letsencrypt/live/{$mainDomain}/privkey.pem",
             "/etc/nginx/ssl-certificates/{$mainDomain}/privkey.pem",
+            "/etc/nginx/ssl-certificates/{$mainDomain}/private.key",
             "/home/cloudpanel/certificates/{$mainDomain}/private.key",
+            "/etc/letsencrypt/live/{$mainDomain}/privkey.pem",
         ];
 
         foreach ($certCandidates as $i => $cp) {
