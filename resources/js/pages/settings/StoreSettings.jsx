@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useErp } from '../../context/ErpContext';
 import StoreRenewalModal from '../../components/StoreRenewalModal';
+import CustomDomainSettings from '../../components/settings/CustomDomainSettings';
 import { getActiveShopCode, getStoreAuthHeaders } from '../../utils/storeAuth';
 import {
   Building2,
@@ -614,15 +615,111 @@ export default function StoreSettings() {
   ];
 
   const tabs = [
-    { id: 'branding', label: 'Store Branding & Logos', icon: Palette, count: '6 fields' },
-    { id: 'ecom', label: 'E-Commerce Themes', icon: ShoppingBag, count: '5 Marketplace Themes' },
-    { id: 'gst', label: 'GST & Legal Entity', icon: ShieldCheck, count: 'All GST fields' },
-    { id: 'footer', label: 'Footer & Contact', icon: MapPin, count: '8 fields*' },
-    { id: 'seo', label: 'Home Meta & SEO', icon: Globe, count: '3 fields*' },
-    { id: 'sms', label: 'SMS Gateway', icon: MessageSquare, count: 'DLT + API' },
-    { id: 'smtp', label: 'SMTP Email Server', icon: Mail, count: 'TLS / Port 587' },
-    { id: 'hardware', label: 'Hardware Bridge', icon: Printer, count: 'POS Printer & Scale' },
-    { id: 'subscription', label: 'Subscription & Passbook', icon: CreditCard, count: 'Passbook & Renewal' },
+    {
+      id: 'branding',
+      label: 'Store Branding',
+      fullLabel: 'Store Branding & Logos',
+      icon: Palette,
+      count: 'Logos & Colors',
+      badge: 'Theme',
+      bgActive: 'bg-violet-600 text-white shadow-violet-600/30 ring-violet-400',
+      bgInactive: 'bg-violet-50/80 text-violet-900 dark:bg-violet-950/40 dark:text-violet-200 hover:bg-violet-100 border-violet-200 dark:border-violet-800/80',
+      iconColor: 'text-violet-600 dark:text-violet-400'
+    },
+    {
+      id: 'ecom',
+      label: 'E-Com Themes',
+      fullLabel: 'E-Commerce Themes',
+      icon: ShoppingBag,
+      count: '5 Live Themes',
+      badge: 'Live',
+      bgActive: 'bg-rose-600 text-white shadow-rose-600/30 ring-rose-400',
+      bgInactive: 'bg-rose-50/80 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200 hover:bg-rose-100 border-rose-200 dark:border-rose-800/80',
+      iconColor: 'text-rose-600 dark:text-rose-400'
+    },
+    {
+      id: 'domain',
+      label: 'Connect Domain',
+      fullLabel: 'Connect Your Domain',
+      icon: Globe,
+      count: 'Custom Domain & SSL',
+      badge: '⚡ NEW',
+      bgActive: 'bg-sky-600 text-white shadow-sky-600/30 ring-sky-400',
+      bgInactive: 'bg-sky-50/80 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200 hover:bg-sky-100 border-sky-200 dark:border-sky-800/80',
+      iconColor: 'text-sky-600 dark:text-sky-400'
+    },
+    {
+      id: 'gst',
+      label: 'GST & Legal',
+      fullLabel: 'GST & Legal Entity',
+      icon: ShieldCheck,
+      count: 'Tax & Compliance',
+      badge: 'Legal',
+      bgActive: 'bg-emerald-600 text-white shadow-emerald-600/30 ring-emerald-400',
+      bgInactive: 'bg-emerald-50/80 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200 hover:bg-emerald-100 border-emerald-200 dark:border-emerald-800/80',
+      iconColor: 'text-emerald-600 dark:text-emerald-400'
+    },
+    {
+      id: 'footer',
+      label: 'Footer & Contact',
+      fullLabel: 'Footer & Contact Details',
+      icon: MapPin,
+      count: 'Social & Address',
+      bgActive: 'bg-amber-600 text-white shadow-amber-600/30 ring-amber-400',
+      bgInactive: 'bg-amber-50/80 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 hover:bg-amber-100 border-amber-200 dark:border-amber-800/80',
+      iconColor: 'text-amber-600 dark:text-amber-400'
+    },
+    {
+      id: 'seo',
+      label: 'SEO & Metadata',
+      fullLabel: 'Home Meta & SEO',
+      icon: Sparkles,
+      count: 'Google & Social',
+      bgActive: 'bg-fuchsia-600 text-white shadow-fuchsia-600/30 ring-fuchsia-400',
+      bgInactive: 'bg-fuchsia-50/80 text-fuchsia-900 dark:bg-fuchsia-950/40 dark:text-fuchsia-200 hover:bg-fuchsia-100 border-fuchsia-200 dark:border-fuchsia-800/80',
+      iconColor: 'text-fuchsia-600 dark:text-fuchsia-400'
+    },
+    {
+      id: 'sms',
+      label: 'SMS Gateway',
+      fullLabel: 'SMS Gateway & OTP',
+      icon: MessageSquare,
+      count: 'DLT + Fast2SMS',
+      bgActive: 'bg-indigo-600 text-white shadow-indigo-600/30 ring-indigo-400',
+      bgInactive: 'bg-indigo-50/80 text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200 hover:bg-indigo-100 border-indigo-200 dark:border-indigo-800/80',
+      iconColor: 'text-indigo-600 dark:text-indigo-400'
+    },
+    {
+      id: 'smtp',
+      label: 'SMTP Email',
+      fullLabel: 'SMTP Email Server',
+      icon: Mail,
+      count: 'Port 465 / 587',
+      bgActive: 'bg-teal-600 text-white shadow-teal-600/30 ring-teal-400',
+      bgInactive: 'bg-teal-50/80 text-teal-900 dark:bg-teal-950/40 dark:text-teal-200 hover:bg-teal-100 border-teal-200 dark:border-teal-800/80',
+      iconColor: 'text-teal-600 dark:text-teal-400'
+    },
+    {
+      id: 'hardware',
+      label: 'Hardware Bridge',
+      fullLabel: 'Hardware Bridge & Thermal',
+      icon: Printer,
+      count: 'POS & Scale',
+      bgActive: 'bg-slate-800 text-white shadow-slate-800/30 ring-slate-500',
+      bgInactive: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 hover:bg-slate-200 border-slate-300 dark:border-slate-700',
+      iconColor: 'text-slate-700 dark:text-slate-300'
+    },
+    {
+      id: 'subscription',
+      label: 'Subscription',
+      fullLabel: 'Subscription & Passbook',
+      icon: CreditCard,
+      count: 'Passbook & Renewal',
+      badge: 'Active',
+      bgActive: 'bg-yellow-600 text-white shadow-yellow-600/30 ring-yellow-400',
+      bgInactive: 'bg-yellow-50/80 text-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-200 hover:bg-yellow-100 border-yellow-200 dark:border-yellow-800/80',
+      iconColor: 'text-yellow-600 dark:text-yellow-400'
+    },
   ];
 
   return (
@@ -815,28 +912,51 @@ export default function StoreSettings() {
       </div>
 
       {/* =================================================================== */}
-      {/* 2. TAB NAVIGATION                                                  */}
+      {/* 2. BUTTON NAVIGATION GRID (6 Buttons Per Row on Desktop)            */}
       {/* =================================================================== */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-slate-200 dark:border-slate-800">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              className={`p-3 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between gap-2.5 cursor-pointer relative overflow-hidden group ${
                 isActive
-                  ? 'bg-white dark:bg-slate-900 border-b-2 shadow-xs text-slate-900 dark:text-white'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                  ? `${tab.bgActive} shadow-lg ring-2 ring-offset-1 dark:ring-offset-slate-900 border-transparent scale-[1.02]`
+                  : `${tab.bgInactive} hover:shadow-xs hover:scale-[1.01]`
               }`}
-              style={{ borderColor: isActive ? formData.theme_color : 'transparent' }}
             >
-              <Icon className="w-4 h-4" style={{ color: isActive ? formData.theme_color : undefined }} />
-              <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500'}`}>
-                {tab.count}
-              </span>
+              {tab.badge && (
+                <span className={`absolute top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-xs ${
+                  isActive ? 'bg-white text-slate-900' : 'bg-rose-500 text-white animate-pulse'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+              <div className="flex items-center justify-between">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-white dark:bg-slate-900 shadow-2xs'
+                }`}>
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : tab.iconColor}`} />
+                </div>
+                {isActive && (
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping mr-1"></span>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs font-black tracking-tight leading-tight">
+                  {tab.label}
+                </div>
+                <div className={`text-[10px] font-semibold mt-0.5 truncate ${
+                  isActive ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'
+                }`} title={tab.fullLabel}>
+                  {tab.count}
+                </div>
+              </div>
             </button>
           );
         })}
@@ -1558,6 +1678,17 @@ export default function StoreSettings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* TAB: AUTOMATED CUSTOM DOMAIN & FREE LET'S ENCRYPT SSL               */}
+      {/* =================================================================== */}
+      {activeTab === 'domain' && (
+        <CustomDomainSettings
+          storeCode={formData.shop_code || getActiveShopCode()}
+          storeName={formData.store_name}
+          showToast={showToast}
+        />
       )}
 
       {/* =================================================================== */}

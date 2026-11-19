@@ -29,6 +29,32 @@ $loadWebsiteMeta = function (): array {
 
 $resolveWebShopCode = function (): string {
     $req = request();
+
+    // 1. Check Custom Domain resolution (Host or X-Forwarded-Host or X-Custom-Domain)
+    $rawHost = $req->header('X-Custom-Domain') ?: $req->header('X-Forwarded-Host') ?: $req->getHost();
+    $host = strtolower(preg_replace('/:\d+$/', '', trim((string) $rawHost)));
+    $cleanHost = preg_replace('/^www\./', '', $host);
+
+    if (!in_array($host, ['shoppy.live', 'www.shoppy.live', 'localhost', '127.0.0.1', '82.29.167.224'], true)) {
+        try {
+            $cd = DB::connection('mysql')->table('store_domains')
+                ->whereIn('domain', [$host, $cleanHost])
+                ->whereIn('status', ['active', 'dns_verified', 'ssl_pending'])
+                ->first();
+
+            if ($cd && !empty($cd->store_id)) {
+                $shop = DB::connection('mysql')->table('shops')->where('id', $cd->store_id)->first();
+                if ($shop && !empty($shop->shop_code)) {
+                    $resolvedCode = strtoupper(trim($shop->shop_code));
+                    if ($req->hasSession()) {
+                        session(['active_store_code' => $resolvedCode]);
+                    }
+                    return $resolvedCode;
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+
     $queryCode = strtoupper(trim((string) ($req->query('code') ?: $req->query('shop_code') ?: '')));
     if ($queryCode !== '') {
         if ($req->hasSession()) {
@@ -293,8 +319,41 @@ Route::get('/test-otp-mail', function () {
 
 // Single Page Application (SPA) catch-all route (matching cashbez architecture)
 // Handles direct URLs: /shop-admin, /shop-admin/products, /shop-admin/orders, /shop-admin/inventory, etc.
-Route::get('/{any}', function () use ($resolveWebShopCode, $loadWebsiteMeta) {
+Route::get('/{any}', function ($any = '') use ($resolveWebShopCode, $loadWebsiteMeta) {
     $shopCode = $resolveWebShopCode();
+
+    // Check if request is coming from a custom domain
+    $rawHost = request()->header('X-Custom-Domain') ?: request()->header('X-Forwarded-Host') ?: request()->getHost();
+    $host = strtolower(preg_replace('/:\d+$/', '', trim((string) $rawHost)));
+    $isCustomDomain = !in_array($host, ['shoppy.live', 'www.shoppy.live', 'localhost', '127.0.0.1', '82.29.167.224'], true);
+
+    $cleanPath = trim((string) $any, '/');
+
+    // If custom domain is requesting the root website '/' or '/shop', render the store's storefront directly!
+    if ($isCustomDomain && $shopCode && ($cleanPath === '' || $cleanPath === 'shop')) {
+        $dbShop = DB::connection('mysql')->table('shops')->where('shop_code', $shopCode)->first();
+        if ($dbShop) {
+            $shopSettings = json_decode($dbShop->settings ?? '{}', true) ?: [];
+            $seo = $loadWebsiteMeta();
+            $storeFavicon = !empty($shopSettings['favicon']) ? $shopSettings['favicon'] : ($seo['favicon_url'] ?? '/favicon.png');
+            $ecomTheme = $shopSettings['ecom_theme'] ?? 'snapdeal';
+
+            return response()
+                ->view('app', [
+                    'entry' => 'storefront',
+                    'title' => $dbShop->name . ' — Official Online Store | Exclusive Deals & Fast Delivery',
+                    'faviconUrl' => $storeFavicon,
+                    'shopCode' => $shopCode,
+                    'ecomTheme' => $ecomTheme,
+                    'htmlClass' => 'h-full bg-[#f8fafc] text-slate-900',
+                    'bodyClass' => 'min-h-full flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-[#e11d48] selection:text-white',
+                ])
+                ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                ->cookie(StoreToken::CODE_COOKIE, $shopCode, 60 * 24 * 30, '/', null, false, false)
+                ->cookie('shoppy_active_store_code', $shopCode, 60 * 24 * 30, '/', null, false, false);
+        }
+    }
+
     $theme = request()->cookie('shoppy_erp_theme', 'light');
     $isDark = ($theme === 'dark');
     $seo = $loadWebsiteMeta();

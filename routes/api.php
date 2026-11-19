@@ -55,6 +55,16 @@ Route::post('/store/forgot-password/send-otp', [MasterPortalApiController::class
 Route::post('/store/forgot-password/verify-otp', [MasterPortalApiController::class, 'forgotPasswordVerifyOtp']);
 Route::post('/store/forgot-password/reset-password', [MasterPortalApiController::class, 'forgotPasswordReset']);
 
+// Custom Domain Management APIs (PRD: Automated Custom Domain Connection System)
+Route::prefix('store/domains')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Tenant\StoreDomainController::class, 'getStoreDomain']);
+    Route::post('/', [\App\Http\Controllers\Tenant\StoreDomainController::class, 'connectDomain']);
+    Route::post('/{id}/verify', [\App\Http\Controllers\Tenant\StoreDomainController::class, 'verifyDomain']);
+    Route::post('/{id}/retry', [\App\Http\Controllers\Tenant\StoreDomainController::class, 'retryDomain']);
+    Route::delete('/{id}', [\App\Http\Controllers\Tenant\StoreDomainController::class, 'removeDomain']);
+});
+Route::get('/master/domains', [\App\Http\Controllers\Tenant\StoreDomainController::class, 'masterListDomains']);
+
 // Public Dynamic Website APIs
 Route::get('/public/landing-data', [MasterPortalApiController::class, 'getPublicLandingData']);
 Route::get('/public/gst-states', [MasterPortalApiController::class, 'getGstStates']);

@@ -53,7 +53,40 @@ class IdentifyTenant
      */
     protected function resolveTenant(Request $request): ?Shop
     {
-        // 1. Explicit Query Hint / Verified Store Auth Token / Header / Cookie / Session
+        // 1. Resolve via Custom Domain (e.g. mystore.in or www.mystore.in)
+        $rawHost = $request->header('X-Custom-Domain') 
+            ?: $request->header('X-Forwarded-Host') 
+            ?: $request->getHost();
+        $host = strtolower(preg_replace('/:\d+$/', '', trim((string) $rawHost)));
+        $cleanHost = preg_replace('/^www\./', '', $host);
+
+        if (!in_array($host, ['shoppy.live', 'www.shoppy.live', 'localhost', '127.0.0.1', '82.29.167.224'], true)) {
+            // Check in store_domains table
+            try {
+                $customDomain = \App\Models\StoreDomain::whereIn('domain', [$host, $cleanHost])
+                    ->whereIn('status', ['active', 'dns_verified', 'ssl_pending'])
+                    ->with('store')
+                    ->first();
+
+                if ($customDomain && $customDomain->store) {
+                    return $customDomain->store;
+                }
+            } catch (\Throwable $e) {}
+
+            // Check in shop_domains table
+            try {
+                $shopDomain = ShopDomain::whereIn('domain', [$host, $cleanHost])
+                    ->where('is_verified', true)
+                    ->with('shop')
+                    ->first();
+
+                if ($shopDomain && $shopDomain->shop) {
+                    return $shopDomain->shop;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 2. Explicit Query Hint / Verified Store Auth Token / Header / Cookie / Session
         $tokenCode = StoreToken::resolveShopCodeFromRequest($request);
 
         $shopCode = $request->query('code')
