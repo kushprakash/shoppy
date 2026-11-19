@@ -350,11 +350,18 @@ class DomainProvisioningService
         $cleanPart = preg_replace('/[^a-z0-9]/i', '', explode('.', $mainDomain)[0]);
         $siteUser = strtolower(substr('cp_' . ($cleanPart ?: 'site'), 0, 16));
         $cpWebroot = "/home/{$siteUser}/htdocs/{$mainDomain}";
-        $webroot = is_dir($cpWebroot) ? $cpWebroot : $this->publicWebroot;
+        $hasCpWebroot = (exec("sudo -n test -d " . escapeshellarg($cpWebroot) . " && echo 1") === '1');
+        $webroot = $hasCpWebroot ? $cpWebroot : $this->publicWebroot;
 
         // Step A: Ensure webroot and .well-known directory exists
         @exec("sudo -n mkdir -p {$webroot}/.well-known/acme-challenge");
-        @exec("sudo -n chown -R {$siteUser}:{$siteUser} {$webroot} 2>&1");
+        if ($hasCpWebroot) {
+            @exec("sudo -n chown -R {$siteUser}:{$siteUser} {$cpWebroot} 2>&1");
+        } else {
+            // Never chown the main application webroot to a custom domain user
+            @exec("sudo -n chown -R shoppy:shoppy {$this->publicWebroot} 2>&1");
+            @exec("sudo -n chmod -R 755 {$this->publicWebroot} 2>&1");
+        }
 
         // Step B: Write temporary plain HTTP server block for ACME validation to guarantee port 80 verification
         $httpAcmeVhost = <<<NGINX
