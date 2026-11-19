@@ -340,41 +340,91 @@ class DomainProvisioningService
     }
 
     /**
-     * Issue Let's Encrypt certificate using CloudPanel CLI or Certbot Webroot
-     * Official CloudPanel Syntax:
-     * clpctl lets-encrypt:install:certificate --domainName=...
+     * Issue Let's Encrypt certificate using Certbot Webroot and sync to CloudPanel
      */
     protected function issueLetsEncryptCertificate(string $mainDomain, array $allDomains): array
     {
         $clpBin = is_executable('/usr/bin/clpctl') ? '/usr/bin/clpctl' : (is_executable('/usr/local/bin/clpctl') ? '/usr/local/bin/clpctl' : 'clpctl');
 
-        // 1. Try CloudPanel's official SSL installer command:
-        // clpctl lets-encrypt:install:certificate --domainName=...
-        $cmdClp = "{$clpBin} lets-encrypt:install:certificate --domainName=" . escapeshellarg($mainDomain) . " 2>&1";
-        $outClp = [];
-        $codeClp = 0;
-        @exec($cmdClp, $outClp, $codeClp);
-        if ($codeClp !== 0) {
-            $outClp = [];
-            @exec("sudo -n {$cmdClp} 2>&1", $outClp, $codeClp);
+        // CloudPanel site user webroot
+        $cleanPart = preg_replace('/[^a-z0-9]/i', '', explode('.', $mainDomain)[0]);
+        $siteUser = strtolower(substr('cp_' . ($cleanPart ?: 'site'), 0, 16));
+        $cpWebroot = "/home/{$siteUser}/htdocs/{$mainDomain}";
+        $webroot = is_dir($cpWebroot) ? $cpWebroot : $this->publicWebroot;
+
+        // Step A: Ensure webroot and .well-known directory exists
+        @exec("sudo -n mkdir -p {$webroot}/.well-known/acme-challenge");
+        @exec("sudo -n chown -R {$siteUser}:{$siteUser} {$webroot} 2>&1");
+
+        // Step B: Write temporary plain HTTP server block for ACME validation to guarantee port 80 verification
+        $httpAcmeVhost = <<<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$mainDomain} www.{$mainDomain};
+    root {$webroot};
+
+    location ^~ /.well-known/acme-challenge/ {
+        auth_basic off;
+        allow all;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 200 "ACME HTTP Verification In Progress";
+    }
+}
+NGINX;
+
+        $tmp = sys_get_temp_dir() . '/acme_init_' . $mainDomain . '.conf';
+        file_put_contents($tmp, $httpAcmeVhost);
+        @exec("sudo -n cp {$tmp} /etc/nginx/sites-enabled/{$mainDomain}.conf 2>&1");
+        @unlink($tmp);
+        @exec("sudo -n nginx -t && sudo -n systemctl reload nginx 2>&1");
+
+        // Step C: Run Certbot Webroot
+        $domainFlags = '';
+        foreach ($allDomains as $d) {
+            $domainFlags .= ' -d ' . escapeshellarg($d);
+        }
+        $email = config('mail.from.address', 'contact@enexa.in');
+        $cmdCertbot = "sudo -n certbot certonly --webroot -w " . escapeshellarg($webroot) . " {$domainFlags} --non-interactive --agree-tos --email " . escapeshellarg($email) . " 2>&1";
+        $output = [];
+        $exitCode = 0;
+        @exec($cmdCertbot, $output, $exitCode);
+
+        // Step D: Copy certificates to CloudPanel's ssl location so CloudPanel UI sees them
+        $certLive = "/etc/letsencrypt/live/{$mainDomain}/fullchain.pem";
+        $keyLive = "/etc/letsencrypt/live/{$mainDomain}/privkey.pem";
+
+        $cpCert = "/etc/nginx/ssl-certificates/{$mainDomain}.crt";
+        $cpKey = "/etc/nginx/ssl-certificates/{$mainDomain}.key";
+
+        $cpOut = []; $cpCode = 0;
+        @exec("sudo -n test -f {$certLive} && sudo -n cp -f {$certLive} {$cpCert} && sudo -n cp -f {$keyLive} {$cpKey} && sudo -n chmod 644 {$cpCert} && sudo -n chmod 600 {$cpKey}", $cpOut, $cpCode);
+        if ($cpCode === 0) {
+            return [
+                'success' => true,
+                'cert_path' => $cpCert,
+                'key_path' => $cpKey,
+            ];
         }
 
-        // Check default certificate locations in CloudPanel and Nginx
+        // Check if certificates exist already in any candidate location
         $certCandidates = [
+            $cpCert,
             "/etc/nginx/ssl-certificates/{$mainDomain}/fullchain.pem",
-            "/etc/nginx/ssl-certificates/{$mainDomain}/certificate.crt",
-            "/home/cloudpanel/certificates/{$mainDomain}/certificate.crt",
             "/etc/letsencrypt/live/{$mainDomain}/fullchain.pem",
         ];
         $keyCandidates = [
+            $cpKey,
             "/etc/nginx/ssl-certificates/{$mainDomain}/privkey.pem",
-            "/etc/nginx/ssl-certificates/{$mainDomain}/private.key",
-            "/home/cloudpanel/certificates/{$mainDomain}/private.key",
             "/etc/letsencrypt/live/{$mainDomain}/privkey.pem",
         ];
 
         foreach ($certCandidates as $i => $cp) {
-            if (file_exists($cp) && file_exists($keyCandidates[$i])) {
+            $testOut = exec("sudo -n test -f " . escapeshellarg($cp) . " && echo 1");
+            if ($testOut === '1') {
                 return [
                     'success' => true,
                     'cert_path' => $cp,
@@ -383,36 +433,9 @@ class DomainProvisioningService
             }
         }
 
-        // 2. Try Certbot Webroot challenge directly
-        $domainFlags = '';
-        foreach ($allDomains as $d) {
-            $domainFlags .= ' -d ' . escapeshellarg($d);
-        }
-
-        $email = config('mail.from.address', 'contact@enexa.in');
-        $cmdCertbot = "certbot certonly --webroot -w " . escapeshellarg($this->publicWebroot) . " {$domainFlags} --non-interactive --agree-tos --email " . escapeshellarg($email) . " 2>&1";
-
-        $output = [];
-        $exitCode = 0;
-        @exec($cmdCertbot, $output, $exitCode);
-        if ($exitCode !== 0) {
-            @exec("sudo -n {$cmdCertbot}", $output, $exitCode);
-        }
-
-        $certPath = "/etc/letsencrypt/live/{$mainDomain}/fullchain.pem";
-        $keyPath = "/etc/letsencrypt/live/{$mainDomain}/privkey.pem";
-
-        if (file_exists($certPath) && file_exists($keyPath)) {
-            return [
-                'success' => true,
-                'cert_path' => $certPath,
-                'key_path' => $keyPath,
-            ];
-        }
-
         return [
             'success' => false,
-            'error' => implode("\n", $output) ?: "Let's Encrypt certificate files not generated yet. DNS propagation in progress.",
+            'error' => implode("\n", $output) ?: "Let's Encrypt certificate challenge in progress.",
         ];
     }
 
