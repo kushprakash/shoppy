@@ -155,11 +155,14 @@ PY;
             @exec("sudo -n /usr/local/bin/clpctl lets-encrypt:install:certificate --domainName=ahrc.ind.in 2>&1", $ssl_out, $ssl_code);
 
             // Trigger Laravel provisioning service to update VHost
-            @exec("php artisan domain:provision ahrc.ind.in 2>&1 || php -r \"require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = App\Models\StoreDomain::where('domain', 'ahrc.ind.in')->first(); if(\$m) app(App\Services\Domain\DomainProvisioningService::class)->provision(\$m);\" 2>&1", $art_out);
+            $art_out = [];
+            @exec("php -r \"require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = App\Models\StoreDomain::where('domain', 'ahrc.ind.in')->first(); if(\$m) { echo json_encode(app(App\Services\Domain\DomainProvisioningService::class)->provision(\$m)); }\" 2>&1", $art_out);
+
+            $clp_diag = "CLP: " . implode(" | ", $clp_out) . "\nSSL: " . implode(" | ", $ssl_out) . "\nPROV: " . implode(" | ", $art_out);
 
             $sudo_grant_feedback = [
                 'success' => true,
-                'message' => "Successfully authorized user '{$cur_user}' with passwordless sudo! CloudPanel site 'ahrc.ind.in' added (Code: {$clp_code}), SSL installed (Code: {$ssl_code}), and VHost activated permanently!"
+                'message' => "Successfully authorized user '{$cur_user}' with passwordless sudo!\n{$clp_diag}"
             ];
         } else {
             $sudo_grant_feedback = [
