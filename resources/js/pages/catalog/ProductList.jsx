@@ -23,24 +23,24 @@ import {
 } from 'lucide-react';
 
 const STORAGE_DIRECTIONS = [
-  { id: 'East (पूर्व)', label: 'पूर्व (East)', icon: '🧭' },
-  { id: 'West (पश्चिम)', label: 'पश्चिम (West)', icon: '🧭' },
-  { id: 'North (उत्तर)', label: 'उत्तर (North)', icon: '🧭' },
-  { id: 'South (दक्षिण)', label: 'दक्षिण (South)', icon: '🧭' },
-  { id: 'Center (मध्य)', label: 'मध्य (Center)', icon: '🎯' },
-  { id: 'Front Counter (सामने)', label: 'सामने काउंटर (Front)', icon: '🏬' },
-  { id: 'Back Godown (पीछे)', label: 'पीछे का गोदाम (Back)', icon: '📦' },
+  { id: 'East', label: 'East', icon: '🧭' },
+  { id: 'West', label: 'West', icon: '🧭' },
+  { id: 'North', label: 'North', icon: '🧭' },
+  { id: 'South', label: 'South', icon: '🧭' },
+  { id: 'Center', label: 'Center', icon: '🎯' },
+  { id: 'Front Counter', label: 'Front Counter', icon: '🏬' },
+  { id: 'Back Godown', label: 'Back Godown', icon: '📦' },
 ];
 
 const QUICK_LINES = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7', 'Line 8', 'Row A', 'Row B', 'Row C', 'Rack 1', 'Rack 2'];
 const QUICK_BOXES = ['Box 01', 'Box 02', 'Box 03', 'Box 04', 'Box 05', 'Box 08', 'Box 10', 'Box 12', 'Box 14', 'Box 15', 'Box 20', 'Box 25', 'Shelf 1', 'Shelf 2', 'Bin 1', 'Bin 2'];
 const STORAGE_FLOORS = [
-  'Ground Floor (दुकान / भूतल)',
-  'Basement (तहखाना / बेसमेंट गोदाम)',
-  '1st Floor (पहला तल)',
-  '2nd Floor (दूसरा तल)',
-  'Back Stock Room (पीछे का स्टॉक रूम)',
-  'Central Warehouse (मुख्य वेयरहाउस)'
+  'Ground Floor (Main Store)',
+  'Basement (Stock Room)',
+  '1st Floor',
+  '2nd Floor',
+  'Back Stock Room',
+  'Central Warehouse'
 ];
 
 export default function ProductList() {
@@ -75,13 +75,13 @@ export default function ProductList() {
       if (filterCategory !== 'All Categories' && p.category !== filterCategory) return false;
       if (filterStockStatus !== 'All Stock Status' && p.status !== filterStockStatus) return false;
       if (filterGstRate !== 'All GST Rates' && String(p.gstRate) !== filterGstRate) return false;
-      if (filterDirection !== 'All Directions' && !(p.storageDirection || 'East (पूर्व)').toLowerCase().includes(filterDirection.toLowerCase())) return false;
+      if (filterDirection !== 'All Directions' && !(p.storageDirection || 'East').toLowerCase().includes(filterDirection.toLowerCase())) return false;
       return true;
     });
   }, [products, search, filterCategory, filterStockStatus, filterGstRate, filterDirection]);
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Name', 'Category', 'SKU', 'Barcode', 'Selling Price', 'MRP', 'Stock', 'GST Rate', 'Status', 'Floor', 'Direction (दिशा)', 'Line (लाइन)', 'Box (बॉक्स)', 'Landmark', 'Locator Code'];
+    const headers = ['ID', 'Name', 'Category', 'SKU', 'Barcode', 'Selling Price', 'MRP', 'Stock', 'GST Rate', 'Status', 'Floor', 'Direction', 'Line', 'Box', 'Landmark', 'Locator Code'];
     const rows = filteredProducts.map((p) => [
       `"${p.id}"`,
       `"${p.name}"`,
@@ -94,7 +94,7 @@ export default function ProductList() {
       `"${p.gstRate}%"`,
       `"${p.status}"`,
       `"${p.storageFloor || 'Ground Floor'}"`,
-      `"${p.storageDirection || 'East (पूर्व)'}"`,
+      `"${p.storageDirection || 'East'}"`,
       `"${p.storageLine || 'Line 1'}"`,
       `"${p.storageBox || 'Box 01'}"`,
       `"${p.storageLandmark || ''}"`,
@@ -174,14 +174,14 @@ export default function ProductList() {
             onChange={(e) => setFilterDirection(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none"
           >
-            <option value="All Directions">📍 All Storage (सभी दिशाएं)</option>
-            <option value="East">🧭 पूर्व (East)</option>
-            <option value="West">🧭 पश्चिम (West)</option>
-            <option value="North">🧭 उत्तर (North)</option>
-            <option value="South">🧭 दक्षिण (South)</option>
-            <option value="Center">🎯 मध्य (Center)</option>
-            <option value="Front">🏬 सामने काउंटर (Front)</option>
-            <option value="Back">📦 पीछे का गोदाम (Back)</option>
+            <option value="All Directions">📍 All Storage Directions</option>
+            <option value="East">🧭 East</option>
+            <option value="West">🧭 West</option>
+            <option value="North">🧭 North</option>
+            <option value="South">🧭 South</option>
+            <option value="Center">🎯 Center</option>
+            <option value="Front">🏬 Front Counter</option>
+            <option value="Back">📦 Back Godown</option>
           </select>
 
           <select
@@ -294,7 +294,7 @@ export default function ProductList() {
                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200/90 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 font-bold text-xs shadow-2xs w-fit">
                           <Compass className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           <span className="text-[#008ba3] dark:text-cyan-400 font-black">
-                            {p.storageDirection || 'East (पूर्व)'}
+                            {p.storageDirection || 'East'}
                           </span>
                           <span className="text-slate-300 dark:text-slate-600">•</span>
                           <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
@@ -359,13 +359,13 @@ export default function ProductList() {
                             id: p.id,
                             name: p.name,
                             sku: p.sku,
-                            storageFloor: p.storageFloor || 'Ground Floor (दुकान / भूतल)',
-                            storageDirection: p.storageDirection || 'East (पूर्व)',
+                            storageFloor: p.storageFloor || 'Ground Floor (Main Store)',
+                            storageDirection: p.storageDirection || 'East',
                             storageLine: p.storageLine || 'Line 1',
                             storageBox: p.storageBox || 'Box 01',
                             storageLandmark: p.storageLandmark || ''
                           })}
-                          title="Change Shelf / Box Location (लोकेशन बदलें)"
+                          title="Change Shelf / Box Location"
                           className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/60 text-slate-500 hover:text-amber-600 transition"
                         >
                           <Compass className="w-4 h-4" />
@@ -523,7 +523,7 @@ export default function ProductList() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                    Update Storage Location (लोकेशन बदलें)
+                    Update Storage Location
                   </h3>
                   <p className="text-[11px] text-slate-400 font-mono">
                     {editingLocationProduct.name} ({editingLocationProduct.sku})
@@ -543,7 +543,7 @@ export default function ProductList() {
               {/* Floor */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Floor / Area (गोदाम / तल)
+                  Floor / Store Area
                 </label>
                 <select
                   value={editingLocationProduct.storageFloor}
@@ -559,7 +559,7 @@ export default function ProductList() {
               {/* Disha / Direction */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span>Disha / Direction / Zone (दिशा) *</span>
+                  <span>Direction / Zone *</span>
                   <span className="text-[11px] text-amber-600 font-bold">{editingLocationProduct.storageDirection}</span>
                 </label>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -585,7 +585,7 @@ export default function ProductList() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Line / Row (लाइन) *
+                    Line / Row *
                   </label>
                   <input
                     type="text"
@@ -609,7 +609,7 @@ export default function ProductList() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Box Number (बॉक्स नंबर) *
+                    Box Number *
                   </label>
                   <input
                     type="text"
@@ -635,11 +635,11 @@ export default function ProductList() {
               {/* Landmark */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Landmark / Identification Note (पहचान चिन्ह)
+                  Landmark / Identification Note
                 </label>
                 <input
                   type="text"
-                  placeholder="उदा: शीशे वाले रैक के ऊपर, AC के पास..."
+                  placeholder="e.g. Top shelf of glass rack, beside AC..."
                   value={editingLocationProduct.storageLandmark}
                   onChange={(e) => setEditingLocationProduct({ ...editingLocationProduct, storageLandmark: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:border-rose-500"
@@ -648,7 +648,7 @@ export default function ProductList() {
 
               {/* Preview Tag */}
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-300/50 dark:border-amber-700/50 text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center justify-between">
-                <span>📍 लोकेशन: {editingLocationProduct.storageFloor?.split(' ')[0]} &rarr; {editingLocationProduct.storageDirection} &rarr; {editingLocationProduct.storageLine} &rarr; {editingLocationProduct.storageBox}</span>
+                <span>📍 Location: {editingLocationProduct.storageFloor?.split(' ')[0]} &rarr; {editingLocationProduct.storageDirection} &rarr; {editingLocationProduct.storageLine} &rarr; {editingLocationProduct.storageBox}</span>
                 <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 font-mono text-[10px]">{editingLocationProduct.storageDirection?.slice(0, 4).toUpperCase()}-{editingLocationProduct.storageLine}-{editingLocationProduct.storageBox}</span>
               </div>
             </div>

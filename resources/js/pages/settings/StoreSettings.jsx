@@ -2439,9 +2439,9 @@ export default function StoreSettings() {
             {/* A4 Products Per Page Capacity (User Requirement) */}
             <div className="p-4 rounded-xl border border-cyan-200 dark:border-cyan-800 bg-cyan-50/50 dark:bg-cyan-950/20 space-y-2">
               <div className="flex items-center gap-2 font-bold text-xs text-slate-900 dark:text-white">
-                <Sliders className="w-4 h-4 text-[#00a2c7]" /> A4 Products Per Page (पेज क्षमता)
+                <Sliders className="w-4 h-4 text-[#00a2c7]" /> A4 Products Per Page Capacity
               </div>
-              <p className="text-[11px] text-slate-500">1 A4 पेज में कितने उत्पाद सेट होंगे</p>
+              <p className="text-[11px] text-slate-500">Number of product items displayed per A4 invoice page</p>
               <select
                 value={formData.hardware.a4_items_per_page || 10}
                 onChange={(e) => {

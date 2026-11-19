@@ -1259,7 +1259,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
               {/* Top Perforation Guide (Simulating the tear-off continuous roll) */}
               <div className="text-center text-[10px] text-slate-500 font-mono tracking-widest pb-1 border-b border-dashed border-slate-400 flex items-center justify-center gap-2 mb-2 select-none">
                 <Scissors className="w-3.5 h-3.5 text-slate-400" />
-                <span>- - - - - - [ TEAR OFF ALONG PERFORATION / यहाँ से फाड़ें ] - - - - - -</span>
+                <span>- - - - - - [ TEAR OFF ALONG PERFORATION ] - - - - - -</span>
                 <Scissors className="w-3.5 h-3.5 text-slate-400" />
               </div>
 
@@ -1418,7 +1418,7 @@ export default function InvoicePrintModal({ invoice, onClose }) {
               {/* Bottom Perforation Guide (Simulating tear-off continuous roll) */}
               <div className="text-center text-[10px] text-slate-500 font-mono tracking-widest pt-2 border-t border-dashed border-slate-400 flex items-center justify-center gap-2 mt-2 select-none">
                 <Scissors className="w-3.5 h-3.5 text-slate-400" />
-                <span>- - - - - - [ TEAR OFF ALONG PERFORATION / यहाँ से फाड़ें ] - - - - - -</span>
+                <span>- - - - - - [ TEAR OFF ALONG PERFORATION ] - - - - - -</span>
                 <Scissors className="w-3.5 h-3.5 text-slate-400" />
               </div>
             </div>

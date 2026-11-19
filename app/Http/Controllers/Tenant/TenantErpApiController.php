@@ -226,7 +226,7 @@ class TenantErpApiController extends Controller
                         'variantCount' => count($pVariants),
                         // Storage / Physical Warehouse Locator
                         'storageFloor' => $storage['floor'] ?? 'Ground Floor',
-                        'storageDirection' => $storage['direction'] ?? 'East (पूर्व)',
+                        'storageDirection' => $storage['direction'] ?? 'East',
                         'storageLine' => $storage['line'] ?? 'Line 1',
                         'storageBox' => $storage['box'] ?? 'Box 01',
                         'storageLandmark' => $storage['landmark'] ?? '',
@@ -552,7 +552,7 @@ class TenantErpApiController extends Controller
 
         $storage = [
             'floor' => $request->input('storageFloor') ?: 'Ground Floor',
-            'direction' => $request->input('storageDirection') ?: 'East (पूर्व)',
+            'direction' => $request->input('storageDirection') ?: 'East',
             'line' => $request->input('storageLine') ?: 'Line 1',
             'box' => $request->input('storageBox') ?: 'Box 01',
             'landmark' => $request->input('storageLandmark') ?: '',
@@ -672,7 +672,7 @@ class TenantErpApiController extends Controller
 
         $storage = [
             'floor' => $request->input('storageFloor') ?: ($existingStorage['floor'] ?? 'Ground Floor'),
-            'direction' => $request->input('storageDirection') ?: ($existingStorage['direction'] ?? 'East (पूर्व)'),
+            'direction' => $request->input('storageDirection') ?: ($existingStorage['direction'] ?? 'East'),
             'line' => $request->input('storageLine') ?: ($existingStorage['line'] ?? 'Line 1'),
             'box' => $request->input('storageBox') ?: ($existingStorage['box'] ?? 'Box 01'),
             'landmark' => $request->input('storageLandmark') !== null ? $request->input('storageLandmark') : ($existingStorage['landmark'] ?? ''),

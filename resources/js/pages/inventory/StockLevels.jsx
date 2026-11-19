@@ -69,7 +69,7 @@ export default function StockLevels() {
                   <td className="px-3 py-3 font-semibold text-slate-900 dark:text-white">{p.name}</td>
                   <td className="px-3 py-3">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[11px] font-bold text-amber-900 dark:text-amber-200">
-                      <span>🧭 {p.storageDirection || 'East (पूर्व)'}</span>
+                      <span>🧭 {p.storageDirection || 'East'}</span>
                       <span className="text-amber-400">•</span>
                       <span>{p.storageLine || 'Line 1'}</span>
                       <span className="text-amber-400">•</span>
