@@ -1489,7 +1489,8 @@ export default function LandingPage({ defaultPage = 'home' }) {
 
             <button
               onClick={() => handleStartOnboarding()}
-              className="enexa-btn-primary !py-2 !px-4 sm:!px-5 !text-xs sm:!text-sm hidden sm:inline-flex"
+              className="enexa-btn-primary"
+              style={{ display: window.innerWidth < 640 ? 'none' : 'inline-flex' }}
             >
               <span>Get Started</span>
               <ArrowRight className="w-3.5 h-3.5" />
