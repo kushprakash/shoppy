@@ -28,24 +28,39 @@ class StoreDomainController extends Controller
     protected function resolveCurrentShop(Request $request): ?Shop
     {
         // 1. Injected by IdentifyTenant middleware
-        $shop = $request->attributes->get('tenant') ?? app('current_shop');
+        $shop = $request->attributes->get('tenant');
         if ($shop instanceof Shop) {
             return $shop;
         }
 
-        // 2. Resolve via StoreToken
-        $shopCode = StoreToken::resolveShopCodeFromRequest($request);
+        if (app()->has('current_shop')) {
+            $cShop = app('current_shop');
+            if ($cShop instanceof Shop) {
+                return $cShop;
+            }
+        }
+
+        // 2. Resolve via StoreToken, Header or Query
+        $shopCode = StoreToken::resolveShopCodeFromRequest($request)
+            ?: $request->header('X-Shop-Code')
+            ?: $request->header('X-Store-Code')
+            ?: $request->query('code')
+            ?: $request->query('shop_code');
+
         if ($shopCode) {
-            $shop = Shop::where('shop_code', strtoupper($shopCode))->first();
+            $shop = Shop::where('shop_code', strtoupper(trim((string) $shopCode)))->first();
             if ($shop) {
                 return $shop;
             }
         }
 
-        // 3. Fallback to active store cookie
-        $cookieCode = $request->cookie(StoreToken::CODE_COOKIE) ?: $request->cookie(StoreToken::LEGACY_CODE_COOKIE);
+        // 3. Fallback to active store cookie or session
+        $cookieCode = $request->cookie(StoreToken::CODE_COOKIE) 
+            ?: $request->cookie(StoreToken::LEGACY_CODE_COOKIE)
+            ?: ($request->hasSession() ? session('active_store_code') : null);
+
         if ($cookieCode) {
-            return Shop::where('shop_code', strtoupper($cookieCode))->first();
+            return Shop::where('shop_code', strtoupper(trim((string) $cookieCode)))->first();
         }
 
         return null;
