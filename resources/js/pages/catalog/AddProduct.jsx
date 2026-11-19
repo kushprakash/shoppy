@@ -15,8 +15,36 @@ import {
   CheckCircle2,
   RefreshCw,
   FolderTree,
-  AlertCircle
+  AlertCircle,
+  Compass,
+  MapPin,
+  Box,
+  Navigation,
+  Archive,
+  Grid,
+  CornerDownRight
 } from 'lucide-react';
+
+const STORAGE_DIRECTIONS = [
+  { id: 'East (पूर्व)', label: 'पूर्व (East)', icon: '🧭', badge: 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800' },
+  { id: 'West (पश्चिम)', label: 'पश्चिम (West)', icon: '🧭', badge: 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800' },
+  { id: 'North (उत्तर)', label: 'उत्तर (North)', icon: '🧭', badge: 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800' },
+  { id: 'South (दक्षिण)', label: 'दक्षिण (South)', icon: '🧭', badge: 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800' },
+  { id: 'Center (मध्य)', label: 'मध्य / सेंटर (Center)', icon: '🎯', badge: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800' },
+  { id: 'Front Counter (सामने)', label: 'सामने काउंटर (Front)', icon: '🏬', badge: 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800' },
+  { id: 'Back Godown (पीछे)', label: 'पीछे का गोदाम (Back)', icon: '📦', badge: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700' },
+];
+
+const QUICK_LINES = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5', 'Line 6', 'Line 7', 'Line 8', 'Row A', 'Row B', 'Row C', 'Rack 1', 'Rack 2', 'Almari 1'];
+const QUICK_BOXES = ['Box 01', 'Box 02', 'Box 03', 'Box 04', 'Box 05', 'Box 08', 'Box 10', 'Box 12', 'Box 14', 'Box 15', 'Box 20', 'Box 25', 'Shelf 1', 'Shelf 2', 'Bin 1', 'Bin 2'];
+const STORAGE_FLOORS = [
+  'Ground Floor (दुकान / भूतल)',
+  'Basement (तहखाना / बेसमेंट गोदाम)',
+  '1st Floor (पहला तल)',
+  '2nd Floor (दूसरा तल)',
+  'Back Stock Room (पीछे का स्टॉक रूम)',
+  'Central Warehouse (मुख्य वेयरहाउस)'
+];
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -47,7 +75,14 @@ export default function AddProduct() {
     branch: 'Main Branch (Downtown)',
     weightKg: 0.35,
     dimensions: '30x25x3 cm',
-    isFreeShipping: false
+    isFreeShipping: false,
+    // Warehouse & Store Storage Location Management (दुकान एवं गोदाम रैक-बॉक्स लोकेटर)
+    storageFloor: 'Ground Floor (दुकान / भूतल)',
+    storageDirection: 'East (पूर्व)',
+    storageLine: 'Line 1',
+    storageBox: 'Box 01',
+    storageRack: 'Rack A',
+    storageLandmark: ''
   });
 
   // Cascade category selections
@@ -196,6 +231,14 @@ export default function AddProduct() {
       weightKg: parseFloat(form.weightKg) || 0.35,
       dimensions: form.dimensions || '30x25x3 cm',
       isFreeShipping: form.isFreeShipping,
+      // Physical Storage & Warehouse Locator (दुकान एवं गोदाम रैक-बॉक्स लोकेटर)
+      storageFloor: form.storageFloor || 'Ground Floor (दुकान / भूतल)',
+      storageDirection: form.storageDirection || 'East (पूर्व)',
+      storageLine: form.storageLine || 'Line 1',
+      storageBox: form.storageBox || 'Box 01',
+      storageRack: form.storageRack || 'Rack A',
+      storageLandmark: form.storageLandmark || '',
+      storageLocationCode: `${form.storageDirection ? form.storageDirection.slice(0, 4).toUpperCase() : 'DIR'}-${form.storageLine || 'L1'}-${form.storageBox || 'B01'}`,
       variants: variants.map(v => ({ ...v, stock: 0 })),
       status: 'Out of Stock'
     };
@@ -435,13 +478,248 @@ export default function AddProduct() {
         </div>
 
         {/* ========================================================================= */}
-        {/* SECTION 3: SIZES & COLORS FOR VARIANT GENERATION                          */}
+        {/* SECTION 3: WAREHOUSE & STORE STORAGE LOCATOR (DISHA, LINE, BOX)           */}
+        {/* ========================================================================= */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 text-xs font-black flex items-center justify-center">
+                3
+              </span>
+              <div>
+                <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Compass className="w-4 h-4 text-amber-500" />
+                  <span>Warehouse & Store Storage Locator (स्टोर / गोदाम लोकेशन - दिशा, लाइन, बॉक्स)</span>
+                </h2>
+                <p className="text-[11px] text-slate-500">
+                  दुकान या वेयरहाउस में प्रोडक्ट तुरंत ढूंढने के लिए दिशा (East/West/North/South), लाइन/रैक और बॉक्स नंबर सेट करें।
+                </p>
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold">
+              <Box className="w-3.5 h-3.5 text-amber-500" />
+              <span>Smart Stock Locator</span>
+            </div>
+          </div>
+
+          {/* 1. Floor & Direction Row */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+            {/* Floor Selection */}
+            <div className="md:col-span-4 space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Floor / Store Area (गोदाम / तल) *
+              </label>
+              <select
+                value={form.storageFloor}
+                onChange={(e) => setForm({ ...form, storageFloor: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold focus:outline-none focus:border-[#00a2c7]"
+              >
+                {STORAGE_FLOORS.map((fl) => (
+                  <option key={fl} value={fl}>{fl}</option>
+                ))}
+              </select>
+              <span className="text-[10px] text-slate-400">दुकान का ग्राउंड फ्लोर या पिछला गोदाम चुनें।</span>
+            </div>
+
+            {/* Disha / Direction Selector */}
+            <div className="md:col-span-8 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <Compass className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Disha / Direction / Zone (दिशा / दिशा क्षेत्र) *</span>
+                </label>
+                <span className="text-[11px] font-bold text-[#008ba3] dark:text-cyan-400">
+                  चयनित: {form.storageDirection}
+                </span>
+              </div>
+
+              {/* Quick Direction Chips */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {STORAGE_DIRECTIONS.map((dir) => {
+                  const isSelected = form.storageDirection === dir.id;
+                  return (
+                    <button
+                      type="button"
+                      key={dir.id}
+                      onClick={() => setForm({ ...form, storageDirection: dir.id })}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-400/40'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400'
+                      }`}
+                    >
+                      <span>{dir.icon}</span>
+                      <span>{dir.label}</span>
+                      {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Direction Input if needed */}
+              <div className="pt-1">
+                <input
+                  type="text"
+                  placeholder="या कोई कस्टम दिशा लिखें (उदा: गेट के दाहिने तरफ, पिलर 3, सीढ़ी के पास)..."
+                  value={form.storageDirection}
+                  onChange={(e) => setForm({ ...form, storageDirection: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Line/Row and Box Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            {/* Line / Row / Rack */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Line / Row / Rack Number (किस लाइन / रो / रैक में है) *
+              </label>
+              <div className="relative">
+                <Grid className="w-4 h-4 text-indigo-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Line 1, Line 3, Row B, Rack 04..."
+                  value={form.storageLine}
+                  onChange={(e) => setForm({ ...form, storageLine: e.target.value })}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Quick Line Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick Select:</span>
+                {QUICK_LINES.slice(0, 8).map((line) => (
+                  <button
+                    type="button"
+                    key={line}
+                    onClick={() => setForm({ ...form, storageLine: line })}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                      form.storageLine === line
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                    }`}
+                  >
+                    {line}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Box / Bin Number */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Box / Bin / Shelf Number (किस नंबर के बॉक्स / बिंन में है) *
+              </label>
+              <div className="relative">
+                <Box className="w-4 h-4 text-emerald-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Box 01, Box 15, Shelf 3, Bin 08..."
+                  value={form.storageBox}
+                  onChange={(e) => setForm({ ...form, storageBox: e.target.value })}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Quick Box Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick Select:</span>
+                {QUICK_BOXES.slice(0, 8).map((box) => (
+                  <button
+                    type="button"
+                    key={box}
+                    onClick={() => setForm({ ...form, storageBox: box })}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                      form.storageBox === box
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                    }`}
+                  >
+                    {box}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Landmark & Live Locator Preview Card */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2 border-t border-slate-100 dark:border-slate-800 items-center">
+            {/* Landmark / Notes */}
+            <div className="md:col-span-5 space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Landmark / Identification Note (पहचान चिन्ह / लैंडमार्क)
+              </label>
+              <div className="relative">
+                <MapPin className="w-4 h-4 text-rose-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="उदा: शीशे वाले रैक के ऊपर, AC के पास, काउंटर 2 के पीछे..."
+                  value={form.storageLandmark}
+                  onChange={(e) => setForm({ ...form, storageLandmark: e.target.value })}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400">स्टाफ को सामान ढूंढने में आसानी के लिए कोई खास पहचान।</span>
+            </div>
+
+            {/* Live Interactive Product Locator Badge */}
+            <div className="md:col-span-7">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-amber-500/15 border border-amber-300/60 dark:border-amber-700/60 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="text-xs font-black text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                      Live Warehouse Location Tag (स्टोर लोकेटर)
+                    </span>
+                  </div>
+
+                  <span className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-[10px] font-mono font-black text-slate-700 dark:text-slate-300 border border-amber-200 dark:border-amber-800">
+                    {`${form.storageDirection ? form.storageDirection.slice(0, 4).toUpperCase() : 'DIR'}-${form.storageLine || 'L1'}-${form.storageBox || 'B01'}`}
+                  </span>
+                </div>
+
+                {/* Path Visualizer */}
+                <div className="flex items-center gap-2 text-xs flex-wrap font-bold text-slate-800 dark:text-slate-100 bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-800/60">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
+                    🏬 {form.storageFloor?.split(' ')[0] || 'Ground'}
+                  </span>
+                  <span className="text-amber-500 font-black">&rarr;</span>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/60 text-[11px] text-amber-800 dark:text-amber-200">
+                    🧭 {form.storageDirection || 'East (पूर्व)'}
+                  </span>
+                  <span className="text-amber-500 font-black">&rarr;</span>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/60 text-[11px] text-indigo-800 dark:text-indigo-200">
+                    🗄️ {form.storageLine || 'Line 1'}
+                  </span>
+                  <span className="text-amber-500 font-black">&rarr;</span>
+                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-600 text-[11px] text-white shadow-xs font-black">
+                    📦 {form.storageBox || 'Box 01'}
+                  </span>
+                </div>
+
+                {/* Staff Picking Instruction */}
+                <p className="text-[11px] text-amber-900/80 dark:text-amber-300/80 leading-relaxed">
+                  💡 <strong>स्टाफ पिकिंग गाइड:</strong> दुकान/गोदाम में <strong>{form.storageDirection}</strong> दिशा जाएं &rarr; <strong>{form.storageLine}</strong> पर पहुंचें &rarr; <strong>{form.storageBox}</strong> से यह सामान तुरंत निकालें।
+                  {form.storageLandmark && ` (पहचान: "${form.storageLandmark}")`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* SECTION 4: SIZES & COLORS FOR VARIANT GENERATION                          */}
         {/* ========================================================================= */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-950/60 text-[#00a2c7] text-xs font-black flex items-center justify-center">
-                3
+                4
               </span>
               <h2 className="text-sm font-black text-slate-900 dark:text-white">
                 Select Sizes &amp; Colors (Variant Ingredients)
@@ -534,13 +812,13 @@ export default function AddProduct() {
         </div>
 
         {/* ========================================================================= */}
-        {/* SECTION 4: EDITABLE VARIANT MATRIX TABLE                                  */}
+        {/* SECTION 5: EDITABLE VARIANT MATRIX TABLE                                  */}
         {/* ========================================================================= */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-950/60 text-[#00a2c7] text-xs font-black flex items-center justify-center">
-                4
+                5
               </span>
               <div>
                 <h2 className="text-sm font-black text-slate-900 dark:text-white">
@@ -667,12 +945,12 @@ export default function AddProduct() {
         </div>
 
         {/* ========================================================================= */}
-        {/* SECTION 5: SHIPPING ATTRIBUTES & PACKAGE SPECS                             */}
+        {/* SECTION 6: SHIPPING ATTRIBUTES & PACKAGE SPECS                             */}
         {/* ========================================================================= */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
             <span className="w-6 h-6 rounded-full bg-cyan-100 dark:bg-cyan-950/60 text-[#00a2c7] text-xs font-black flex items-center justify-center">
-              5
+              6
             </span>
             <h2 className="text-sm font-black text-slate-900 dark:text-white">
               Shipping &amp; Logistics Packaging Attributes

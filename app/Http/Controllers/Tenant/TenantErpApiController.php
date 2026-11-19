@@ -202,6 +202,8 @@ class TenantErpApiController extends Controller
                     })->toArray() : [];
 
                     $catName = $p->category_name ?: ($p->business_category_name ?: 'General Retail');
+                    $catMeta = !empty($p->category_meta) ? (json_decode($p->category_meta, true) ?: []) : [];
+                    $storage = $catMeta['storage'] ?? [];
 
                     return [
                         'id' => 'PRD-' . $p->id,
@@ -222,6 +224,13 @@ class TenantErpApiController extends Controller
                         'status' => $stockQty <= 0 ? 'Out of Stock' : ($stockQty <= $reorderLevel ? 'Low Stock' : 'In Stock'),
                         'variants' => $pVariants,
                         'variantCount' => count($pVariants),
+                        // Storage / Physical Warehouse Locator
+                        'storageFloor' => $storage['floor'] ?? 'Ground Floor',
+                        'storageDirection' => $storage['direction'] ?? 'East (पूर्व)',
+                        'storageLine' => $storage['line'] ?? 'Line 1',
+                        'storageBox' => $storage['box'] ?? 'Box 01',
+                        'storageLandmark' => $storage['landmark'] ?? '',
+                        'storageLocationCode' => $storage['locator_code'] ?? (($storage['direction'] ?? 'EAST') . '-' . ($storage['line'] ?? 'L1') . '-' . ($storage['box'] ?? 'B01')),
                     ];
                 })->toArray();
             } catch (\Throwable $e) {}
@@ -541,6 +550,16 @@ class TenantErpApiController extends Controller
             'updated_at' => now(),
         ]);
 
+        $storage = [
+            'floor' => $request->input('storageFloor') ?: 'Ground Floor',
+            'direction' => $request->input('storageDirection') ?: 'East (पूर्व)',
+            'line' => $request->input('storageLine') ?: 'Line 1',
+            'box' => $request->input('storageBox') ?: 'Box 01',
+            'landmark' => $request->input('storageLandmark') ?: '',
+            'locator_code' => $request->input('storageLocationCode') ?: (($request->input('storageDirection') ? mb_substr($request->input('storageDirection'), 0, 4) : 'EAST') . '-' . ($request->input('storageLine') ?: 'L1') . '-' . ($request->input('storageBox') ?: 'B01')),
+        ];
+        $categoryMeta = ['storage' => $storage];
+
         $productId = DB::connection('tenant')->table('products')->insertGetId([
             'business_category_id' => $bCatId,
             'name' => $data['name'],
@@ -553,6 +572,7 @@ class TenantErpApiController extends Controller
             'gst_rate' => $data['gstRate'] ?: 0,
             'hsn_code' => $data['hsnCode'] ?: null,
             'unit' => $data['unit'] ?: 'pcs',
+            'category_meta' => json_encode($categoryMeta),
             'is_active' => true,
             'created_at' => now(),
             'updated_at' => now(),
@@ -611,7 +631,7 @@ class TenantErpApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Product saved into tenant database',
+            'message' => 'Product saved into tenant database with Storage Location',
             'product' => [
                 'id' => 'PRD-' . $productId,
                 'db_id' => $productId,
@@ -619,10 +639,63 @@ class TenantErpApiController extends Controller
                 'sku' => $sku,
                 'sellingPrice' => $data['sellingPrice'],
                 'stock' => $data['stock'] ?: 0,
+                'storageFloor' => $storage['floor'],
+                'storageDirection' => $storage['direction'],
+                'storageLine' => $storage['line'],
+                'storageBox' => $storage['box'],
+                'storageLandmark' => $storage['landmark'],
+                'storageLocationCode' => $storage['locator_code'],
                 'variants' => $savedVariants,
                 'variantCount' => count($savedVariants),
             ]
         ]);
+    }
+
+    /**
+     * Update Product Storage Location in Tenant DB
+     */
+    public function updateStorageLocation(Request $request, string $id): JsonResponse
+    {
+        $shop = $this->resolveShop($request);
+        if (!$shop) return response()->json(['success' => false, 'message' => 'Shop not found'], 404);
+
+        $this->switchToTenant($shop->database_name);
+        $realId = (int) str_replace('PRD-', '', $id);
+
+        $product = DB::connection('tenant')->table('products')->where('id', $realId)->first();
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'Product not found'], 404);
+        }
+
+        $meta = !empty($product->category_meta) ? (json_decode($product->category_meta, true) ?: []) : [];
+        $existingStorage = $meta['storage'] ?? [];
+
+        $storage = [
+            'floor' => $request->input('storageFloor') ?: ($existingStorage['floor'] ?? 'Ground Floor'),
+            'direction' => $request->input('storageDirection') ?: ($existingStorage['direction'] ?? 'East (पूर्व)'),
+            'line' => $request->input('storageLine') ?: ($existingStorage['line'] ?? 'Line 1'),
+            'box' => $request->input('storageBox') ?: ($existingStorage['box'] ?? 'Box 01'),
+            'landmark' => $request->input('storageLandmark') !== null ? $request->input('storageLandmark') : ($existingStorage['landmark'] ?? ''),
+            'locator_code' => $request->input('storageLocationCode') ?: '',
+        ];
+
+        if (empty($storage['locator_code'])) {
+            $storage['locator_code'] = mb_substr($storage['direction'], 0, 4) . '-' . $storage['line'] . '-' . $storage['box'];
+        }
+
+        $meta['storage'] = $storage;
+
+        DB::connection('tenant')->table('products')->where('id', $realId)->update([
+            'category_meta' => json_encode($meta),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Storage location updated for product #{$realId}",
+            'storage' => $storage,
+        ]);
+    }
     }
 
     /**

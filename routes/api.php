@@ -144,6 +144,7 @@ Route::prefix('tenant/erp')->group(function () {
     Route::get('/init', [TenantErpApiController::class, 'getInitData']);
     Route::post('/categories', [TenantErpApiController::class, 'saveCategories']);
     Route::post('/products', [TenantErpApiController::class, 'saveProduct']);
+    Route::post('/products/{id}/storage-location', [TenantErpApiController::class, 'updateStorageLocation']);
     Route::delete('/products/{id}', [TenantErpApiController::class, 'deleteProduct']);
     Route::post('/orders', [TenantErpApiController::class, 'saveOrder']);
     Route::post('/roles', [TenantErpApiController::class, 'saveRole']);

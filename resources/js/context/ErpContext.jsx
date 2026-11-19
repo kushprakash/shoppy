@@ -1123,9 +1123,48 @@ export function ErpProvider({ children }) {
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-  const addProduct = (prod) => {
+  const addProduct = async (prod) => {
     setProducts((prev) => [prod, ...prev]);
     showToast(`Product ${prod.name} added to catalog!`);
+    try {
+      const activeCode = shopCode || getActiveShopCode();
+      if (activeCode) {
+        await fetch(`/api/tenant/erp/products?shop_code=${encodeURIComponent(activeCode)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...getStoreAuthHeaders(activeCode)
+          },
+          body: JSON.stringify(prod)
+        });
+      }
+    } catch (e) {
+      console.warn('Product async backend sync notice:', e);
+    }
+  };
+
+  const updateProductStorageLocation = async (productId, storageData) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, ...storageData } : p))
+    );
+    showToast('Storage location updated successfully!');
+    try {
+      const activeCode = shopCode || getActiveShopCode();
+      if (activeCode) {
+        await fetch(`/api/tenant/erp/products/${encodeURIComponent(productId)}/storage-location?shop_code=${encodeURIComponent(activeCode)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...getStoreAuthHeaders(activeCode)
+          },
+          body: JSON.stringify(storageData)
+        });
+      }
+    } catch (e) {
+      console.warn('Storage location async backend sync notice:', e);
+    }
   };
 
   const deleteProduct = (id) => {
@@ -1683,6 +1722,7 @@ export function ErpProvider({ children }) {
         products,
         setProducts,
         addProduct,
+        updateProductStorageLocation,
         deleteProduct,
         topCategories,
         setTopCategories,

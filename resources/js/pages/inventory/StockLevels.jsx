@@ -55,6 +55,7 @@ export default function StockLevels() {
               <tr>
                 <th className="px-3 py-2.5">Product SKU</th>
                 <th className="px-3 py-2.5">Item Name</th>
+                <th className="px-3 py-2.5">📍 Shelf & Box Locator</th>
                 <th className="px-3 py-2.5">Branch Location</th>
                 <th className="px-3 py-2.5">Unit</th>
                 <th className="px-3 py-2.5">Available Stock</th>
@@ -66,6 +67,15 @@ export default function StockLevels() {
                 <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                   <td className="px-3 py-3 font-mono font-bold text-slate-800 dark:text-slate-200">{p.sku}</td>
                   <td className="px-3 py-3 font-semibold text-slate-900 dark:text-white">{p.name}</td>
+                  <td className="px-3 py-3">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                      <span>🧭 {p.storageDirection || 'East (पूर्व)'}</span>
+                      <span className="text-amber-400">•</span>
+                      <span>{p.storageLine || 'Line 1'}</span>
+                      <span className="text-amber-400">•</span>
+                      <span className="px-1 rounded bg-amber-200/80 dark:bg-amber-800/80 text-[10px] font-black">{p.storageBox || 'Box 01'}</span>
+                    </span>
+                  </td>
                   <td className="px-3 py-3 text-slate-500">{p.branch}</td>
                   <td className="px-3 py-3 uppercase text-slate-400">{p.unit}</td>
                   <td className="px-3 py-3 font-bold text-slate-900 dark:text-white text-sm">{p.stock}</td>
