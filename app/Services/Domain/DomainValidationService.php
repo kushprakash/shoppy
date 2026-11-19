@@ -18,13 +18,13 @@ class DomainValidationService
         $domain = trim($input);
 
         // Strip protocol
-        $domain = preg_replace('#^https?://#i', '', $domain);
+        $domain = preg_replace('~^https?://~i', '', $domain);
 
         // Strip path, query params, hash
-        $domain = preg_replace('#[/\\?#].*$#', '', $domain);
+        $domain = preg_replace('~[/\\\\?#].*$~', '', $domain);
 
         // Strip port number (e.g. domain.com:8080)
-        $domain = preg_replace('#:\d+$#', '', $domain);
+        $domain = preg_replace('~:\d+$~', '', $domain);
 
         // Strip trailing dots
         $domain = rtrim($domain, '.');
