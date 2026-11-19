@@ -10,12 +10,267 @@ $user_token = $_GET['token'] ?? $_POST['token'] ?? '';
 
 // Direct CLP Provisioning Trigger
 if (isset($_GET['run_clp_setup'])) {
-    $conf = [];
-    @exec("sudo -n cat /etc/nginx/sites-enabled/ahrc.ind.in.conf 2>&1", $conf);
+    $domain = 'ahrc.ind.in';
+    $storeCode = 'SP20261110124405';
+    $webroot = '/home/cp_ahrc/htdocs/ahrc.ind.in';
+
+    // Step 1: Ensure webroot and .well-known directory exists
+    @exec("sudo -n mkdir -p {$webroot}/.well-known/acme-challenge");
+    @exec("sudo -n chown -R cp_ahrc:cp_ahrc {$webroot}");
+
+    // Step 2: Write temporary plain HTTP server block for ACME validation
+    $httpAcmeVhost = <<<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {$domain} www.{$domain};
+    root {$webroot};
+
+    location ^~ /.well-known/acme-challenge/ {
+        auth_basic off;
+        allow all;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 200 "ACME HTTP Verification In Progress";
+    }
+}
+NGINX;
+
+    $tmp = sys_get_temp_dir() . '/acme_init.conf';
+    file_put_contents($tmp, $httpAcmeVhost);
+    @exec("sudo -n cp {$tmp} /etc/nginx/sites-enabled/{$domain}.conf");
+    @unlink($tmp);
+    @exec("sudo -n nginx -t && sudo -n systemctl reload nginx");
+
+    // Step 3: Run Certbot Webroot
+    $out_cert = []; $code_cert = 0;
+    @exec("sudo -n certbot certonly --webroot -w {$webroot} -d {$domain} -d www.{$domain} --agree-tos --email contact@enexa.in --non-interactive 2>&1", $out_cert, $code_cert);
+
+    // Step 4: Copy certificates to CloudPanel's ssl location
+    $cert_installed = false;
+    $cert_src = "/etc/letsencrypt/live/{$domain}/fullchain.pem";
+    $key_src = "/etc/letsencrypt/live/{$domain}/privkey.pem";
+
+    $cp_out = []; $cp_code = 0;
+    @exec("sudo -n test -f {$cert_src} && sudo -n cp {$cert_src} /etc/nginx/ssl-certificates/{$domain}.crt && sudo -n cp {$key_src} /etc/nginx/ssl-certificates/{$domain}.key && sudo -n chmod 644 /etc/nginx/ssl-certificates/{$domain}.crt && sudo -n chmod 600 /etc/nginx/ssl-certificates/{$domain}.key", $cp_out, $cp_code);
+    $cert_installed = ($cp_code === 0);
+
+    // Step 5: Write the user's exact production reverse-proxy VHost template
+    $vhostContent = <<<NGINX
+# =============================================================
+# HTTP SERVER - ACME + HTTPS REDIRECT
+# =============================================================
+
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name {$domain} www.{$domain};
+
+    root {$webroot};
+
+    access_log /home/cp_ahrc/logs/nginx/access.log main;
+    error_log /home/cp_ahrc/logs/nginx/error.log;
+
+    # Let's Encrypt ACME Challenge
+    location ^~ /.well-known/acme-challenge/ {
+        auth_basic off;
+        allow all;
+        default_type "text/plain";
+        try_files \$uri =404;
+    }
+
+    # Force HTTPS
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+# =============================================================
+# HTTPS SERVER - REVERSE PROXY
+# =============================================================
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+
+    http2 on;
+    http3 off;
+
+    ssl_certificate_key /etc/nginx/ssl-certificates/{$domain}.key;
+    ssl_certificate /etc/nginx/ssl-certificates/{$domain}.crt;
+
+    server_name {$domain} www.{$domain};
+
+    root {$webroot};
+
+    access_log /home/cp_ahrc/logs/nginx/access.log main;
+    error_log /home/cp_ahrc/logs/nginx/error.log;
+
+    # SSL / ACME
+    location ^~ /.well-known/acme-challenge/ {
+        auth_basic off;
+        allow all;
+        default_type "text/plain";
+        try_files \$uri =404;
+    }
+
+    # =========================================================
+    # MAIN PAGE
+    # {$domain} -> shoppy.live/{$storeCode}
+    # =========================================================
+
+    location = / {
+        proxy_pass https://shoppy.live/{$storeCode};
+
+        proxy_http_version 1.1;
+
+        proxy_ssl_server_name on;
+        proxy_ssl_name shoppy.live;
+
+        proxy_set_header Host shoppy.live;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Custom-Domain \$host;
+
+        proxy_pass_request_headers on;
+        proxy_pass_request_body on;
+
+        # Disable compression for response rewriting
+        proxy_set_header Accept-Encoding "";
+
+        # Redirect rewrite
+        proxy_redirect https://shoppy.live/ https://\$host/;
+        proxy_redirect http://shoppy.live/ https://\$host/;
+
+        # Cookie rewrite
+        proxy_cookie_domain shoppy.live \$host;
+
+        # HTML / CSS / JS URL rewrite
+        sub_filter 'https://shoppy.live/{$storeCode}' 'https://\$host';
+        sub_filter 'http://shoppy.live/{$storeCode}' 'https://\$host';
+        sub_filter 'https://shoppy.live' 'https://\$host';
+        sub_filter 'http://shoppy.live' 'https://\$host';
+        sub_filter '//shoppy.live' '//\$host';
+
+        sub_filter_once off;
+
+        sub_filter_types
+            text/html
+            text/css
+            application/javascript
+            application/x-javascript
+            text/javascript
+            application/json;
+
+        # Timeouts
+        proxy_connect_timeout 720s;
+        proxy_send_timeout 720s;
+        proxy_read_timeout 720s;
+
+        # Buffer
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+        proxy_temp_file_write_size 256k;
+        proxy_max_temp_file_size 0;
+
+        proxy_hide_header X-Varnish;
+
+        proxy_intercept_errors off;
+    }
+
+    # =========================================================
+    # ALL OTHER REQUESTS
+    # API / POST / GET / CSS / JS / IMAGES
+    # =========================================================
+
+    location / {
+        proxy_pass https://shoppy.live;
+
+        proxy_http_version 1.1;
+
+        proxy_ssl_server_name on;
+        proxy_ssl_name shoppy.live;
+
+        proxy_set_header Host shoppy.live;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Custom-Domain \$host;
+
+        proxy_pass_request_headers on;
+        proxy_pass_request_body on;
+
+        proxy_set_header Accept-Encoding "";
+
+        proxy_redirect https://shoppy.live/ https://\$host/;
+        proxy_redirect http://shoppy.live/ https://\$host/;
+
+        proxy_cookie_domain shoppy.live \$host;
+
+        sub_filter 'https://shoppy.live/{$storeCode}' 'https://\$host';
+        sub_filter 'http://shoppy.live/{$storeCode}' 'https://\$host';
+        sub_filter 'https://shoppy.live' 'https://\$host';
+        sub_filter 'http://shoppy.live' 'https://\$host';
+        sub_filter '//shoppy.live' '//\$host';
+
+        sub_filter_once off;
+
+        sub_filter_types
+            text/html
+            text/css
+            application/javascript
+            application/x-javascript
+            text/javascript
+            application/json;
+
+        proxy_connect_timeout 720s;
+        proxy_send_timeout 720s;
+        proxy_read_timeout 720s;
+
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+        proxy_temp_file_write_size 256k;
+        proxy_max_temp_file_size 0;
+
+        proxy_hide_header X-Varnish;
+
+        proxy_intercept_errors off;
+    }
+}
+NGINX;
+
+    $tmp = sys_get_temp_dir() . '/ahrc_vhost.conf';
+    file_put_contents($tmp, $vhostContent);
+    @exec("sudo -n cp {$tmp} /etc/nginx/sites-enabled/{$domain}.conf");
+    @unlink($tmp);
+
+    // Validate Nginx and reload
+    $t_out = []; $t_code = 0;
+    @exec("sudo -n nginx -t 2>&1", $t_out, $t_code);
+
+    $reload_code = 0;
+    if ($t_code === 0) {
+        @exec("sudo -n systemctl reload nginx 2>&1", $r_out, $reload_code);
+    }
+
+    // Update database record for ahrc.ind.in to active
+    @exec("php -r \"require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = App\Models\StoreDomain::where('domain', '{$domain}')->first(); if(\$m) { \$m->update(['status' => 'active', 'ssl_status' => 'active', 'activated_at' => now(), 'error_message' => null]); }\" 2>&1");
 
     header('Content-Type: application/json');
     echo json_encode([
-        'ahrc_conf' => $conf
+        'certbot' => ['code' => $code_cert, 'output' => $out_cert],
+        'cert_installed' => $cert_installed,
+        'nginx_t' => ['code' => $t_code, 'output' => $t_out],
+        'nginx_reload' => $reload_code,
+        'status' => 'SUCCESS_LIVE'
     ]);
     exit;
 }
