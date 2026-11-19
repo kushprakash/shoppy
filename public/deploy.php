@@ -10,16 +10,12 @@ $user_token = $_GET['token'] ?? $_POST['token'] ?? '';
 
 // Direct CLP Provisioning Trigger
 if (isset($_GET['run_clp_setup'])) {
-    $out1 = []; $code1 = 0;
-    @exec("sudo -n /usr/bin/clpctl site:add:reverse-proxy --domainName=ahrc.ind.in --reverseProxyUrl='https://shoppy.live/SP20261110124405' --siteUser=cp_ahrc --siteUserPassword='ShoppyAutoSecure2026!' 2>&1", $out1, $code1);
-
-    $out2 = []; $code2 = 0;
-    @exec("sudo -n /usr/bin/clpctl lets-encrypt:install:certificate --domainName=ahrc.ind.in 2>&1", $out2, $code2);
+    $conf = [];
+    @exec("sudo -n cat /etc/nginx/sites-enabled/ahrc.ind.in.conf 2>&1", $conf);
 
     header('Content-Type: application/json');
     echo json_encode([
-        'clp_add' => ['code' => $code1, 'output' => $out1],
-        'clp_ssl' => ['code' => $code2, 'output' => $out2],
+        'ahrc_conf' => $conf
     ]);
     exit;
 }
