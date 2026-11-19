@@ -261,8 +261,12 @@ NGINX;
         @exec("sudo -n systemctl reload nginx 2>&1", $r_out, $reload_code);
     }
 
+    // Always ensure main application permissions remain intact
+    @exec("sudo -n chown -R shoppy:shoppy /home/shoppy/htdocs/shoppy.live && sudo -n chmod -R 755 /home/shoppy/htdocs/shoppy.live");
+
     // Update database record for ahrc.ind.in to active
-    @exec("php -r \"require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = App\Models\StoreDomain::where('domain', '{$domain}')->first(); if(\$m) { \$m->update(['status' => 'active', 'ssl_status' => 'active', 'activated_at' => now(), 'error_message' => null]); }\" 2>&1");
+    $proj = dirname(__DIR__);
+    @exec("php -r \"require '{$proj}/vendor/autoload.php'; \$app = require_once '{$proj}/bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = App\Models\StoreDomain::where('domain', '{$domain}')->first(); if(\$m) { \$m->update(['status' => 'active', 'ssl_status' => 'active', 'activated_at' => now(), 'error_message' => null]); }\" 2>&1");
 
     header('Content-Type: application/json');
     echo json_encode([
