@@ -47,6 +47,50 @@ if (isset($_POST['apply_db_perms']) || isset($_GET['apply_db_perms'])) {
     }
 }
 
+// Check if user requested to auto-grant sudo authorization via VPS root password
+$sudo_grant_feedback = null;
+if (isset($_POST['apply_sudo_auth']) || isset($_GET['apply_sudo_auth'])) {
+    $vps_root_pass = $_POST['vps_root_pass'] ?? $_GET['vps_root_pass'] ?? '';
+    if (!empty($vps_root_pass)) {
+        $cur_user = @exec('whoami') ?: get_current_user() ?: 'shoppy';
+        $sudoers_rule = "{$cur_user} ALL=(ALL) NOPASSWD: ALL\n";
+
+        $cmd = "sudo -S sh -c " . escapeshellarg("echo '{$sudoers_rule}' > /etc/sudoers.d/shoppy-custom-domain && chmod 0440 /etc/sudoers.d/shoppy-custom-domain") . " 2>&1";
+
+        $descriptors = [
+            0 => ["pipe", "r"],
+            1 => ["pipe", "w"],
+            2 => ["pipe", "w"]
+        ];
+
+        $process = @proc_open($cmd, $descriptors, $pipes);
+        if (is_resource($process)) {
+            fwrite($pipes[0], $vps_root_pass . "\n");
+            fclose($pipes[0]);
+
+            $out = stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+            $err = stream_get_contents($pipes[2]);
+            fclose($pipes[2]);
+
+            proc_close($process);
+
+            @exec('sudo -n id 2>&1', $check_id, $code_id);
+            if ($code_id === 0) {
+                $sudo_grant_feedback = [
+                    'success' => true,
+                    'message' => "Successfully authorized user '{$cur_user}' with passwordless sudo! CloudPanel and Nginx automated domain provisioning is now 100% active."
+                ];
+            } else {
+                $sudo_grant_feedback = [
+                    'success' => false,
+                    'message' => "Authorization failed: " . ($err ?: $out ?: "Incorrect root password or sudo denied.")
+                ];
+            }
+        }
+    }
+}
+
 // Auto-sync Production Mail Configuration into .env
 $mail_sync_feedback = null;
 if (file_exists($env_file)) {
@@ -493,13 +537,29 @@ if (!$has_error) {
             <?php endif; ?>
         </div>
 
+        <?php if (!empty($sudo_grant_feedback)): ?>
+            <div style="padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; font-weight: 600; <?php echo $sudo_grant_feedback['success'] ? 'background: #064e3b; color: #6ee7b7; border: 1px solid #059669;' : 'background: #881337; color: #fca5a5; border: 1px solid #e11d48;'; ?>">
+                <?php echo $sudo_grant_feedback['success'] ? '✔ ' : '❌ '; ?><?php echo htmlspecialchars($sudo_grant_feedback['message']); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!$has_sudo): ?>
+            <!-- Web 1-Click Root Password Form -->
+            <form method="POST" action="?apply_sudo_auth=1" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px;">
+                <input type="password" name="vps_root_pass" required placeholder="Enter Hostinger VPS Root Password" style="background: #0f172a; border: 1px solid #475569; color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; min-width: 280px;">
+                <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 12px; padding: 10px 18px;">
+                    ⚡ Auto-Authorize via Web (No SSH Needed)
+                </button>
+            </form>
+        <?php endif; ?>
+
         <div style="background: #020617; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
             <div style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 8px;">
-                ⚡ Run this 1-line command in your Hostinger VPS SSH Terminal as root to authorize Nginx and CloudPanel:
+                Or run this 1-line command in your Hostinger VPS SSH Terminal as root:
             </div>
             <pre style="font-family: monospace; font-size: 11px; color: #34d399; background: #0b1120; padding: 10px 14px; border-radius: 8px; overflow-x: auto; user-select: all; word-break: break-all; white-space: pre-wrap;">echo "<?php echo htmlspecialchars($cur_user); ?> ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/shoppy-custom-domain && sudo chmod 0440 /etc/sudoers.d/shoppy-custom-domain</pre>
             <div style="font-size: 11px; color: #94a3b8; margin-top: 8px;">
-                After executing this once in your VPS terminal, click <strong>"Retry Provisioning"</strong> in Store Settings and your custom domain will activate with SSL immediately.
+                Once this is configured ONCE on the server, all customer custom domains will be added to CloudPanel, get SSL, and update VHost 100% automatically without any manual commands!
             </div>
         </div>
     </div>
