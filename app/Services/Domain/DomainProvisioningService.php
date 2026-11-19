@@ -13,7 +13,7 @@ class DomainProvisioningService
     public function __construct()
     {
         $this->nginxConfigDir = config('services.custom_domain.nginx_dir')
-            ?: (is_dir('/etc/nginx/sites-available') ? '/etc/nginx/sites-available' : '/etc/nginx/conf.d');
+            ?: (is_dir('/etc/nginx/sites-enabled') ? '/etc/nginx/sites-enabled' : '/etc/nginx/sites-enabled');
         
         $this->publicWebroot = config('services.custom_domain.webroot')
             ?: base_path('public');
@@ -50,16 +50,9 @@ class DomainProvisioningService
                 $domainModel->log('cloudpanel', 'warning', "CloudPanel CLI notice: " . ($clpResult['error'] ?? 'Proceeding with Nginx configuration.'));
             }
 
-            // Identify VHost config path (In CloudPanel, sites are in /etc/nginx/sites-enabled/)
-            $configPath = is_file("/etc/nginx/sites-enabled/{$domain}.conf")
-                ? "/etc/nginx/sites-enabled/{$domain}.conf"
-                : (is_file("/etc/nginx/sites-available/{$domain}.conf")
-                    ? "/etc/nginx/sites-available/{$domain}.conf"
-                    : "{$this->nginxConfigDir}/shoppy-domain-{$domain}.conf");
-
-            $symlinkPath = (dirname($configPath) === '/etc/nginx/sites-enabled')
-                ? null
-                : "/etc/nginx/sites-enabled/" . basename($configPath);
+            // In CloudPanel, sites are strictly in /etc/nginx/sites-enabled/
+            $configPath = "/etc/nginx/sites-enabled/{$domain}.conf";
+            $symlinkPath = null;
 
             // =========================================================================
             // STEP 2: Issue & Install Let's Encrypt SSL Certificate
@@ -277,7 +270,7 @@ class DomainProvisioningService
             $codeCp = 0;
             @exec($cmdCp, $outCp, $codeCp);
 
-            if ($codeCp === 0 && file_exists($targetPath)) {
+            if ($codeCp === 0) {
                 $writeSuccess = true;
             } else {
                 // Attempt sudo tee
@@ -285,7 +278,7 @@ class DomainProvisioningService
                 $outTee = [];
                 $codeTee = 0;
                 @exec($cmdTee, $outTee, $codeTee);
-                if ($codeTee === 0 && file_exists($targetPath)) {
+                if ($codeTee === 0) {
                     $writeSuccess = true;
                 }
             }
