@@ -461,6 +461,49 @@ if (!$has_error) {
         </form>
     </div>
 
+    <!-- Live Custom Domain & Nginx VPS Authorization Tool -->
+    <?php
+    $cur_user = @exec('whoami') ?: get_current_user() ?: 'shoppy';
+    $sudo_check = [];
+    $sudo_code = 1;
+    @exec('sudo -n id 2>&1', $sudo_check, $sudo_code);
+    $has_sudo = ($sudo_code === 0);
+    $nginx_conf_writable = is_writable('/etc/nginx/conf.d') || is_writable('/etc/nginx/sites-available');
+    ?>
+    <div style="margin-top: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px;">
+        <h3 style="font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <span>🌐 Custom Domain & Nginx VPS Authorization Status</span>
+        </h3>
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.6; margin-bottom: 14px;">
+            Automated Custom Domain reverse-proxy and Let's Encrypt SSL provisioning requires authorization to reload Nginx and manage virtual hosts.
+        </p>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+            <span class="info-pill">User: <strong><?php echo htmlspecialchars($cur_user); ?></strong></span>
+            <?php if ($has_sudo): ?>
+                <span class="info-pill" style="background: #064e3b; color: #6ee7b7; font-weight: 700;">✔ Sudo Authorized (Passwordless)</span>
+            <?php else: ?>
+                <span class="info-pill" style="background: #881337; color: #fca5a5; font-weight: 700;">❌ Sudo Not Configured for '<?php echo htmlspecialchars($cur_user); ?>'</span>
+            <?php endif; ?>
+
+            <?php if ($nginx_conf_writable): ?>
+                <span class="info-pill" style="background: #064e3b; color: #6ee7b7; font-weight: 700;">✔ Nginx Config Directory Writable</span>
+            <?php else: ?>
+                <span class="info-pill" style="background: #78350f; color: #fcd34d; font-weight: 700;">⚠ Nginx Directory Root-Protected</span>
+            <?php endif; ?>
+        </div>
+
+        <div style="background: #020617; border: 1px solid #334155; border-radius: 12px; padding: 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #f59e0b; margin-bottom: 8px;">
+                ⚡ Run this 1-line command in your Hostinger VPS SSH Terminal as root to authorize Nginx and CloudPanel:
+            </div>
+            <pre style="font-family: monospace; font-size: 11px; color: #34d399; background: #0b1120; padding: 10px 14px; border-radius: 8px; overflow-x: auto; user-select: all; word-break: break-all; white-space: pre-wrap;">echo "<?php echo htmlspecialchars($cur_user); ?> ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/shoppy-custom-domain && sudo chmod 0440 /etc/sudoers.d/shoppy-custom-domain</pre>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 8px;">
+                After executing this once in your VPS terminal, click <strong>"Retry Provisioning"</strong> in Store Settings and your custom domain will activate with SSL immediately.
+            </div>
+        </div>
+    </div>
+
 </div>
 </body>
 </html>

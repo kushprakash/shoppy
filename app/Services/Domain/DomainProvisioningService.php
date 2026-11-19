@@ -198,72 +198,94 @@ class DomainProvisioningService
      */
     protected function atomicWriteNginxConfig(string $targetPath, string $content, ?string $symlinkPath = null): array
     {
-        $tempPath = $targetPath . '.tmp.' . uniqid();
-
         $dir = dirname($targetPath);
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);
         }
 
-        if (@file_put_contents($tempPath, $content) === false) {
-            // Try via sudo tee if direct write lacks permission
-            $escapedContent = escapeshellarg($content);
-            $sudoWrite = @exec("echo {$escapedContent} | sudo -n tee " . escapeshellarg($tempPath) . " 2>&1", $sOut, $sCode);
-            if ($sCode !== 0 || !file_exists($tempPath)) {
-                return [
-                    'success' => false,
-                    'error' => "Could not write Nginx configuration to {$targetPath}. Permission check failed.",
-                ];
+        // 1. Write content to system temp directory first (always writable by PHP user)
+        $localTemp = sys_get_temp_dir() . '/shoppy_vhost_' . uniqid() . '.conf';
+        if (@file_put_contents($localTemp, $content) === false) {
+            return [
+                'success' => false,
+                'error' => "Failed to write temporary configuration file to {$localTemp}.",
+            ];
+        }
+
+        // 2. Safely place the file at targetPath (direct write or via sudo cp/tee)
+        $writeSuccess = false;
+        if (@file_put_contents($targetPath . '.test_perm', 'test') !== false) {
+            @unlink($targetPath . '.test_perm');
+            if (@file_put_contents($targetPath, $content) !== false) {
+                $writeSuccess = true;
             }
         }
 
-        $backupPath = null;
-        if (file_exists($targetPath)) {
-            $backupPath = $targetPath . '.bak.' . uniqid();
-            @copy($targetPath, $backupPath);
-        }
+        if (!$writeSuccess) {
+            // Attempt with sudo cp
+            $cmdCp = "sudo -n cp " . escapeshellarg($localTemp) . " " . escapeshellarg($targetPath) . " 2>&1";
+            $outCp = [];
+            $codeCp = 0;
+            @exec($cmdCp, $outCp, $codeCp);
 
-        if (!@rename($tempPath, $targetPath)) {
-            @exec("sudo -n mv " . escapeshellarg($tempPath) . " " . escapeshellarg($targetPath) . " 2>&1");
-        }
-
-        if ($symlinkPath && dirname($symlinkPath) !== dirname($targetPath) && is_dir(dirname($symlinkPath))) {
-            if (!file_exists($symlinkPath)) {
-                if (!@symlink($targetPath, $symlinkPath)) {
-                    @exec("sudo -n ln -s " . escapeshellarg($targetPath) . " " . escapeshellarg($symlinkPath) . " 2>&1");
+            if ($codeCp === 0 && file_exists($targetPath)) {
+                $writeSuccess = true;
+            } else {
+                // Attempt sudo tee
+                $cmdTee = "sudo -n tee " . escapeshellarg($targetPath) . " < " . escapeshellarg($localTemp) . " 2>&1";
+                $outTee = [];
+                $codeTee = 0;
+                @exec($cmdTee, $outTee, $codeTee);
+                if ($codeTee === 0 && file_exists($targetPath)) {
+                    $writeSuccess = true;
                 }
             }
         }
 
-        // Test configuration syntax
+        @unlink($localTemp);
+
+        if (!$writeSuccess) {
+            $cmdHelp = 'echo "shoppy ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/shoppy-custom-domain && sudo chmod 0440 /etc/sudoers.d/shoppy-custom-domain';
+            return [
+                'success' => false,
+                'error' => "Could not write Nginx configuration to {$targetPath}. Server sudo permission required. Please run this 1-line command in your Hostinger VPS SSH terminal as root:\n{$cmdHelp}",
+            ];
+        }
+
+        // 3. Symlink into sites-enabled if used
+        if ($symlinkPath && dirname($symlinkPath) !== dirname($targetPath) && is_dir(dirname($symlinkPath))) {
+            if (!file_exists($symlinkPath)) {
+                if (!@symlink($targetPath, $symlinkPath)) {
+                    @exec("sudo -n ln -sf " . escapeshellarg($targetPath) . " " . escapeshellarg($symlinkPath) . " 2>&1");
+                }
+            }
+        }
+
+        // 4. Test configuration syntax (nginx -t or sudo -n nginx -t)
         $output = [];
         $exitCode = 0;
         @exec('nginx -t 2>&1', $output, $exitCode);
+        if ($exitCode !== 0) {
+            @exec('sudo -n nginx -t 2>&1', $output, $exitCode);
+        }
 
         if ($exitCode !== 0) {
             $err = "Nginx configuration syntax test failed:\n" . implode("\n", $output);
             Log::error($err);
 
             // Rollback
-            if ($backupPath && file_exists($backupPath)) {
-                @rename($backupPath, $targetPath);
-            } else {
-                @unlink($targetPath);
-                if ($symlinkPath && file_exists($symlinkPath)) {
-                    @unlink($symlinkPath);
-                }
+            @unlink($targetPath);
+            @exec("sudo -n rm -f " . escapeshellarg($targetPath) . " 2>&1");
+            if ($symlinkPath && file_exists($symlinkPath)) {
+                @unlink($symlinkPath);
+                @exec("sudo -n rm -f " . escapeshellarg($symlinkPath) . " 2>&1");
             }
 
             return ['success' => false, 'error' => $err];
         }
 
-        // Cleanup backup
-        if ($backupPath && file_exists($backupPath)) {
-            @unlink($backupPath);
-        }
-
-        // Reload Nginx cleanly
-        @exec('systemctl reload nginx 2>&1 || nginx -s reload 2>&1 || sudo -n systemctl reload nginx 2>&1');
+        // 5. Reload Nginx cleanly
+        @exec('systemctl reload nginx 2>&1 || nginx -s reload 2>&1 || sudo -n systemctl reload nginx 2>&1 || sudo -n service nginx reload 2>&1');
 
         return ['success' => true];
     }

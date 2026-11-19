@@ -404,14 +404,42 @@ export default function CustomDomainSettings({ storeCode, storeName, showToast }
             </div>
           </div>
 
-          {/* Error Message if any */}
+          {/* Error Message or Permission Setup Notice */}
           {domainData.error_message && (
-            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-xs">
-                <span className="font-bold text-rose-900 dark:text-rose-200">DNS or SSL Diagnostic Notice:</span>
-                <p className="text-rose-700 dark:text-rose-300 font-mono leading-relaxed">{domainData.error_message}</p>
+            <div className={`p-4 rounded-2xl border ${domainData.error_message.includes('sudo') || domainData.error_message.includes('Permission') ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800'} space-y-3`}>
+              <div className="flex items-start gap-3">
+                <AlertCircle className={`w-5 h-5 ${domainData.error_message.includes('sudo') || domainData.error_message.includes('Permission') ? 'text-amber-600' : 'text-rose-600'} shrink-0 mt-0.5`} />
+                <div className="space-y-1 text-xs">
+                  <span className={`font-bold ${domainData.error_message.includes('sudo') || domainData.error_message.includes('Permission') ? 'text-amber-900 dark:text-amber-200' : 'text-rose-900 dark:text-rose-200'}`}>
+                    {domainData.error_message.includes('sudo') || domainData.error_message.includes('Permission') ? 'One-Time Server Authorization Required:' : 'DNS or SSL Diagnostic Notice:'}
+                  </span>
+                  <p className={`${domainData.error_message.includes('sudo') || domainData.error_message.includes('Permission') ? 'text-amber-800 dark:text-amber-300' : 'text-rose-700 dark:text-rose-300'} font-mono leading-relaxed`}>
+                    {domainData.error_message}
+                  </p>
+                </div>
               </div>
+
+              {(domainData.error_message.includes('sudo') || domainData.error_message.includes('Permission')) && (
+                <div className="mt-2 p-3 bg-slate-900 text-white rounded-xl border border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-amber-400">Run this 1-line command in your Hostinger VPS Terminal as root:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy('echo "shoppy ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/shoppy-custom-domain && sudo chmod 0440 /etc/sudoers.d/shoppy-custom-domain', 'sudo_cmd')}
+                      className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-600 text-black text-[11px] font-black inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedKey === 'sudo_cmd' ? <Check className="w-3 h-3 text-black" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedKey === 'sudo_cmd' ? 'Copied Command!' : 'Copy SSH Command'}</span>
+                    </button>
+                  </div>
+                  <pre className="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap break-all select-all">
+                    echo "shoppy ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/shoppy-custom-domain && sudo chmod 0440 /etc/sudoers.d/shoppy-custom-domain
+                  </pre>
+                  <p className="text-[10px] text-slate-400">
+                    💡 After running this once, click <strong>"Retry Provisioning"</strong> above and your domain will be configured and live with SSL immediately.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
