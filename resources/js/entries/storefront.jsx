@@ -532,6 +532,7 @@ export default function Storefront() {
 
   // Master Products & Variant Selection Map
   const [products, setProducts] = useState(SHOPPY_PRODUCTS);
+  const [isDummyChecked, setIsDummyChecked] = useState(true);
   const [selectedVariants, setSelectedVariants] = useState(() => {
     const map = {};
     SHOPPY_PRODUCTS.forEach((p) => {
@@ -684,13 +685,21 @@ export default function Storefront() {
         });
       }
 
-      if (catalogRes.data?.success && catalogRes.data.data?.data?.length > 0) {
-        const dbProducts = catalogRes.data.data.data.map((item, idx) => ({
+      // Resolve Dummy View preference (default is true for new stores)
+      const storeData = infoRes.data?.store;
+      const dummyPref = (storeData?.show_dummy_products ?? storeData?.settings?.show_dummy_products) !== false;
+      setIsDummyChecked(dummyPref);
+
+      const rawDbList = catalogRes.data?.success && Array.isArray(catalogRes.data.data?.data) ? catalogRes.data.data.data : [];
+
+      let dbProducts = [];
+      if (rawDbList.length > 0) {
+        dbProducts = rawDbList.map((item, idx) => ({
           id: item.id || `PRD-${idx + 1}`,
           name: item.name,
           category: item.category || 'General',
           topCategoryId: 'CAT-MOBILES',
-          brand: item.brand || storeInfo?.name || 'Shoppy',
+          brand: item.brand || storeData?.name || 'Shoppy',
           selling_price: Number(item.selling_price || item.price || 999),
           mrp: Number(item.mrp || (Number(item.selling_price || 999) * 1.35).toFixed(0)),
           rating: 4.6,
@@ -706,7 +715,23 @@ export default function Storefront() {
             { id: 'v1', size: 'Standard', color: 'Default', colorHex: '#475569', sellingPrice: Number(item.selling_price || 999), mrp: Number(item.mrp || 1299), sku: `SKU-${idx}` }
           ]
         }));
+      }
+
+      // If dummy view is checked:
+      // Show SHOPPY_PRODUCTS (dummy products) so newly created stores with 0 products open with full demo catalog.
+      // If dummy view is unchecked:
+      // Show real dbProducts! (If 0 real products exist, products is [] and renders clean empty state)
+      if (dummyPref) {
+        setProducts(SHOPPY_PRODUCTS);
+      } else {
         setProducts(dbProducts);
+        const map = {};
+        dbProducts.forEach((p) => {
+          if (p.variants && p.variants.length > 0) {
+            map[p.id] = p.variants[0];
+          }
+        });
+        setSelectedVariants(map);
       }
     } catch (err) {
       console.warn('Storefront data fetch error:', err);
@@ -1101,6 +1126,28 @@ export default function Storefront() {
       )}
 
       {/* =========================================================================
+          DEMO / DUMMY VIEW NOTIFICATION BANNER (ACTIVE WHEN DUMMY MODE IS TICKED)
+      ========================================================================== */}
+      {!previewThemeParam && isDummyChecked && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-900 text-[11px] py-1.5 px-4 z-40">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 font-bold">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>
+                Demo Catalog Preview Active — You are browsing with sample products. Real products will appear once added &amp; "Dummy View" is unticked in Theme Settings.
+              </span>
+            </div>
+            <a
+              href="/shop-admin/store-settings"
+              className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[10px] transition shrink-0"
+            >
+              <span>Manage Themes</span>
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
           THEME 1: SNAPDEAL STYLE LAYOUT
       ========================================================================== */}
       {activeThemeId === 'snapdeal' && (
@@ -1320,43 +1367,55 @@ export default function Storefront() {
                 <h3 className="text-base font-black text-slate-900">{activeCategory === 'ALL' ? 'All Curated Products' : activeCategory}</h3>
                 <span className="text-xs text-slate-500 font-bold">{filteredProducts.length} Products</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
-                  <div key={product.id} className="rounded-2xl border border-slate-200 bg-white p-3.5 flex flex-col justify-between hover:shadow-lg transition">
-                    <div className="space-y-2">
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black bg-[#e11d48] text-white">
-                          {Math.round(((product.mrp - product.selling_price) / product.mrp) * 100)}% OFF
-                        </span>
-                        <button onClick={(e) => toggleWishlist(product.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow-xs">
-                          <Heart className={`w-3.5 h-3.5 ${wishlist[product.id] ? 'fill-rose-600 text-rose-600' : 'text-slate-400'}`} />
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <ShoppingBag className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800">No Products Available In Catalog</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Store catalog is currently empty. If you are the store owner, add products in Store Admin or enable Dummy View in Theme Settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} className="rounded-2xl border border-slate-200 bg-white p-3.5 flex flex-col justify-between hover:shadow-lg transition">
+                      <div className="space-y-2">
+                        <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50">
+                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black bg-[#e11d48] text-white">
+                            {Math.round(((product.mrp - product.selling_price) / product.mrp) * 100)}% OFF
+                          </span>
+                          <button onClick={(e) => toggleWishlist(product.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow-xs">
+                            <Heart className={`w-3.5 h-3.5 ${wishlist[product.id] ? 'fill-rose-600 text-rose-600' : 'text-slate-400'}`} />
+                          </button>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase">{product.brand}</span>
+                        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{product.name}</h4>
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>{product.rating} ({product.rating_count})</span>
+                        </div>
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-base font-black text-slate-900">₹{product.selling_price.toLocaleString('en-IN')}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{product.mrp.toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-3 mt-2 border-t border-slate-100">
+                        <button onClick={(e) => handleAddToCart(product, e)} className="py-2 text-xs border border-slate-200 hover:border-slate-300 font-bold rounded-lg flex items-center justify-center gap-1">
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>Add</span>
+                        </button>
+                        <button onClick={(e) => handleBuyNow(product, e)} className="py-2 text-xs bg-[#e11d48] hover:bg-[#be123c] text-white font-black rounded-lg flex items-center justify-center gap-1">
+                          <Zap className="w-3.5 h-3.5 fill-current" />
+                          <span>Buy Now</span>
                         </button>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{product.brand}</span>
-                      <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{product.name}</h4>
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                        <Star className="w-3 h-3 fill-current" />
-                        <span>{product.rating} ({product.rating_count})</span>
-                      </div>
-                      <div className="flex items-baseline gap-2 pt-1">
-                        <span className="text-base font-black text-slate-900">₹{product.selling_price.toLocaleString('en-IN')}</span>
-                        <span className="text-xs text-slate-400 line-through">₹{product.mrp.toLocaleString('en-IN')}</span>
-                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-3 mt-2 border-t border-slate-100">
-                      <button onClick={(e) => handleAddToCart(product, e)} className="py-2 text-xs border border-slate-200 hover:border-slate-300 font-bold rounded-lg flex items-center justify-center gap-1">
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>Add</span>
-                      </button>
-                      <button onClick={(e) => handleBuyNow(product, e)} className="py-2 text-xs bg-[#e11d48] hover:bg-[#be123c] text-white font-black rounded-lg flex items-center justify-center gap-1">
-                        <Zap className="w-3.5 h-3.5 fill-current" />
-                        <span>Buy Now</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           </main>
         </div>
@@ -1503,42 +1562,54 @@ export default function Storefront() {
                 <span className="text-xs font-bold text-slate-500">{filteredProducts.length} Items</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {filteredProducts.map((p) => (
-                  <div key={p.id} className="rounded-sm border border-slate-200 p-3 flex flex-col justify-between hover:shadow-lg transition bg-white">
-                    <div className="space-y-2">
-                      <div className="relative aspect-square rounded-sm overflow-hidden bg-slate-50 flex items-center justify-center">
-                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-sm bg-[#2874f0] text-[#ffe500] text-[9px] font-black italic">
-                          f-Assured ★
-                        </span>
-                        <button onClick={(e) => toggleWishlist(p.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow-xs">
-                          <Heart className={`w-3.5 h-3.5 ${wishlist[p.id] ? 'fill-rose-600 text-rose-600' : 'text-slate-400'}`} />
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-sm border border-slate-200">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <ShoppingBag className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800">No Products Available In Catalog</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Store catalog is currently empty. If you are the store owner, add products in Store Admin or enable Dummy View in Theme Settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredProducts.map((p) => (
+                    <div key={p.id} className="rounded-sm border border-slate-200 p-3 flex flex-col justify-between hover:shadow-lg transition bg-white">
+                      <div className="space-y-2">
+                        <div className="relative aspect-square rounded-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-sm bg-[#2874f0] text-[#ffe500] text-[9px] font-black italic">
+                            f-Assured ★
+                          </span>
+                          <button onClick={(e) => toggleWishlist(p.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow-xs">
+                            <Heart className={`w-3.5 h-3.5 ${wishlist[p.id] ? 'fill-rose-600 text-rose-600' : 'text-slate-400'}`} />
+                          </button>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
+                        <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{p.name}</h4>
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-base font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
+                          <span className="text-xs font-bold text-emerald-600">
+                            {Math.round(((p.mrp - p.selling_price) / p.mrp) * 100)}% off
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-600 block">Free delivery</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 pt-3 mt-2 border-t border-slate-100">
+                        <button onClick={(e) => handleAddToCart(p, e)} className="py-2 text-xs bg-[#ff9f00] hover:bg-[#e68f00] text-white font-black rounded-sm">
+                          Add to Cart
+                        </button>
+                        <button onClick={(e) => handleBuyNow(p, e)} className="py-2 text-xs bg-[#fb641b] hover:bg-[#e65612] text-white font-black rounded-sm">
+                          Buy Now
                         </button>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
-                      <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug">{p.name}</h4>
-                      <div className="flex items-baseline gap-2 pt-1">
-                        <span className="text-base font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
-                        <span className="text-xs text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
-                        <span className="text-xs font-bold text-emerald-600">
-                          {Math.round(((p.mrp - p.selling_price) / p.mrp) * 100)}% off
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-600 block">Free delivery</span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 pt-3 mt-2 border-t border-slate-100">
-                      <button onClick={(e) => handleAddToCart(p, e)} className="py-2 text-xs bg-[#ff9f00] hover:bg-[#e68f00] text-white font-black rounded-sm">
-                        Add to Cart
-                      </button>
-                      <button onClick={(e) => handleBuyNow(p, e)} className="py-2 text-xs bg-[#fb641b] hover:bg-[#e65612] text-white font-black rounded-sm">
-                        Buy Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           </main>
         </div>
@@ -1651,34 +1722,46 @@ export default function Storefront() {
                 <span className="text-xs font-bold text-emerald-700">⚡ 2-Hour Delivery Available</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
-                {filteredProducts.map((p) => (
-                  <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-3 flex flex-col justify-between hover:shadow-md transition">
-                    <div className="space-y-1.5">
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center">
-                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#0c831f] text-white text-[9px] font-black">
-                          SAVE ₹{p.mrp - p.selling_price}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
-                      <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{p.name}</h4>
-                      <span className="text-[10px] text-slate-500 font-medium">Standard Pack</span>
-                      <div className="flex items-baseline gap-2 pt-1">
-                        <span className="text-base font-black text-slate-900">₹{p.selling_price}</span>
-                        <span className="text-xs text-slate-400 line-through">₹{p.mrp}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={(e) => handleAddToCart(p, e)}
-                      className="mt-3 w-full py-2 rounded-full border border-[#0c831f] text-[#0c831f] hover:bg-[#0c831f] hover:text-white font-bold text-xs transition flex items-center justify-center gap-1"
-                    >
-                      <span>Add +</span>
-                    </button>
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <ShoppingBag className="w-7 h-7" />
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-sm font-black text-slate-800">No Products Available In Catalog</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Store catalog is currently empty. If you are the store owner, add products in Store Admin or enable Dummy View in Theme Settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+                  {filteredProducts.map((p) => (
+                    <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-3 flex flex-col justify-between hover:shadow-md transition">
+                      <div className="space-y-1.5">
+                        <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center">
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#0c831f] text-white text-[9px] font-black">
+                            SAVE ₹{p.mrp - p.selling_price}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase">{p.brand}</span>
+                        <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{p.name}</h4>
+                        <span className="text-[10px] text-slate-500 font-medium">Standard Pack</span>
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-base font-black text-slate-900">₹{p.selling_price}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{p.mrp}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => handleAddToCart(p, e)}
+                        className="mt-3 w-full py-2 rounded-full border border-[#0c831f] text-[#0c831f] hover:bg-[#0c831f] hover:text-white font-bold text-xs transition flex items-center justify-center gap-1"
+                      >
+                        <span>Add +</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </main>
         </div>
@@ -1801,41 +1884,53 @@ export default function Storefront() {
             {/* Amazon Product Cards Grid (Prime Badges & Yellow Buy Buttons) */}
             <section className="bg-white p-5 rounded-sm border border-slate-200 space-y-4">
               <h3 className="text-base font-black text-slate-900">Today's Deals &amp; Top Recommendations</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {filteredProducts.map((p) => (
-                  <div key={p.id} className="rounded-sm border border-slate-200 p-3 flex flex-col justify-between hover:shadow-md transition bg-white">
-                    <div className="space-y-1.5">
-                      <div className="aspect-square bg-slate-50 rounded-sm overflow-hidden flex items-center justify-center p-2">
-                        <img src={p.image} alt={p.name} className="w-full h-full object-contain" />
-                      </div>
-                      <span className="inline-block px-2 py-0.5 rounded-sm bg-[#b12704] text-white text-[10px] font-bold">
-                        Limited time deal
-                      </span>
-                      <h4 className="text-xs font-medium text-slate-900 hover:text-[#c45500] line-clamp-2 leading-snug cursor-pointer">
-                        {p.name}
-                      </h4>
-                      <div className="flex items-center gap-1">
-                        <span className="text-amber-500 font-bold text-xs">★★★★☆</span>
-                        <span className="text-[10px] text-[#007185]">{p.rating_count}</span>
-                      </div>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-[#b12704]">₹{p.selling_price.toLocaleString('en-IN')}</span>
-                        <span className="text-xs text-slate-500">M.R.P: <span className="line-through">₹{p.mrp}</span></span>
-                      </div>
-                      <span className="text-[10px] text-slate-600 block">Get it by <span className="font-bold">Tomorrow</span> • <span className="text-[#007185] font-black">✓prime</span></span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 pt-3 mt-2 border-t border-slate-100">
-                      <button onClick={(e) => handleAddToCart(p, e)} className="py-2 text-xs bg-[#ffd814] hover:bg-[#f7ca00] text-slate-900 font-bold rounded-full">
-                        Add to Cart
-                      </button>
-                      <button onClick={(e) => handleBuyNow(p, e)} className="py-2 text-xs bg-[#ffa41c] hover:bg-[#fa8900] text-slate-900 font-bold rounded-full">
-                        Buy Now
-                      </button>
-                    </div>
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-sm border border-slate-200">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <ShoppingBag className="w-7 h-7" />
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-sm font-black text-slate-800">No Products Available In Catalog</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Store catalog is currently empty. If you are the store owner, add products in Store Admin or enable Dummy View in Theme Settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {filteredProducts.map((p) => (
+                    <div key={p.id} className="rounded-sm border border-slate-200 p-3 flex flex-col justify-between hover:shadow-md transition bg-white">
+                      <div className="space-y-1.5">
+                        <div className="aspect-square bg-slate-50 rounded-sm overflow-hidden flex items-center justify-center p-2">
+                          <img src={p.image} alt={p.name} className="w-full h-full object-contain" />
+                        </div>
+                        <span className="inline-block px-2 py-0.5 rounded-sm bg-[#b12704] text-white text-[10px] font-bold">
+                          Limited time deal
+                        </span>
+                        <h4 className="text-xs font-medium text-slate-900 hover:text-[#c45500] line-clamp-2 leading-snug cursor-pointer">
+                          {p.name}
+                        </h4>
+                        <div className="flex items-center gap-1">
+                          <span className="text-amber-500 font-bold text-xs">★★★★☆</span>
+                          <span className="text-[10px] text-[#007185]">{p.rating_count}</span>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-lg font-bold text-[#b12704]">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                          <span className="text-xs text-slate-500">M.R.P: <span className="line-through">₹{p.mrp}</span></span>
+                        </div>
+                        <span className="text-[10px] text-slate-600 block">Get it by <span className="font-bold">Tomorrow</span> • <span className="text-[#007185] font-black">✓prime</span></span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 pt-3 mt-2 border-t border-slate-100">
+                        <button onClick={(e) => handleAddToCart(p, e)} className="py-2 text-xs bg-[#ffd814] hover:bg-[#f7ca00] text-slate-900 font-bold rounded-full">
+                          Add to Cart
+                        </button>
+                        <button onClick={(e) => handleBuyNow(p, e)} className="py-2 text-xs bg-[#ffa41c] hover:bg-[#fa8900] text-slate-900 font-bold rounded-full">
+                          Buy Now
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </main>
         </div>
@@ -1920,39 +2015,51 @@ export default function Storefront() {
                 <p className="text-xs text-slate-400 tracking-wide mt-0.5">Handpicked luxury items with verified authenticity</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                {filteredProducts.map((p) => (
-                  <div key={p.id} className="group border border-slate-200 p-4 flex flex-col justify-between hover:shadow-lg transition bg-white">
-                    <div className="space-y-2">
-                      <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
-                        <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <button onClick={(e) => toggleWishlist(p.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 shadow-xs">
-                          <Heart className={`w-3.5 h-3.5 ${wishlist[p.id] ? 'fill-[#da1c5c] text-[#da1c5c]' : 'text-slate-400'}`} />
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center bg-white border border-slate-200">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <ShoppingBag className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800">No Products Available In Catalog</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Store catalog is currently empty. If you are the store owner, add products in Store Admin or enable Dummy View in Theme Settings.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                  {filteredProducts.map((p) => (
+                    <div key={p.id} className="group border border-slate-200 p-4 flex flex-col justify-between hover:shadow-lg transition bg-white">
+                      <div className="space-y-2">
+                        <div className="relative aspect-square overflow-hidden bg-slate-50 flex items-center justify-center">
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <button onClick={(e) => toggleWishlist(p.id, e)} className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 shadow-xs">
+                            <Heart className={`w-3.5 h-3.5 ${wishlist[p.id] ? 'fill-[#da1c5c] text-[#da1c5c]' : 'text-slate-400'}`} />
+                          </button>
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-900 block">{p.brand}</span>
+                        <h4 className="text-xs font-normal text-slate-600 line-clamp-1">{p.name}</h4>
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-sm font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
+                          <span className="text-[11px] font-bold text-[#da1c5c]">
+                            {Math.round(((p.mrp - p.selling_price) / p.mrp) * 100)}% Off
+                          </span>
+                        </div>
+                        <span className="text-[9px] uppercase tracking-wider text-emerald-700 font-bold block">100% Luxury Authentic</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-4 mt-2 border-t border-slate-100">
+                        <button onClick={(e) => handleAddToCart(p, e)} className="py-2.5 text-[11px] uppercase tracking-wider bg-black text-white font-bold hover:bg-slate-800">
+                          Add to Bag
+                        </button>
+                        <button onClick={(e) => handleBuyNow(p, e)} className="py-2.5 text-[11px] uppercase tracking-wider bg-[#da1c5c] text-white font-bold hover:bg-[#b8124b]">
+                          Buy Now
                         </button>
                       </div>
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-900 block">{p.brand}</span>
-                      <h4 className="text-xs font-normal text-slate-600 line-clamp-1">{p.name}</h4>
-                      <div className="flex items-baseline gap-2 pt-1">
-                        <span className="text-sm font-black text-slate-900">₹{p.selling_price.toLocaleString('en-IN')}</span>
-                        <span className="text-xs text-slate-400 line-through">₹{p.mrp.toLocaleString('en-IN')}</span>
-                        <span className="text-[11px] font-bold text-[#da1c5c]">
-                          {Math.round(((p.mrp - p.selling_price) / p.mrp) * 100)}% Off
-                        </span>
-                      </div>
-                      <span className="text-[9px] uppercase tracking-wider text-emerald-700 font-bold block">100% Luxury Authentic</span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-4 mt-2 border-t border-slate-100">
-                      <button onClick={(e) => handleAddToCart(p, e)} className="py-2.5 text-[11px] uppercase tracking-wider bg-black text-white font-bold hover:bg-slate-800">
-                        Add to Bag
-                      </button>
-                      <button onClick={(e) => handleBuyNow(p, e)} className="py-2.5 text-[11px] uppercase tracking-wider bg-[#da1c5c] text-white font-bold hover:bg-[#b8124b]">
-                        Buy Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           </main>
         </div>

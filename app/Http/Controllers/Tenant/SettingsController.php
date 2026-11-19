@@ -241,6 +241,7 @@ class SettingsController extends Controller
             'theme_color' => $settings['theme_color'] ?? '#00a2c7',
             'secondary_color' => $settings['secondary_color'] ?? '#06b6d4',
             'ecom_theme' => $settings['ecom_theme'] ?? ($settings['theme_template'] ?? 'snapdeal'),
+            'show_dummy_products' => isset($settings['show_dummy_products']) ? (bool) $settings['show_dummy_products'] : true,
             'sms_settings' => [
                 'is_enabled' => !empty($settings['sms_settings']['is_enabled']),
                 'provider' => $settings['sms_settings']['provider'] ?? 'fast2sms',
@@ -315,6 +316,7 @@ class SettingsController extends Controller
             'theme_color' => 'required|string|max:32',
             'secondary_color' => 'nullable|string|max:32',
             'ecom_theme' => 'nullable|string|max:32',
+            'show_dummy_products' => 'nullable|boolean',
             'sms_settings' => 'nullable|array',
             'smtp_settings' => 'nullable|array',
         ]);
@@ -361,6 +363,7 @@ class SettingsController extends Controller
             'theme_color' => $validated['theme_color'],
             'secondary_color' => $validated['secondary_color'] ?? '#06b6d4',
             'ecom_theme' => $validated['ecom_theme'] ?? ($currentSettings['ecom_theme'] ?? 'snapdeal'),
+            'show_dummy_products' => $request->has('show_dummy_products') ? (bool) $request->input('show_dummy_products') : ($currentSettings['show_dummy_products'] ?? true),
             'sms_settings' => $smsSettings,
             'smtp_settings' => $smtpSettings,
             'updated_at' => now()->toIso8601String(),

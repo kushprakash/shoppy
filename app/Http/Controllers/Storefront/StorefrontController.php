@@ -45,6 +45,7 @@ class StorefrontController extends Controller
         $footerLogo = $rawSettings['footer_logo'] ?? null;
         $favicon = $rawSettings['favicon'] ?? null;
         $ecomTheme = $rawSettings['ecom_theme'] ?? ($rawSettings['theme_template'] ?? 'snapdeal');
+        $showDummyProducts = isset($rawSettings['show_dummy_products']) ? (bool) $rawSettings['show_dummy_products'] : true;
 
         return response()->json([
             'success' => true,
@@ -58,10 +59,14 @@ class StorefrontController extends Controller
                 'footer_logo' => $footerLogo,
                 'favicon' => $favicon,
                 'ecom_theme' => $ecomTheme,
-                'settings' => $rawSettings ?: [
+                'show_dummy_products' => $showDummyProducts,
+                'settings' => array_merge($rawSettings ?: [
                     'theme_color' => '#e11d48',
                     'banner_text' => 'Welcome to ' . ($shop ? $shop->name : 'Shoppy Store'),
-                ],
+                ], [
+                    'show_dummy_products' => $showDummyProducts,
+                    'ecom_theme' => $ecomTheme,
+                ]),
             ],
             'categories' => $categories,
             'business_categories' => $businessCategories,
@@ -73,6 +78,19 @@ class StorefrontController extends Controller
      */
     public function getCatalog(Request $request): JsonResponse
     {
+        $shop = $request->attributes->get('tenant');
+        $code = $request->query('code') ?: ($shop ? $shop->shop_code : null);
+        if (!$shop && $code) {
+            $shop = DB::connection('mysql')->table('shops')->where('shop_code', strtoupper($code))->first();
+        }
+        if ($shop && !empty($shop->database_name)) {
+            $sanitized = preg_replace('/[^a-zA-Z0-9_\-]/', '', $shop->database_name);
+            if (!empty($sanitized)) {
+                \Illuminate\Support\Facades\Config::set('database.connections.tenant.database', $sanitized);
+                DB::purge('tenant');
+            }
+        }
+
         $products = [];
         try {
             if (DB::connection('tenant')->getSchemaBuilder()->hasTable('products')) {

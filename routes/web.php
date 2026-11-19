@@ -212,7 +212,7 @@ Route::get('/{storeCode}', function ($storeCode) use ($loadWebsiteMeta) {
     }
 
     $settings = json_decode($dbShop->settings, true) ?: [];
-    $hasEcommerce = !empty($settings['has_ecommerce']);
+    $hasEcommerce = !empty($settings['has_ecommerce']) || ($settings['show_dummy_products'] ?? true) !== false;
     
     // Allow instant override via URL parameters ?ecom=1, ?shop=1, or ?store=1
     if (request()->has('ecom') || request()->has('shop') || request()->has('storefront') || request()->has('store')) {

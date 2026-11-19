@@ -248,65 +248,154 @@ export function ErpProvider({ children }) {
     }
   });
 
+  const syncCategoriesToBackend = async (overrides = {}) => {
+    try {
+      const payload = {
+        topCategories: overrides.topCategories !== undefined ? overrides.topCategories : topCategories,
+        midCategories: overrides.midCategories !== undefined ? overrides.midCategories : midCategories,
+        endCategories: overrides.endCategories !== undefined ? overrides.endCategories : endCategories,
+        sizes: overrides.sizes !== undefined ? overrides.sizes : sizes,
+        colors: overrides.colors !== undefined ? overrides.colors : colors,
+        shippingRules: overrides.shippingRules !== undefined ? overrides.shippingRules : shippingRules,
+      };
+
+      try {
+        if (payload.topCategories) localStorage.setItem('shoppy_top_categories', JSON.stringify(payload.topCategories));
+        if (payload.midCategories) localStorage.setItem('shoppy_mid_categories', JSON.stringify(payload.midCategories));
+        if (payload.endCategories) localStorage.setItem('shoppy_end_categories', JSON.stringify(payload.endCategories));
+        if (payload.sizes) localStorage.setItem('shoppy_sizes', JSON.stringify(payload.sizes));
+        if (payload.colors) localStorage.setItem('shoppy_colors', JSON.stringify(payload.colors));
+        if (payload.shippingRules) localStorage.setItem('shoppy_shipping_rules', JSON.stringify(payload.shippingRules));
+      } catch (e) {}
+
+      const activeCode = shopCode || getActiveShopCode();
+      if (activeCode) {
+        await fetch(`/api/tenant/erp/categories?shop_code=${encodeURIComponent(activeCode)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...getStoreAuthHeaders(activeCode)
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to sync categories to backend:', err);
+    }
+  };
+
   const addTopCategory = (cat) => {
     const newCat = { ...cat, id: cat.id || `TOP-${Date.now().toString().slice(-4)}` };
-    setTopCategories((prev) => [newCat, ...prev]);
+    setTopCategories((prev) => {
+      const next = [newCat, ...prev];
+      syncCategoriesToBackend({ topCategories: next });
+      return next;
+    });
     showToast(`Top Category "${cat.name}" added`);
   };
   const updateTopCategory = (id, updated) => {
-    setTopCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)));
+    setTopCategories((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...updated } : c));
+      syncCategoriesToBackend({ topCategories: next });
+      return next;
+    });
     showToast('Top Category updated');
   };
   const deleteTopCategory = (id) => {
-    setTopCategories((prev) => prev.filter((c) => c.id !== id));
+    setTopCategories((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      syncCategoriesToBackend({ topCategories: next });
+      return next;
+    });
     showToast('Top Category deleted');
   };
 
   const addMidCategory = (cat) => {
     const newCat = { ...cat, id: cat.id || `MID-${Date.now().toString().slice(-4)}` };
-    setMidCategories((prev) => [newCat, ...prev]);
+    setMidCategories((prev) => {
+      const next = [newCat, ...prev];
+      syncCategoriesToBackend({ midCategories: next });
+      return next;
+    });
     showToast(`Mid Category "${cat.name}" added`);
   };
   const updateMidCategory = (id, updated) => {
-    setMidCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)));
+    setMidCategories((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...updated } : c));
+      syncCategoriesToBackend({ midCategories: next });
+      return next;
+    });
     showToast('Mid Category updated');
   };
   const deleteMidCategory = (id) => {
-    setMidCategories((prev) => prev.filter((c) => c.id !== id));
+    setMidCategories((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      syncCategoriesToBackend({ midCategories: next });
+      return next;
+    });
     showToast('Mid Category deleted');
   };
 
   const addEndCategory = (cat) => {
     const newCat = { ...cat, id: cat.id || `END-${Date.now().toString().slice(-4)}` };
-    setEndCategories((prev) => [newCat, ...prev]);
+    setEndCategories((prev) => {
+      const next = [newCat, ...prev];
+      syncCategoriesToBackend({ endCategories: next });
+      return next;
+    });
     showToast(`End Category "${cat.name}" added`);
   };
   const updateEndCategory = (id, updated) => {
-    setEndCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updated } : c)));
+    setEndCategories((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...updated } : c));
+      syncCategoriesToBackend({ endCategories: next });
+      return next;
+    });
     showToast('End Category updated');
   };
   const deleteEndCategory = (id) => {
-    setEndCategories((prev) => prev.filter((c) => c.id !== id));
+    setEndCategories((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      syncCategoriesToBackend({ endCategories: next });
+      return next;
+    });
     showToast('End Category deleted');
   };
 
   const addSize = (sz) => {
     const newSz = { ...sz, id: sz.id || `sz-${Date.now().toString().slice(-4)}` };
-    setSizes((prev) => [...prev, newSz]);
+    setSizes((prev) => {
+      const next = [...prev, newSz];
+      syncCategoriesToBackend({ sizes: next });
+      return next;
+    });
     showToast(`Size "${sz.label}" added`);
   };
   const deleteSize = (id) => {
-    setSizes((prev) => prev.filter((s) => s.id !== id));
+    setSizes((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      syncCategoriesToBackend({ sizes: next });
+      return next;
+    });
     showToast('Size option removed');
   };
 
   const addColor = (clr) => {
     const newClr = { ...clr, id: clr.id || `clr-${Date.now().toString().slice(-4)}` };
-    setColors((prev) => [...prev, newClr]);
+    setColors((prev) => {
+      const next = [...prev, newClr];
+      syncCategoriesToBackend({ colors: next });
+      return next;
+    });
     showToast(`Color "${clr.name}" added`);
   };
   const deleteColor = (id) => {
-    setColors((prev) => prev.filter((c) => c.id !== id));
+    setColors((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      syncCategoriesToBackend({ colors: next });
+      return next;
+    });
     showToast('Color option removed');
   };
 
@@ -315,6 +404,7 @@ export function ErpProvider({ children }) {
     try {
       localStorage.setItem('shoppy_shipping_rules', JSON.stringify(rules));
     } catch (e) {}
+    syncCategoriesToBackend({ shippingRules: rules });
     showToast('Shipping & courier policies updated');
   };
 
@@ -358,12 +448,30 @@ export function ErpProvider({ children }) {
           if (Array.isArray(d.suppliers)) setSuppliers(d.suppliers);
           if (Array.isArray(d.branches)) setBranches(d.branches);
           if (Array.isArray(d.roles) && d.roles.length > 0) setRoles(d.roles);
-          if (Array.isArray(d.topCategories) && d.topCategories.length > 0) setTopCategories(d.topCategories);
-          if (Array.isArray(d.midCategories) && d.midCategories.length > 0) setMidCategories(d.midCategories);
-          if (Array.isArray(d.endCategories) && d.endCategories.length > 0) setEndCategories(d.endCategories);
-          if (Array.isArray(d.sizes) && d.sizes.length > 0) setSizes(d.sizes);
-          if (Array.isArray(d.colors) && d.colors.length > 0) setColors(d.colors);
-          if (d.shippingRules) setShippingRules(d.shippingRules);
+          if (Array.isArray(d.topCategories) && d.topCategories.length > 0) {
+            setTopCategories(d.topCategories);
+            try { localStorage.setItem('shoppy_top_categories', JSON.stringify(d.topCategories)); } catch (e) {}
+          }
+          if (Array.isArray(d.midCategories) && d.midCategories.length > 0) {
+            setMidCategories(d.midCategories);
+            try { localStorage.setItem('shoppy_mid_categories', JSON.stringify(d.midCategories)); } catch (e) {}
+          }
+          if (Array.isArray(d.endCategories) && d.endCategories.length > 0) {
+            setEndCategories(d.endCategories);
+            try { localStorage.setItem('shoppy_end_categories', JSON.stringify(d.endCategories)); } catch (e) {}
+          }
+          if (Array.isArray(d.sizes) && d.sizes.length > 0) {
+            setSizes(d.sizes);
+            try { localStorage.setItem('shoppy_sizes', JSON.stringify(d.sizes)); } catch (e) {}
+          }
+          if (Array.isArray(d.colors) && d.colors.length > 0) {
+            setColors(d.colors);
+            try { localStorage.setItem('shoppy_colors', JSON.stringify(d.colors)); } catch (e) {}
+          }
+          if (d.shippingRules) {
+            setShippingRules(d.shippingRules);
+            try { localStorage.setItem('shoppy_shipping_rules', JSON.stringify(d.shippingRules)); } catch (e) {}
+          }
           if (d.shop) {
             if (d.shop.code) {
               setStoreAuthSession({ shopCode: d.shop.code, store: d.shop });

@@ -142,6 +142,7 @@ Route::prefix('pos')->middleware('tenant')->group(function () {
 */
 Route::prefix('tenant/erp')->group(function () {
     Route::get('/init', [TenantErpApiController::class, 'getInitData']);
+    Route::post('/categories', [TenantErpApiController::class, 'saveCategories']);
     Route::post('/products', [TenantErpApiController::class, 'saveProduct']);
     Route::delete('/products/{id}', [TenantErpApiController::class, 'deleteProduct']);
     Route::post('/orders', [TenantErpApiController::class, 'saveOrder']);

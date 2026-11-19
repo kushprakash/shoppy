@@ -347,7 +347,7 @@ class TenantErpApiController extends Controller
             } catch (\Throwable $e) {}
         }
 
-        // 7. Standard Retail Categories (clean)
+        // 7. Standard Retail Categories (clean default baseline)
         $topCategories = [
             ['id' => 'TOP-1', 'name' => 'General Retail', 'slug' => 'general-retail', 'icon' => '🛍️', 'description' => 'Retail products, goods & merchandise', 'isActive' => true],
             ['id' => 'TOP-2', 'name' => 'Fashion & Apparel', 'slug' => 'fashion-apparel', 'icon' => '👗', 'description' => 'Apparel, garments, footwear and accessories', 'isActive' => true],
@@ -419,6 +419,43 @@ class TenantErpApiController extends Controller
                 ['id' => 'ws-3', 'minWeight' => 1.0, 'maxWeight' => 3.0, 'rate' => 140, 'label' => '1kg - 3kg'],
             ]
         ];
+
+        // 11. Retrieve Persisted 3-Tier Categories, Sizes, Colors & Rules from Tenant DB or Central Shop settings
+        $savedCategories = null;
+        if ($hasTenantDb) {
+            try {
+                if (DB::connection('tenant')->getSchemaBuilder()->hasTable('settings')) {
+                    $row = DB::connection('tenant')->table('settings')->where('key', 'catalog_categories')->first();
+                    if ($row && !empty($row->value)) {
+                        $savedCategories = json_decode($row->value, true);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+        if (!$savedCategories && !empty($shopSettings['catalog_categories'])) {
+            $savedCategories = $shopSettings['catalog_categories'];
+        }
+
+        if (is_array($savedCategories)) {
+            if (!empty($savedCategories['topCategories']) && is_array($savedCategories['topCategories'])) {
+                $topCategories = $savedCategories['topCategories'];
+            }
+            if (!empty($savedCategories['midCategories']) && is_array($savedCategories['midCategories'])) {
+                $midCategories = $savedCategories['midCategories'];
+            }
+            if (!empty($savedCategories['endCategories']) && is_array($savedCategories['endCategories'])) {
+                $endCategories = $savedCategories['endCategories'];
+            }
+            if (!empty($savedCategories['sizes']) && is_array($savedCategories['sizes'])) {
+                $sizes = $savedCategories['sizes'];
+            }
+            if (!empty($savedCategories['colors']) && is_array($savedCategories['colors'])) {
+                $colors = $savedCategories['colors'];
+            }
+            if (!empty($savedCategories['shippingRules']) && is_array($savedCategories['shippingRules'])) {
+                $shippingRules = $savedCategories['shippingRules'];
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -714,6 +751,89 @@ class TenantErpApiController extends Controller
             'role-sales' => 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200',
             default => 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
         };
+    }
+
+    /**
+     * Save/Persist 3-tier categories (Top, Mid, End), Sizes, Colors & Shipping Rules
+     */
+    public function saveCategories(Request $request): JsonResponse
+    {
+        $shop = $this->resolveShop($request);
+        if (!$shop) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Store session not found.',
+            ], 401);
+        }
+
+        $topCategories = $request->input('topCategories');
+        $midCategories = $request->input('midCategories');
+        $endCategories = $request->input('endCategories');
+        $sizes = $request->input('sizes');
+        $colors = $request->input('colors');
+        $shippingRules = $request->input('shippingRules');
+
+        $dbName = $shop->database_name;
+        $hasTenantDb = $this->switchToTenant($dbName);
+
+        // Fetch current saved categories to allow partial updates
+        $current = [];
+        if ($hasTenantDb) {
+            try {
+                if (DB::connection('tenant')->getSchemaBuilder()->hasTable('settings')) {
+                    $row = DB::connection('tenant')->table('settings')->where('key', 'catalog_categories')->first();
+                    if ($row && !empty($row->value)) {
+                        $current = json_decode($row->value, true) ?: [];
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        if (empty($current)) {
+            $shopSettings = json_decode($shop->settings, true) ?: [];
+            $current = $shopSettings['catalog_categories'] ?? [];
+        }
+
+        $payload = [
+            'topCategories' => $topCategories !== null ? $topCategories : ($current['topCategories'] ?? null),
+            'midCategories' => $midCategories !== null ? $midCategories : ($current['midCategories'] ?? null),
+            'endCategories' => $endCategories !== null ? $endCategories : ($current['endCategories'] ?? null),
+            'sizes' => $sizes !== null ? $sizes : ($current['sizes'] ?? null),
+            'colors' => $colors !== null ? $colors : ($current['colors'] ?? null),
+            'shippingRules' => $shippingRules !== null ? $shippingRules : ($current['shippingRules'] ?? null),
+            'updated_at' => now()->toIso8601String(),
+        ];
+
+        // 1. Save in tenant database settings table
+        if ($hasTenantDb) {
+            try {
+                if (DB::connection('tenant')->getSchemaBuilder()->hasTable('settings')) {
+                    DB::connection('tenant')->table('settings')->updateOrInsert(
+                        ['key' => 'catalog_categories'],
+                        [
+                            'value' => json_encode($payload),
+                            'updated_at' => now(),
+                        ]
+                    );
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 2. Also save in central shops table settings column as durable backup
+        try {
+            $shopSettings = json_decode($shop->settings, true) ?: [];
+            $shopSettings['catalog_categories'] = $payload;
+            DB::connection('mysql')->table('shops')->where('id', $shop->id)->update([
+                'settings' => json_encode($shopSettings),
+                'updated_at' => now(),
+            ]);
+        } catch (\Throwable $e) {}
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Categories & Catalog configuration persisted successfully.',
+            'data' => $payload,
+        ]);
     }
 }
 

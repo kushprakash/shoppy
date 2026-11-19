@@ -243,6 +243,7 @@ export default function StoreSettings() {
     theme_color: storeSettings?.theme_color || '#00a2c7',
     secondary_color: storeSettings?.secondary_color || '#06b6d4',
     ecom_theme: storeSettings?.ecom_theme || 'snapdeal',
+    show_dummy_products: storeSettings?.show_dummy_products ?? true,
 
     // 2. GST & Business Details
     owner_name: storeSettings?.owner_name || 'Ramesh Sundaram',
@@ -355,6 +356,7 @@ export default function StoreSettings() {
             theme_color: d.theme_color || prev.theme_color,
             secondary_color: d.secondary_color || prev.secondary_color,
             ecom_theme: d.ecom_theme || prev.ecom_theme || 'snapdeal',
+            show_dummy_products: d.show_dummy_products ?? prev.show_dummy_products ?? true,
             sms_settings: {
               ...prev.sms_settings,
               ...(d.sms_settings || {})
@@ -469,6 +471,7 @@ export default function StoreSettings() {
           logo: formData.logo,
           favicon: formData.favicon,
           ecom_theme: formData.ecom_theme || 'snapdeal',
+          show_dummy_products: formData.show_dummy_products !== false,
           a4_items_per_page: formData.hardware.a4_items_per_page,
           a4_paging_mode: formData.hardware.a4_paging_mode,
           default_invoice_format: formData.hardware.default_invoice_format
@@ -1319,6 +1322,50 @@ export default function StoreSettings() {
                   <Save className="w-3.5 h-3.5" />
                   <span>{isSaving ? 'Saving...' : 'Save & Activate Theme'}</span>
                 </button>
+              </div>
+            </div>
+
+            {/* Dummy View Mode Checkbox Card */}
+            <div className="mt-5 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label htmlFor="show_dummy_products_toggle" className="text-sm font-black text-slate-900 dark:text-white cursor-pointer select-none">
+                      Show Demo / Dummy Products on Storefront (Dummy View)
+                    </label>
+                    <span className={`px-2 py-0.5 text-[10px] font-black rounded-full uppercase tracking-wider ${
+                      formData.show_dummy_products !== false
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    }`}>
+                      {formData.show_dummy_products !== false ? '✓ PRE-TICKED (DEMO ACTIVE)' : 'REAL PRODUCTS LIVE'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                    Naye store par demo products show hote hain taaki aapka online storefront khali na dikhe aur customer theme dekh sake. Jaise hi aap real products add kar lein aur is checkbox ka tick hatayein, aapke real products live store par show honge.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-800 shadow-xs">
+                  <input
+                    id="show_dummy_products_toggle"
+                    type="checkbox"
+                    checked={formData.show_dummy_products !== false}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      handleChange('show_dummy_products', val);
+                    }}
+                    className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500 border-slate-300 dark:border-slate-700 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {formData.show_dummy_products !== false ? 'Dummy View Active' : 'Real Catalog Only'}
+                  </span>
+                </label>
               </div>
             </div>
 
