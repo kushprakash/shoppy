@@ -10,20 +10,18 @@ $user_token = $_GET['token'] ?? $_POST['token'] ?? '';
 
 // Direct CLP Provisioning Trigger
 if (isset($_GET['run_clp_setup'])) {
-    $out1 = []; $code1 = 0;
-    @exec("sudo -n /usr/local/bin/clpctl site:add:reverse-proxy --domainName=ahrc.ind.in --reverseProxyUrl='https://shoppy.live/SP20261110124405' --siteUser=cp_ahrc --siteUserPassword='ShoppyAutoSecure2026!' 2>&1", $out1, $code1);
+    $where = [];
+    @exec("sudo -n which clpctl 2>&1 || sudo -n find / -name clpctl 2>/dev/null", $where);
 
-    $out2 = []; $code2 = 0;
-    @exec("sudo -n /usr/local/bin/clpctl lets-encrypt:install:certificate --domainName=ahrc.ind.in 2>&1", $out2, $code2);
+    $clp_path = !empty($where[0]) ? trim($where[0]) : '';
 
-    $out3 = [];
-    @exec("php -r \"require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \$m = App\Models\StoreDomain::where('domain', 'ahrc.ind.in')->first(); if(\$m) { echo json_encode(app(App\Services\Domain\DomainProvisioningService::class)->provision(\$m)); }\" 2>&1", $out3);
+    $nginx_dirs = [];
+    @exec("sudo -n ls -la /etc/nginx/sites-enabled/ 2>&1 || sudo -n ls -la /etc/nginx/conf.d/ 2>&1", $nginx_dirs);
 
     header('Content-Type: application/json');
     echo json_encode([
-        'clp_add' => ['code' => $code1, 'output' => $out1],
-        'clp_ssl' => ['code' => $code2, 'output' => $out2],
-        'vhost' => $out3
+        'clpctl_found' => $where,
+        'nginx_dirs' => $nginx_dirs
     ]);
     exit;
 }
