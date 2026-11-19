@@ -156,7 +156,7 @@ class DomainProvisioningService
     protected function registerInCloudPanel(string $domain, string $storeCode): array
     {
         $clpBin = null;
-        $candidates = ['/usr/local/bin/clpctl', '/usr/bin/clpctl', 'clpctl'];
+        $candidates = ['/usr/bin/clpctl', '/usr/local/bin/clpctl', 'clpctl'];
         foreach ($candidates as $cand) {
             if (@is_executable($cand)) {
                 $clpBin = $cand;
@@ -164,7 +164,7 @@ class DomainProvisioningService
             }
         }
         if (!$clpBin) {
-            $clpBin = '/usr/local/bin/clpctl';
+            $clpBin = '/usr/bin/clpctl';
         }
 
         // Generate isolated siteUser and strong password required by CloudPanel
@@ -346,7 +346,7 @@ class DomainProvisioningService
      */
     protected function issueLetsEncryptCertificate(string $mainDomain, array $allDomains): array
     {
-        $clpBin = is_executable('/usr/local/bin/clpctl') ? '/usr/local/bin/clpctl' : 'clpctl';
+        $clpBin = is_executable('/usr/bin/clpctl') ? '/usr/bin/clpctl' : (is_executable('/usr/local/bin/clpctl') ? '/usr/local/bin/clpctl' : 'clpctl');
 
         // 1. Try CloudPanel's official SSL installer command:
         // clpctl lets-encrypt:install:certificate --domainName=...
