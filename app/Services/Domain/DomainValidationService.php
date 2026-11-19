@@ -94,6 +94,46 @@ class DomainValidationService
     }
 
     /**
+     * Check if domain is an apex/root domain (e.g. example.com, mystore.in, ahrc.ind.in, shop.co.uk)
+     * as opposed to a subdomain (e.g. sub.domain.com).
+     */
+    public function isApexDomain(string $domain): bool
+    {
+        $domain = $this->normalize($domain);
+        $parts = explode('.', $domain);
+        $count = count($parts);
+
+        if ($count <= 1) {
+            return false;
+        }
+
+        if ($count === 2) {
+            return true; // e.g. example.com, mystore.in
+        }
+
+        // Common two-part second level ccTLDs
+        $twoPartSuffixes = [
+            'ind.in', 'co.in', 'net.in', 'org.in', 'gen.in', 'firm.in',
+            'co.uk', 'org.uk', 'me.uk', 'ltd.uk', 'plc.uk',
+            'com.au', 'net.au', 'org.au', 'edu.au',
+            'co.nz', 'net.nz', 'org.nz',
+            'co.za', 'org.za',
+            'com.sg', 'edu.sg',
+            'co.jp', 'ne.jp',
+            'com.br', 'net.br'
+        ];
+
+        if ($count === 3) {
+            $suffix = $parts[1] . '.' . $parts[2];
+            if (in_array($suffix, $twoPartSuffixes, true)) {
+                return true; // e.g. ahrc.ind.in, myshop.co.in
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Generate unique, cryptographically strong TXT verification token
      */
     public function generateVerificationToken(): string

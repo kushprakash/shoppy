@@ -31,7 +31,8 @@ class DomainProvisioningService
         $domainModel->log('provisioning', 'info', "Starting automated CloudPanel & Nginx reverse-proxy provisioning for {$domain} (Store: {$storeCode})...");
 
         $serverNames = [$domain];
-        if ($domainModel->www_enabled && substr_count($domain, '.') === 1) {
+        $isApex = app(DomainValidationService::class)->isApexDomain($domain);
+        if ($domainModel->www_enabled && $isApex) {
             $serverNames[] = "www.{$domain}";
         }
         $serverNameStr = implode(' ', $serverNames);
